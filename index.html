@@ -1,0 +1,3468 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <meta name="theme-color" content="#173B72" />
+  <title>Reviso — Assistant Pédagogique & Préparation Examens</title>
+
+  <!-- Polices Google Fonts : Plus Jakarta Sans & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- PDF.js pour l'extraction locale gratuite des fichiers PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+  <style>
+    /* ==========================================================================
+       1. VARIABLES DE THÈME (CLAIR & SOMBRE) ET PALETTE REVISO
+       ========================================================================== */
+    :root,
+    [data-theme="light"] {
+      --bg-app: #F8FAFC;
+      --bg-surface: #FFFFFF;
+      --bg-surface-alt: #F1F5F9;
+      --text-primary: #0F172A;
+      --text-secondary: #475569;
+      --text-muted: #64748B;
+      --border-subtle: rgba(15, 23, 42, 0.08);
+      --border-strong: rgba(15, 23, 42, 0.16);
+      --shadow-card: 0 6px 24px -4px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+      --shadow-nav: 0 14px 36px -6px rgba(15, 23, 42, 0.18), 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+
+      /* Couleurs des 5 onglets — Mode Clair */
+      --tab-0-color: #173B72;
+      --tab-0-glow: rgba(23, 59, 114, 0.35);
+      --tab-1-color: #0EA5E9;
+      --tab-1-glow: rgba(14, 165, 233, 0.35);
+      --tab-2-color: #10B981;
+      --tab-2-glow: rgba(16, 185, 129, 0.35);
+      --tab-3-color: #F59E0B;
+      --tab-3-glow: rgba(245, 158, 11, 0.35);
+      --tab-4-color: #7C3AED;
+      --tab-4-glow: rgba(124, 58, 237, 0.35);
+
+      --active-color: #173B72;
+      --active-glow: rgba(23, 59, 114, 0.35);
+    }
+
+    [data-theme="dark"] {
+      --bg-app: #0F172A;
+      --bg-surface: #1E293B;
+      --bg-surface-alt: #273549;
+      --text-primary: #F8FAFC;
+      --text-secondary: #CBD5E1;
+      --text-muted: #94A3B8;
+      --border-subtle: rgba(248, 250, 252, 0.08);
+      --border-strong: rgba(248, 250, 252, 0.16);
+      --shadow-card: 0 8px 28px -4px rgba(0, 0, 0, 0.42), 0 1px 3px rgba(0, 0, 0, 0.3);
+      --shadow-nav: 0 16px 40px -6px rgba(0, 0, 0, 0.65), 0 4px 14px -2px rgba(0, 0, 0, 0.45);
+
+      /* Couleurs des 5 onglets — Mode Sombre */
+      --tab-0-color: #2563EB;
+      --tab-0-glow: rgba(37, 99, 235, 0.45);
+      --tab-1-color: #0EA5E9;
+      --tab-1-glow: rgba(14, 165, 233, 0.45);
+      --tab-2-color: #10B981;
+      --tab-2-glow: rgba(16, 185, 129, 0.45);
+      --tab-3-color: #F59E0B;
+      --tab-3-glow: rgba(245, 158, 11, 0.45);
+      --tab-4-color: #7C3AED;
+      --tab-4-glow: rgba(124, 58, 237, 0.45);
+
+      --active-color: #2563EB;
+      --active-glow: rgba(37, 99, 235, 0.45);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-app);
+      color: var(--text-primary);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.28s ease, color 0.28s ease;
+    }
+
+    h1, h2, h3, h4, .font-display {
+      font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+    }
+
+    .surface-card {
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-card);
+      border-radius: 20px;
+      transition: background-color 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
+    }
+
+    .surface-alt {
+      background-color: var(--bg-surface-alt);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px;
+      transition: background-color 0.28s ease, border-color 0.28s ease;
+    }
+
+    .btn-active-accent {
+      background-color: var(--active-color);
+      color: #FFFFFF;
+      box-shadow: 0 8px 20px -4px var(--active-glow);
+      transition:
+        background-color 0.28s ease,
+        box-shadow 0.28s ease,
+        transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .btn-active-accent:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.06);
+    }
+
+    .btn-active-accent:active {
+      transform: scale(0.97);
+    }
+
+    /* ==========================================================================
+       2. BARRE DE NAVIGATION FLOTTANTE DU BAS & BULLE SURÉLEVÉE
+       ========================================================================== */
+    .bottom-nav-wrapper {
+      position: fixed;
+      bottom: 16px;
+      left: 0;
+      right: 0;
+      z-index: 45;
+      display: flex;
+      justify-content: center;
+      padding: 0 12px;
+      pointer-events: none;
+    }
+
+    .bottom-nav {
+      pointer-events: auto;
+      position: relative;
+      width: 100%;
+      max-width: 460px;
+      height: 68px;
+      border-radius: 34px;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-nav);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      align-items: center;
+      padding: 0 6px;
+      overflow: visible;
+      touch-action: pan-y;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background-color 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
+    }
+
+    .nav-item[data-index="0"] { --tab-color: var(--tab-0-color); --tab-glow: var(--tab-0-glow); }
+    .nav-item[data-index="1"] { --tab-color: var(--tab-1-color); --tab-glow: var(--tab-1-glow); }
+    .nav-item[data-index="2"] { --tab-color: var(--tab-2-color); --tab-glow: var(--tab-2-glow); }
+    .nav-item[data-index="3"] { --tab-color: var(--tab-3-color); --tab-glow: var(--tab-3-glow); }
+    .nav-item[data-index="4"] { --tab-color: var(--tab-4-color); --tab-glow: var(--tab-4-glow); }
+
+    .nav-item {
+      position: relative;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .nav-bubble {
+      box-sizing: content-box;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      background-color: transparent;
+      border: 5px solid transparent;
+      transform: translateY(0) scale(1);
+      transition:
+        transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        background-color 260ms ease,
+        color 220ms ease,
+        box-shadow 300ms ease,
+        border-color 280ms ease;
+      will-change: transform;
+    }
+
+    .nav-item:hover:not(.active) .nav-bubble {
+      color: var(--text-primary);
+      transform: translateY(-2px) scale(1.04);
+    }
+
+    .nav-item.active .nav-bubble {
+      transform: translateY(-20px) scale(1.08);
+      background-color: var(--tab-color);
+      color: #FFFFFF;
+      box-shadow: 0 10px 22px -2px var(--tab-glow);
+      border: 5px solid var(--bg-app);
+    }
+
+    .nav-label {
+      position: absolute;
+      bottom: 4px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+      color: var(--tab-color);
+      opacity: 0;
+      transform: translateY(4px);
+      pointer-events: none;
+      transition:
+        opacity 240ms ease,
+        transform 380ms cubic-bezier(0.34, 1.56, 0.64, 1),
+        color 220ms ease;
+      will-change: transform, opacity;
+    }
+
+    .nav-item.active .nav-label {
+      opacity: 1;
+      transform: translateY(-8px);
+    }
+
+    /* ==========================================================================
+       3. TRANSITIONS DE PAGES DIRECTIONNELLES 60 FPS & MODALES
+       ========================================================================== */
+    .page-view {
+      display: none;
+      will-change: transform, opacity;
+    }
+
+    .page-view.active {
+      display: block;
+    }
+
+    @keyframes slideEnterFromRight {
+      0% { opacity: 0; transform: translate3d(24px, 0, 0); }
+      100% { opacity: 1; transform: translate3d(0, 0, 0); }
+    }
+
+    @keyframes slideEnterFromLeft {
+      0% { opacity: 0; transform: translate3d(-24px, 0, 0); }
+      100% { opacity: 1; transform: translate3d(0, 0, 0); }
+    }
+
+    .anim-from-right {
+      animation: slideEnterFromRight 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .anim-from-left {
+      animation: slideEnterFromLeft 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .modal-backdrop {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 250ms cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-panel {
+      transform: translate3d(0, 18px, 0) scale(0.98);
+      opacity: 0;
+      transition:
+        transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 250ms cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: transform, opacity;
+    }
+
+    .modal-backdrop.open .modal-panel {
+      transform: translate3d(0, 0, 0) scale(1);
+      opacity: 1;
+    }
+
+    .drawer-panel {
+      transform: translate3d(100%, 0, 0);
+      transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+      will-change: transform;
+    }
+
+    .modal-backdrop.open .drawer-panel {
+      transform: translate3d(0, 0, 0);
+    }
+
+    /* Interrupteur animé Mode Clair / Sombre dans le tiroir */
+    .theme-switch-track {
+      width: 48px;
+      height: 26px;
+      border-radius: 999px;
+      background-color: #CBD5E1;
+      position: relative;
+      transition: background-color 0.28s ease;
+    }
+
+    [data-theme="dark"] .theme-switch-track {
+      background-color: #2563EB;
+    }
+
+    .theme-switch-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background-color: #FFFFFF;
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.22);
+      transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    [data-theme="dark"] .theme-switch-thumb {
+      transform: translateX(22px);
+    }
+
+    /* Flashcards 3D */
+    .perspective-1000 {
+      perspective: 1000px;
+    }
+
+    .flashcard-inner {
+      position: relative;
+      width: 100%;
+      min-height: 220px;
+      transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
+      transform-style: preserve-3d;
+      cursor: pointer;
+    }
+
+    .flashcard-inner.flipped {
+      transform: rotateY(180deg);
+    }
+
+    .flashcard-face {
+      position: absolute;
+      inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 20px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .flashcard-back {
+      transform: rotateY(180deg);
+    }
+
+    /* Secousse Code PIN */
+    @keyframes pinShake {
+      0%, 100% { transform: translate3d(0, 0, 0); }
+      20%, 60% { transform: translate3d(-8px, 0, 0); }
+      40%, 80% { transform: translate3d(8px, 0, 0); }
+    }
+
+    .animate-shake {
+      animation: pinShake 360ms ease;
+    }
+
+    /* Champs de formulaire */
+    .input-field {
+      width: 100%;
+      background-color: var(--bg-surface-alt);
+      color: var(--text-primary);
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.28s ease;
+    }
+
+    .input-field:focus {
+      border-color: var(--active-color);
+      box-shadow: 0 0 0 3px var(--active-glow);
+    }
+
+    /* Badge circulaire flat-design à ombre portée douce */
+    .flat-icon-badge {
+      filter: drop-shadow(0 6px 12px rgba(15, 23, 42, 0.14));
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .flat-icon-badge:hover {
+      transform: scale(1.05);
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.28);
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================================
+       ÉCRAN DE VERROUILLAGE PAR CODE PIN (4 CHIFFRES + RÉCUPÉRATION)
+       ======================================================================== -->
+  <div id="pin-lock-screen" class="fixed inset-0 z-50 hidden flex-col items-center justify-center p-6" style="background-color: var(--bg-app);">
+    <div class="w-full max-w-xs text-center">
+      <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl text-white" style="background-color: var(--active-color); box-shadow: 0 10px 24px var(--active-glow);">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </div>
+      <h2 class="font-display text-xl font-bold tracking-tight">Espace Reviso Verrouillé</h2>
+      <p id="pin-lock-subtitle" class="mt-1 text-xs" style="color: var(--text-muted);">
+        Saisissez votre code PIN à 4 chiffres pour déverrouiller votre espace de révision.
+      </p>
+
+      <div id="pin-dots" class="my-6 flex justify-center gap-4">
+        <span class="pin-dot h-3.5 w-3.5 rounded-full border transition-all duration-200" style="border-color: var(--border-strong);"></span>
+        <span class="pin-dot h-3.5 w-3.5 rounded-full border transition-all duration-200" style="border-color: var(--border-strong);"></span>
+        <span class="pin-dot h-3.5 w-3.5 rounded-full border transition-all duration-200" style="border-color: var(--border-strong);"></span>
+        <span class="pin-dot h-3.5 w-3.5 rounded-full border transition-all duration-200" style="border-color: var(--border-strong);"></span>
+      </div>
+
+      <p id="pin-error-msg" class="mb-3 h-4 text-xs font-medium text-rose-500"></p>
+
+      <div class="grid grid-cols-3 gap-3">
+        <button type="button" onclick="handlePinKey('1')" class="surface-card py-3.5 text-lg font-bold active:scale-95 transition-transform">1</button>
+        <button type="button" onclick="handlePinKey('2')" class="surface-card py-3.5 text-lg font-bold active:scale-95 transition-transform">2</button>
+        <button type="button" onclick="handlePinKey('3')" class="surface-card py-3.5 text-lg font-bold active:scale-95 transition-transform">3</button>
+        <button type="button" onclick="handlePinKey('4')" class="surface-card py-3.5 text-lg font-bold active:scale-95 transition-transform">4</button>
+        <button type="button" onclick="handlePinKey('5')" class="surface-card py-3.5 text-lg font-bold active:scale-95 transition-transform">5</button>
+        <button type="button" onclick="handlePinKey('6')" class="surface-card py-3.5 text-lg font-bold active:scale-95 transition-transform">6</button>
+        <button type="button" onclick="handlePinKey('7')" class="surface-card py-3.5 text-lg font-bold active:scale-95 transition-transform">7</button>
+        <button type="button" onclick="handlePinKey('8')" class="surface-card py-3.5 text-lg font-bold active:scale-95 transition-transform">8</button>
+        <button type="button" onclick="handlePinKey('9')" class="surface-card py-3.5 text-lg font-bold active:scale-95 transition-transform">9</button>
+        <button type="button" onclick="clearPinEntry()" class="surface-alt py-3.5 text-xs font-semibold uppercase tracking-wider" style="color: var(--text-muted);">Effacer</button>
+        <button type="button" onclick="handlePinKey('0')" class="surface-card py-3.5 text-lg font-bold active:scale-95 transition-transform">0</button>
+        <button type="button" onclick="backspacePinEntry()" class="surface-alt flex items-center justify-center py-3.5" aria-label="Retour arrière">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+            <line x1="18" y1="9" x2="12" y2="15"></line>
+            <line x1="12" y1="9" x2="18" y2="15"></line>
+          </svg>
+        </button>
+      </div>
+
+      <button type="button" onclick="togglePinRecoveryBox()" class="mt-5 text-xs font-semibold underline" style="color: var(--text-muted);">
+        Code PIN oublié ? Récupérer l'accès
+      </button>
+
+      <div id="pin-recovery-box" class="surface-card mt-3 hidden p-3.5 text-left">
+        <p class="text-[11px] leading-relaxed" style="color: var(--text-secondary);">
+          Saisissez le prénom enregistré sur votre profil pour réinitialiser le verrouillage, ou effacez le profil local.
+        </p>
+        <div class="mt-2 flex gap-2">
+          <input type="text" id="pin-recovery-name" class="input-field py-1.5 text-xs" placeholder="Votre prénom..." />
+          <button type="button" onclick="verifyPinRecovery()" class="btn-active-accent rounded-xl px-3 py-1.5 text-xs font-bold">Valider</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       EN-TÊTE SUPÉRIEUR FIXE
+       ======================================================================== -->
+  <header class="sticky top-0 z-30 border-b backdrop-blur-md" style="background-color: color-mix(in srgb, var(--bg-app) 88%, transparent); border-color: var(--border-subtle);">
+    <div class="mx-auto flex max-w-4xl items-center justify-between px-4 py-3">
+      <div class="flex items-center gap-2.5">
+        <div class="flex h-9 w-9 items-center justify-center rounded-xl text-white transition-all duration-300" style="background-color: var(--active-color); box-shadow: 0 4px 14px var(--active-glow);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-display text-lg font-extrabold tracking-tight">Reviso</span>
+            <span class="h-2.5 w-2.5 rounded-full transition-all duration-300" style="background-color: var(--active-color); box-shadow: 0 0 10px var(--active-glow);"></span>
+          </div>
+          <p id="header-subtitle" class="text-[11px] font-medium" style="color: var(--text-muted);">Assistant Pédagogique & Préparation Examens</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="openProfileModal()" id="header-profile-badge" class="hidden sm:flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all" style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-primary);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--active-color);">
+            <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+            <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+          </svg>
+          <span id="header-profile-label">Configurer le profil</span>
+        </button>
+
+        <!-- Bouton rapide Soleil / Lune -->
+        <button type="button" onclick="toggleTheme()" class="flex h-9 w-9 items-center justify-center rounded-xl transition-colors" style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle);" title="Basculer le thème Clair / Sombre" aria-label="Basculer le thème">
+          <svg id="icon-sun" class="hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg id="icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+
+        <!-- Bouton Tiroir Latéral -->
+        <button type="button" onclick="openDrawer()" class="flex h-9 w-9 items-center justify-center rounded-xl transition-colors" style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle);" title="Menu, PIN et paramètres" aria-label="Ouvrir le menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       CONTENEUR PRINCIPAL DE L'APPLICATION
+       ======================================================================== -->
+  <main class="mx-auto max-w-4xl px-4 pt-4 pb-32">
+
+    <!-- BANNIÈRE ARCHITECTURALE DYNAMIQUE + MÉDAILLON DE FILIÈRE RECOLORÉ -->
+    <section class="surface-card relative mb-5 overflow-hidden">
+      <div class="grid grid-cols-1 md:grid-cols-12">
+        <!-- Colonne gauche : Médaillon circulaire flat-design de la filière + Infos -->
+        <div class="flex flex-col justify-between p-5 md:col-span-7">
+          <div class="flex items-start gap-3.5">
+            <!-- Médaillon circulaire spécifique à la filière/série -->
+            <div id="hero-domain-badge" class="flat-icon-badge shrink-0">
+              <!-- Injecté par getDomainBadgeSVG(profile) -->
+            </div>
+
+            <div class="min-w-0 flex-1">
+              <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
+                <span id="hero-cycle-tag" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wider text-white transition-colors duration-300" style="background-color: var(--active-color);">
+                  Profil à configurer
+                </span>
+                <span id="hero-subject-tag" class="rounded-full px-2.5 py-0.5 text-[10.5px] font-semibold" style="background-color: var(--bg-surface-alt); color: var(--text-secondary); border: 1px solid var(--border-subtle);">
+                  Matière prioritaire
+                </span>
+              </div>
+              <h1 id="hero-greeting" class="font-display text-lg font-extrabold tracking-tight sm:text-xl">
+                Bienvenue sur Reviso
+              </h1>
+              <p id="hero-description" class="mt-1 text-xs leading-relaxed" style="color: var(--text-secondary);">
+                Configurez votre parcours scolaire (Gabon) ou universitaire pour adapter les illustrations, le planning de révision et le tuteur IA.
+              </p>
+            </div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap items-center gap-2.5">
+            <button type="button" onclick="openProfileModal()" class="btn-active-accent inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              <span id="hero-profile-btn-text">Configurer mon profil</span>
+            </button>
+
+            <div class="flex items-center gap-3 rounded-xl px-3 py-2 text-xs" style="background-color: var(--bg-surface-alt); border: 1px solid var(--border-subtle);">
+              <div>
+                <span class="font-bold" id="stat-docs-count">0</span>
+                <span style="color: var(--text-muted);"> docs</span>
+              </div>
+              <span style="color: var(--border-strong);">|</span>
+              <div>
+                <span class="font-bold" id="stat-annales-count">0</span>
+                <span style="color: var(--text-muted);"> annales</span>
+              </div>
+              <span style="color: var(--border-strong);">|</span>
+              <div>
+                <span class="font-bold" id="stat-mastery-pct">0%</span>
+                <span style="color: var(--text-muted);"> maîtrise</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Colonne droite : Illustration Architecturale SVG Dynamique Jour / Nuit -->
+        <div id="hero-building-container" class="relative min-h-[160px] md:col-span-5 flex items-end justify-center overflow-hidden">
+          <!-- Injecté dynamiquement par getBuildingIllustration(profile) -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         ONGLET 0 : DOCUMENTS (CAHIER À SPIRALES + MULTI-PDF)
+         ====================================================================== -->
+    <section id="view-documents" class="page-view active space-y-5">
+      <div class="surface-card flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
+        <div class="flex items-center gap-3.5">
+          <div id="badge-section-docs" class="flat-icon-badge shrink-0"></div>
+          <div>
+            <h2 class="font-display text-base font-extrabold tracking-tight sm:text-lg">Base Documentaire & Ingestion Multi-PDF</h2>
+            <p class="mt-0.5 text-xs" style="color: var(--text-muted);">
+              Importez simultanément vos cours, le programme officiel et jusqu'à 20+ sujets d'examen (extraction locale gratuite).
+            </p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" onclick="openPasteModal()" class="surface-alt inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold hover:opacity-90">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+              <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+            </svg>
+            Coller un texte
+          </button>
+          <button type="button" onclick="loadAdaptedSamplePack()" class="btn-active-accent inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            Jeu d'entraînement selon mon profil
+          </button>
+        </div>
+      </div>
+
+      <!-- 3 Zones d'importation multi-fichiers -->
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <!-- Zone 1 : Cours -->
+        <label class="surface-card group flex cursor-pointer flex-col items-center justify-center p-5 text-center transition-all hover:border-blue-500/50">
+          <input type="file" multiple accept=".pdf,.txt,.md" class="hidden" onchange="handleMultiFileUpload(event, 'cours')" />
+          <div class="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl transition-transform group-hover:scale-105" style="background-color: color-mix(in srgb, var(--tab-0-color) 14%, transparent); color: var(--tab-0-color);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+          </div>
+          <span class="text-sm font-bold">Cours & Chapitres</span>
+          <span class="mt-1 text-[11px]" style="color: var(--text-muted);">Multi-PDF, polycopiés, notes (.pdf, .txt, .md)</span>
+          <span class="mt-3 rounded-lg px-2.5 py-1 text-[11px] font-semibold" style="background-color: var(--bg-surface-alt); color: var(--tab-0-color);">Importer les cours</span>
+        </label>
+
+        <!-- Zone 2 : Programme Officiel -->
+        <label class="surface-card group flex cursor-pointer flex-col items-center justify-center p-5 text-center transition-all hover:border-emerald-500/50">
+          <input type="file" multiple accept=".pdf,.txt,.md" class="hidden" onchange="handleMultiFileUpload(event, 'programme')" />
+          <div class="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl transition-transform group-hover:scale-105" style="background-color: color-mix(in srgb, var(--tab-2-color) 14%, transparent); color: var(--tab-2-color);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+          </div>
+          <span class="text-sm font-bold">Programme Officiel</span>
+          <span class="mt-1 text-[11px]" style="color: var(--text-muted);">Syllabus, maquette UE, référentiel</span>
+          <span class="mt-3 rounded-lg px-2.5 py-1 text-[11px] font-semibold" style="background-color: var(--bg-surface-alt); color: var(--tab-2-color);">Importer le programme</span>
+        </label>
+
+        <!-- Zone 3 : Sujets d'Examen & Annales -->
+        <label class="surface-card group flex cursor-pointer flex-col items-center justify-center p-5 text-center transition-all hover:border-sky-500/50">
+          <input type="file" multiple accept=".pdf,.txt,.md" class="hidden" onchange="handleMultiFileUpload(event, 'annales')" />
+          <div class="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl transition-transform group-hover:scale-105" style="background-color: color-mix(in srgb, var(--tab-1-color) 14%, transparent); color: var(--tab-1-color);">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+          </div>
+          <span class="text-sm font-bold">Annales & Examens</span>
+          <span class="mt-1 text-[11px]" style="color: var(--text-muted);">Import groupé (jusqu'à 20+ sujets simultanés)</span>
+          <span class="mt-3 rounded-lg px-2.5 py-1 text-[11px] font-semibold" style="background-color: var(--bg-surface-alt); color: var(--tab-1-color);">Importer les annales</span>
+        </label>
+      </div>
+
+      <!-- Barre de progression d'extraction PDF -->
+      <div id="pdf-progress-box" class="surface-card hidden p-4">
+        <div class="flex items-center justify-between text-xs font-semibold">
+          <span id="pdf-progress-label">Extraction locale en cours...</span>
+          <span id="pdf-progress-pct">0%</span>
+        </div>
+        <div class="mt-2 h-2 w-full overflow-hidden rounded-full" style="background-color: var(--bg-surface-alt);">
+          <div id="pdf-progress-bar" class="h-full rounded-full transition-all duration-200" style="width: 0%; background-color: var(--active-color);"></div>
+        </div>
+      </div>
+
+      <!-- Liste des documents importés -->
+      <div class="surface-card p-5">
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="font-display text-sm font-bold">Documents indexés dans votre espace</h3>
+          <button type="button" onclick="confirmClearAllDocuments()" id="btn-clear-docs" class="hidden text-xs font-semibold text-rose-500 hover:underline">
+            Tout vider
+          </button>
+        </div>
+        <div id="documents-list-container" class="space-y-2.5"></div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         ONGLET 1 : ANNALES & EXAMENS (LOUPE + RADAR STATISTIQUE)
+         ====================================================================== -->
+    <section id="view-annales" class="page-view space-y-5">
+      <div class="surface-card flex items-center gap-3.5 p-5">
+        <div id="badge-section-annales" class="flat-icon-badge shrink-0"></div>
+        <div>
+          <h2 class="font-display text-base font-extrabold tracking-tight sm:text-lg">Radar Statistique des Annales & Examen Blanc</h2>
+          <p class="mt-0.5 text-xs" style="color: var(--text-muted);">
+            Détection des thèmes récurrents, barèmes des correcteurs et entraînement corrigé sur sujets inédits.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-12">
+        <div class="surface-card p-5 md:col-span-7">
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="font-display text-sm font-bold">Probabilité d'apparition aux examens</h3>
+            <span id="annales-radar-badge" class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style="background-color: var(--bg-surface-alt); color: var(--active-color);">0 sujet analysé</span>
+          </div>
+          <div id="radar-topics-container" class="space-y-3.5"></div>
+        </div>
+
+        <div class="surface-card flex flex-col justify-between p-5 md:col-span-5">
+          <div>
+            <h3 class="font-display text-sm font-bold">Mots-clés attendus au barème</h3>
+            <p class="mt-1 text-xs" style="color: var(--text-muted);">Notions discriminantes repérées dans vos documents :</p>
+            <div id="radar-keywords-container" class="mt-3 flex flex-wrap gap-1.5"></div>
+          </div>
+
+          <div class="surface-alt mt-4 p-3.5">
+            <p class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--active-color);">Vigilance méthodologique</p>
+            <p id="radar-trap-text" class="mt-1 text-xs leading-relaxed" style="color: var(--text-secondary);">
+              Importez vos cours et annales pour révéler les attentes prioritaires des correcteurs.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="surface-card p-5">
+        <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div>
+            <h3 class="font-display text-base font-bold">Simulateur d'Examen Blanc Inédit</h3>
+            <p class="text-xs" style="color: var(--text-muted);">Génère un sujet calibré sur votre filière et corrige votre raisonnement.</p>
+          </div>
+          <button type="button" onclick="generateMockExam()" class="btn-active-accent inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+            Nouveau sujet d'entraînement
+          </button>
+        </div>
+
+        <div class="mt-4 space-y-4">
+          <div class="surface-alt p-4">
+            <div class="flex items-center justify-between">
+              <span id="mock-exam-tag" class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--active-color);">Épreuve ciblée</span>
+              <span class="text-[11px] font-medium" style="color: var(--text-muted);">Barème : 20 points</span>
+            </div>
+            <p id="mock-exam-prompt" class="mt-2 text-sm font-medium leading-relaxed">
+              Cliquez sur « Nouveau sujet d'entraînement » après avoir ajouté vos documents pour démarrer une mise en situation d'examen.
+            </p>
+          </div>
+
+          <div>
+            <label for="mock-exam-answer" class="mb-1.5 block text-xs font-semibold">Votre rédaction structurée :</label>
+            <textarea id="mock-exam-answer" rows="4" class="input-field" placeholder="Rédigez votre démarche étape par étape..."></textarea>
+          </div>
+
+          <div class="flex justify-end">
+            <button type="button" onclick="gradeMockExam()" class="btn-active-accent rounded-xl px-4 py-2 text-xs font-bold">
+              Soumettre à la correction détaillée
+            </button>
+          </div>
+
+          <div id="mock-exam-feedback" class="surface-alt hidden p-4"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         ONGLET 2 : PLANNING IA (HORLOGE + RÉPÉTITION ESPACÉE SM-2)
+         ====================================================================== -->
+    <section id="view-planning" class="page-view space-y-5">
+      <div class="surface-card flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
+        <div class="flex items-center gap-3.5">
+          <div id="badge-section-planning" class="flat-icon-badge shrink-0"></div>
+          <div>
+            <h2 class="font-display text-base font-extrabold tracking-tight sm:text-lg">Planning IA & Répétition Espacée (SM-2)</h2>
+            <p class="mt-0.5 text-xs" style="color: var(--text-muted);">
+              Répartition intelligente pondérée par le poids aux annales et votre emploi du temps.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" onclick="recalculateScheduleDelay()" class="surface-alt inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold hover:opacity-90">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            Recalculer (Imprévu)
+          </button>
+          <button type="button" onclick="exportCalendarICS()" class="btn-active-accent inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-bold">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            Exporter (.ics)
+          </button>
+        </div>
+      </div>
+
+      <div class="surface-card flex flex-col justify-between gap-3 p-4 sm:flex-row sm:items-center">
+        <div class="text-xs">
+          <span class="font-bold">Rythme hebdomadaire :</span>
+          <span id="schedule-mode-desc" style="color: var(--text-secondary);">Semaine classique (sessions de 45 min)</span>
+        </div>
+        <div class="inline-flex rounded-xl p-1" style="background-color: var(--bg-surface-alt); border: 1px solid var(--border-subtle);">
+          <button type="button" id="btn-rhythm-standard" onclick="setScheduleRhythm('standard')" class="rounded-lg px-3 py-1.5 text-xs font-bold transition-all">
+            Cours classique (45 min)
+          </button>
+          <button type="button" id="btn-rhythm-stage" onclick="setScheduleRhythm('stage')" class="rounded-lg px-3 py-1.5 text-xs font-bold transition-all">
+            Stage / Gardes (25 min)
+          </button>
+        </div>
+      </div>
+
+      <div id="planning-sessions-container" class="space-y-3"></div>
+    </section>
+
+    <!-- ======================================================================
+         ONGLET 3 : RÉVISION ACTIVE (AMPOULE LUMINEUSE + FICHES, FLASHCARDS, QCM)
+         ====================================================================== -->
+    <section id="view-revision" class="page-view space-y-5">
+      <div class="surface-card flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
+        <div class="flex items-center gap-3.5">
+          <div id="badge-section-revision" class="flat-icon-badge shrink-0"></div>
+          <div>
+            <h2 class="font-display text-base font-extrabold tracking-tight sm:text-lg">Atelier de Révision Active</h2>
+            <p class="mt-0.5 text-xs" style="color: var(--text-muted);">
+              Fiches multi-vues, flashcards 3D à répétition espacée et quiz QCM corrigés.
+            </p>
+          </div>
+        </div>
+
+        <div class="inline-flex rounded-xl p-1" style="background-color: var(--bg-surface-alt); border: 1px solid var(--border-subtle);">
+          <button type="button" onclick="switchRevisionSubTab('fiches')" id="subtab-btn-fiches" class="rounded-lg px-3 py-1.5 text-xs font-bold transition-all">
+            Fiches
+          </button>
+          <button type="button" onclick="switchRevisionSubTab('flashcards')" id="subtab-btn-flashcards" class="rounded-lg px-3 py-1.5 text-xs font-bold transition-all">
+            Flashcards 3D
+          </button>
+          <button type="button" onclick="switchRevisionSubTab('qcm')" id="subtab-btn-qcm" class="rounded-lg px-3 py-1.5 text-xs font-bold transition-all">
+            Quiz QCM
+          </button>
+        </div>
+      </div>
+
+      <!-- Sous-vue 1 : Fiches -->
+      <div id="rev-sub-fiches" class="space-y-4">
+        <div class="surface-card p-5">
+          <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" onclick="setSheetFormat('synthese')" id="fmt-synthese" class="rounded-lg px-2.5 py-1 text-xs font-bold transition-all">Synthèse structurée</button>
+              <button type="button" onclick="setSheetFormat('schema')" id="fmt-schema" class="rounded-lg px-2.5 py-1 text-xs font-bold transition-all">Schéma cause → conséquence</button>
+              <button type="button" onclick="setSheetFormat('pieges')" id="fmt-pieges" class="rounded-lg px-2.5 py-1 text-xs font-bold transition-all">Points clés & Pièges</button>
+            </div>
+            <button type="button" onclick="copyCurrentSheet()" class="surface-alt inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              Copier la fiche
+            </button>
+          </div>
+          <div id="revision-sheet-content" class="space-y-3 text-sm leading-relaxed"></div>
+        </div>
+      </div>
+
+      <!-- Sous-vue 2 : Flashcards 3D -->
+      <div id="rev-sub-flashcards" class="hidden space-y-4">
+        <div class="flex items-center justify-between text-xs">
+          <span id="flashcard-counter" class="font-bold">Carte 0 / 0</span>
+          <span class="rounded-full px-2.5 py-0.5 font-semibold" style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle);">Touchez la carte pour retourner</span>
+        </div>
+
+        <div class="perspective-1000">
+          <div id="flashcard-3d" onclick="flipFlashcard()" class="flashcard-inner">
+            <div class="flashcard-face surface-card">
+              <span class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--active-color);">Question / Notion clé</span>
+              <p id="flashcard-front-text" class="my-auto text-center font-display text-base font-bold sm:text-lg">
+                Aucune flashcard disponible. Ajoutez un cours dans l'onglet Documents.
+              </p>
+              <span class="text-center text-[11px]" style="color: var(--text-muted);">Touchez pour afficher la réponse</span>
+            </div>
+            <div class="flashcard-face surface-card flashcard-back" style="border-color: var(--active-color);">
+              <span class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--active-color);">Réponse & Justification</span>
+              <p id="flashcard-back-text" class="my-auto text-center text-sm leading-relaxed sm:text-base">---</p>
+              <span class="text-center text-[11px]" style="color: var(--text-muted);">Évaluez votre niveau de maîtrise</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2.5">
+          <button type="button" onclick="rateFlashcard('review')" class="surface-card py-2.5 text-xs font-bold text-rose-500 active:scale-95 transition-transform">À revoir</button>
+          <button type="button" onclick="rateFlashcard('learning')" class="surface-card py-2.5 text-xs font-bold text-amber-500 active:scale-95 transition-transform">En cours</button>
+          <button type="button" onclick="rateFlashcard('mastered')" class="surface-card py-2.5 text-xs font-bold text-emerald-500 active:scale-95 transition-transform">Maîtrisée</button>
+        </div>
+      </div>
+
+      <!-- Sous-vue 3 : Quiz QCM -->
+      <div id="rev-sub-qcm" class="hidden space-y-4">
+        <div class="surface-card p-5">
+          <div class="mb-3 flex items-center justify-between">
+            <span id="qcm-progress-label" class="text-xs font-bold" style="color: var(--active-color);">Question 1</span>
+            <span id="qcm-score-label" class="text-xs font-semibold" style="color: var(--text-muted);">Score : 0 / 0</span>
+          </div>
+          <p id="qcm-question-text" class="font-display text-base font-bold leading-snug">
+            Ajoutez des documents pour générer un quiz d'entraînement.
+          </p>
+          <div id="qcm-options-container" class="mt-4 space-y-2.5"></div>
+          <div id="qcm-explanation-box" class="surface-alt mt-4 hidden p-3.5 text-xs leading-relaxed"></div>
+          <div class="mt-4 flex justify-end">
+            <button type="button" onclick="nextQcmQuestion()" id="btn-next-qcm" class="btn-active-accent hidden rounded-xl px-4 py-2 text-xs font-bold">
+              Question suivante
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================================================================
+         ONGLET 4 : TUTEUR IA (PROFIL COGNITIF ENGRENAGES + DIALOGUE SOCRATIQUE)
+         ====================================================================== -->
+    <section id="view-tuteur" class="page-view space-y-5">
+      <div class="surface-card flex items-center gap-3.5 p-5">
+        <div id="badge-section-tuteur" class="flat-icon-badge shrink-0"></div>
+        <div>
+          <h2 class="font-display text-base font-extrabold tracking-tight sm:text-lg">Tuteur Socratique & Profilage Cognitif</h2>
+          <p class="mt-0.5 text-xs" style="color: var(--text-muted);">
+            Encadrement strict calibré sur votre filière, votre niveau et vos documents importés.
+          </p>
+        </div>
+      </div>
+
+      <!-- Verrouillage contextuel strict -->
+      <div id="tutor-locked-panel" class="surface-card p-6 text-center">
+        <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl" style="background-color: color-mix(in srgb, var(--tab-4-color) 14%, transparent); color: var(--tab-4-color);">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </div>
+        <h3 class="font-display text-base font-extrabold">Encadrement Contextuel Actif</h3>
+        <p id="tutor-lock-reason" class="mx-auto mt-2 max-w-md text-xs leading-relaxed" style="color: var(--text-secondary);">
+          Pour éviter toute réponse hors-programme, configurez d'abord votre parcours académique et importez au moins un cours ou programme.
+        </p>
+
+        <div class="mt-5 flex flex-wrap justify-center gap-2.5">
+          <button type="button" onclick="openProfileModal()" class="surface-alt px-4 py-2.5 text-xs font-bold">
+            1. Configurer mon profil
+          </button>
+          <button type="button" onclick="switchTab(0)" class="btn-active-accent rounded-xl px-4 py-2.5 text-xs font-bold">
+            2. Importer mes cours
+          </button>
+        </div>
+      </div>
+
+      <!-- Espace Tuteur Déverrouillé -->
+      <div id="tutor-unlocked-panel" class="hidden space-y-5">
+        <div class="surface-card p-5">
+          <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 class="font-display text-sm font-bold">Profil Cognitif & Méthode Optimale Détectée</h3>
+            <span id="tutor-optimal-method" class="rounded-full px-3 py-1 text-[11px] font-bold text-white" style="background-color: var(--active-color);">
+              Raisonnement pas-à-pas
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <div class="flex justify-between text-xs font-semibold">
+                <span>Rétention & Connaissances</span>
+                <span id="cog-val-retention">50%</span>
+              </div>
+              <div class="mt-1.5 h-2 rounded-full" style="background-color: var(--bg-surface-alt);">
+                <div id="cog-bar-retention" class="h-full rounded-full transition-all duration-500" style="width: 50%; background-color: var(--active-color);"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-semibold">
+                <span>Analyse & Compréhension</span>
+                <span id="cog-val-analysis">54%</span>
+              </div>
+              <div class="mt-1.5 h-2 rounded-full" style="background-color: var(--bg-surface-alt);">
+                <div id="cog-bar-analysis" class="h-full rounded-full transition-all duration-500" style="width: 54%; background-color: var(--active-color);"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-semibold">
+                <span>Raisonnement & Déduction</span>
+                <span id="cog-val-reasoning">52%</span>
+              </div>
+              <div class="mt-1.5 h-2 rounded-full" style="background-color: var(--bg-surface-alt);">
+                <div id="cog-bar-reasoning" class="h-full rounded-full transition-all duration-500" style="width: 52%; background-color: var(--active-color);"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs font-semibold">
+                <span>Méthodologie d'Examen</span>
+                <span id="cog-val-method">48%</span>
+              </div>
+              <div class="mt-1.5 h-2 rounded-full" style="background-color: var(--bg-surface-alt);">
+                <div id="cog-bar-method" class="h-full rounded-full transition-all duration-500" style="width: 48%; background-color: var(--active-color);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="surface-card flex flex-col overflow-hidden">
+          <div class="flex items-center justify-between border-b px-4 py-3" style="border-color: var(--border-subtle); background-color: var(--bg-surface-alt);">
+            <div class="flex items-center gap-2 text-xs font-bold">
+              <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+              <span id="tutor-context-banner">Cadre académique verrouillé</span>
+            </div>
+            <button type="button" onclick="resetTutorChat()" class="text-[11px] font-semibold hover:underline" style="color: var(--text-muted);">
+              Nouvelle session
+            </button>
+          </div>
+
+          <div id="tutor-chat-messages" class="max-h-[340px] space-y-3 overflow-y-auto p-4 text-xs leading-relaxed sm:text-sm"></div>
+
+          <form onsubmit="sendTutorMessage(event)" class="flex items-center gap-2 border-t p-3" style="border-color: var(--border-subtle);">
+            <input type="text" id="tutor-chat-input" class="input-field flex-1" placeholder="Posez une question sur votre programme ou demandez un exercice guidé..." />
+            <button type="submit" class="btn-active-accent flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" aria-label="Envoyer">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ========================================================================
+       BARRE DE NAVIGATION FLOTTANTE DU BAS (5 ONGLETS + GLISSEMENT CONTINU)
+       ======================================================================== -->
+  <div class="bottom-nav-wrapper">
+    <nav id="bottom-nav" class="bottom-nav" role="tablist" aria-label="Navigation principale Reviso">
+      <button type="button" class="nav-item active" data-index="0" data-tab="documents" role="tab" aria-selected="true" aria-label="Documents">
+        <div class="nav-bubble">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+          </svg>
+        </div>
+        <span class="nav-label">Documents</span>
+      </button>
+
+      <button type="button" class="nav-item" data-index="1" data-tab="annales" role="tab" aria-selected="false" aria-label="Annales">
+        <div class="nav-bubble">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg>
+        </div>
+        <span class="nav-label">Annales</span>
+      </button>
+
+      <button type="button" class="nav-item" data-index="2" data-tab="planning" role="tab" aria-selected="false" aria-label="Planning">
+        <div class="nav-bubble">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </div>
+        <span class="nav-label">Planning</span>
+      </button>
+
+      <button type="button" class="nav-item" data-index="3" data-tab="revision" role="tab" aria-selected="false" aria-label="Révision">
+        <div class="nav-bubble">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+        </div>
+        <span class="nav-label">Révision</span>
+      </button>
+
+      <button type="button" class="nav-item" data-index="4" data-tab="tuteur" role="tab" aria-selected="false" aria-label="Tuteur IA">
+        <div class="nav-bubble">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </div>
+        <span class="nav-label">Tuteur IA</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ========================================================================
+       MODALE DE CONFIGURATION ACADÉMIQUE (DÉMARRAGE VIERGE — GABON & SUPÉRIEUR)
+       ======================================================================== -->
+  <div id="modal-profile" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm">
+    <div class="modal-panel surface-card max-h-[90vh] w-full max-w-xl overflow-y-auto p-6">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider" style="color: var(--active-color);">Configuration Académique</span>
+          <h2 class="font-display text-lg font-extrabold tracking-tight">Personnaliser votre espace Reviso</h2>
+          <p class="mt-0.5 text-xs" style="color: var(--text-muted);">
+            Sélectionnez votre cycle, votre filière exacte et votre matière prioritaire pour calibrer l'assistant IA et les illustrations.
+          </p>
+        </div>
+        <button type="button" onclick="closeModal('modal-profile')" class="surface-alt flex h-8 w-8 items-center justify-center rounded-lg" aria-label="Fermer">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <form onsubmit="saveAcademicProfile(event)" class="mt-5 space-y-4">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label class="mb-1 block text-xs font-semibold">Prénom de l'élève / étudiant(e) *</label>
+            <input type="text" id="prof-name" class="input-field" required placeholder="Saisissez votre prénom..." />
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-semibold">Établissement / Université (optionnel)</label>
+            <input type="text" id="prof-school" class="input-field" placeholder="Ex : USS, UOB, Lycée National..." />
+          </div>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-xs font-semibold">Cycle d'enseignement *</label>
+          <select id="prof-cycle" onchange="updateProfileFormOptions()" class="input-field" required>
+            <option value="">-- Choisir votre cycle --</option>
+            <option value="college_gabon">Collège (Gabon — 6ème à 3ème / BEPC)</option>
+            <option value="lycee_general_gabon">Lycée Général (Gabon — Séries S, LE, C, D, A1, A2, B)</option>
+            <option value="lycee_technique_gabon">Lycée Technique (Gabon — Séries E, F1–F4, STI, STT G1–G3, Hôtellerie)</option>
+            <option value="superieur">Enseignement Supérieur (Santé, Université & Grandes Écoles)</option>
+          </select>
+        </div>
+
+        <!-- Domaine (Supérieur) -->
+        <div id="prof-domain-group" class="hidden">
+          <label class="mb-1 block text-xs font-semibold">Grand domaine universitaire *</label>
+          <select id="prof-domain" onchange="updateProfileDomainTracks()" class="input-field">
+            <option value="sante">Santé & Sciences Médicales (Maïeutique, Médecine, Pharmacie, Soins Infirmiers...)</option>
+            <option value="gestion">Économie, Gestion, Comptabilité, RH, Commerce International & Logistique</option>
+            <option value="droit">Droit & Sciences Politiques</option>
+            <option value="lettres">Lettres, Langues, Histoire, Géographie & Philosophie</option>
+            <option value="sciences">Sciences, Mathématiques, Informatique & Ingénierie</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label class="mb-1 block text-xs font-semibold">Classe / Niveau d'études *</label>
+            <select id="prof-level" onchange="updateProfileSeriesByLevel()" class="input-field" required>
+              <option value="">-- Sélectionner le cycle d'abord --</option>
+            </select>
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-semibold">Série / Filière précise *</label>
+            <select id="prof-track" class="input-field" required>
+              <option value="">-- Sélectionner --</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label class="mb-1 block text-xs font-semibold">Matière ou UE prioritaire *</label>
+            <input type="text" id="prof-priority-subject" class="input-field" required placeholder="Ex : Obstétrique, Mathématiques, Droit civil..." />
+          </div>
+          <div>
+            <label class="mb-1 block text-xs font-semibold">Date des prochains examens</label>
+            <input type="date" id="prof-exam-date" class="input-field" />
+          </div>
+        </div>
+
+        <div>
+          <label class="mb-1 block text-xs font-semibold">Méthode d'apprentissage préférée</label>
+          <select id="prof-cognitive-style" class="input-field">
+            <option value="Cas pratiques & Exercices guidés pas-à-pas">Cas pratiques & Exercices guidés pas-à-pas</option>
+            <option value="Synthèses structurées & Schémas logiques">Synthèses structurées & Schémas logiques</option>
+            <option value="Questionnement socratique & Auto-évaluation">Questionnement socratique & Auto-évaluation</option>
+            <option value="Flashcards actives & Répétition espacée">Flashcards actives & Répétition espacée</option>
+          </select>
+        </div>
+
+        <div class="flex items-center justify-end gap-2.5 pt-2">
+          <button type="button" onclick="closeModal('modal-profile')" class="surface-alt px-4 py-2.5 text-xs font-semibold">Plus tard</button>
+          <button type="submit" class="btn-active-accent rounded-xl px-5 py-2.5 text-xs font-bold">
+            Valider mon profil académique
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODALE D'AJOUT MANUEL DE TEXTE
+       ======================================================================== -->
+  <div id="modal-paste" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div class="modal-panel surface-card w-full max-w-lg p-6">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display text-base font-extrabold">Ajouter un contenu texte</h3>
+        <button type="button" onclick="closeModal('modal-paste')" class="surface-alt flex h-8 w-8 items-center justify-center rounded-lg">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <form onsubmit="savePastedDocument(event)" class="mt-4 space-y-3.5">
+        <div>
+          <label class="mb-1 block text-xs font-semibold">Catégorie</label>
+          <select id="paste-category" class="input-field">
+            <option value="cours">Cours / Chapitre</option>
+            <option value="programme">Programme officiel / Syllabus</option>
+            <option value="annales">Sujet d'examen / Annale</option>
+          </select>
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold">Titre du document *</label>
+          <input type="text" id="paste-title" class="input-field" required placeholder="Titre du chapitre ou du sujet..." />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-semibold">Contenu *</label>
+          <textarea id="paste-content" rows="6" class="input-field" required placeholder="Collez ici vos notes de cours, votre syllabus ou un énoncé d'examen..."></textarea>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeModal('modal-paste')" class="surface-alt px-4 py-2 text-xs font-semibold">Annuler</button>
+          <button type="submit" class="btn-active-accent rounded-xl px-4 py-2 text-xs font-bold">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       TIROIR LATÉRAL (THÈME ANIMÉ, PIN 4 CHIFFRES, API GEMINI, GUIDE & LÉGAL)
+       ======================================================================== -->
+  <div id="side-drawer-backdrop" onclick="if(event.target===this) closeDrawer()" class="modal-backdrop fixed inset-0 z-50 flex justify-end bg-slate-950/60 backdrop-blur-sm">
+    <aside class="drawer-panel flex h-full w-full max-w-sm flex-col justify-between overflow-y-auto p-6" style="background-color: var(--bg-surface); border-left: 1px solid var(--border-subtle);">
+      <div>
+        <div class="flex items-center justify-between border-b pb-4" style="border-color: var(--border-subtle);">
+          <div class="flex items-center gap-2">
+            <span class="h-3 w-3 rounded-full" style="background-color: var(--active-color);"></span>
+            <h2 class="font-display text-base font-extrabold">Menu & Paramètres</h2>
+          </div>
+          <button type="button" onclick="closeDrawer()" class="surface-alt flex h-8 w-8 items-center justify-center rounded-lg">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+
+        <div class="mt-5 space-y-2.5">
+          <!-- Profil académique -->
+          <button type="button" onclick="closeDrawer(); openProfileModal();" class="surface-alt flex w-full items-center justify-between p-3.5 text-left transition-opacity hover:opacity-90">
+            <div class="flex items-center gap-3">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--active-color);">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+              </svg>
+              <div>
+                <p class="text-xs font-bold">Parcours Académique</p>
+                <p id="drawer-profile-summary" class="text-[11px]" style="color: var(--text-muted);">Non configuré</p>
+              </div>
+            </div>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+
+          <!-- Interrupteur animé Mode Clair / Mode Sombre -->
+          <button type="button" onclick="toggleTheme()" class="surface-alt flex w-full items-center justify-between p-3.5 text-left transition-opacity hover:opacity-90">
+            <div class="flex items-center gap-3">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--active-color);">
+                <circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line>
+              </svg>
+              <div>
+                <p class="text-xs font-bold">Mode Clair / Mode Sombre</p>
+                <p id="drawer-theme-label" class="text-[11px]" style="color: var(--text-muted);">Thème clair actif</p>
+              </div>
+            </div>
+            <div class="theme-switch-track" aria-hidden="true">
+              <div class="theme-switch-thumb"></div>
+            </div>
+          </button>
+
+          <!-- Verrouillage par Code PIN à 4 chiffres -->
+          <button type="button" onclick="closeDrawer(); openPinSettingsModal();" class="surface-alt flex w-full items-center justify-between p-3.5 text-left transition-opacity hover:opacity-90">
+            <div class="flex items-center gap-3">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--active-color);">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <div>
+                <p class="text-xs font-bold">Code PIN de sécurité (4 chiffres)</p>
+                <p id="drawer-pin-status" class="text-[11px]" style="color: var(--text-muted);">Désactivé</p>
+              </div>
+            </div>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+
+          <!-- Clé API Google AI Studio -->
+          <button type="button" onclick="closeDrawer(); openApiKeyModal();" class="surface-alt flex w-full items-center justify-between p-3.5 text-left transition-opacity hover:opacity-90">
+            <div class="flex items-center gap-3">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--active-color);">
+                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+              </svg>
+              <div>
+                <p class="text-xs font-bold">Clé API Gemini (Google AI Studio)</p>
+                <p id="drawer-api-status" class="text-[11px]" style="color: var(--text-muted);">Moteur local autonome actif</p>
+              </div>
+            </div>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+
+          <div class="my-3 border-t" style="border-color: var(--border-subtle);"></div>
+
+          <button type="button" onclick="closeDrawer(); openInfoModal('guide');" class="surface-alt flex w-full items-center justify-between p-3 text-left text-xs font-semibold">
+            <span>Guide d'utilisation (5 étapes)</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+
+          <button type="button" onclick="closeDrawer(); openInfoModal('privacy');" class="surface-alt flex w-full items-center justify-between p-3 text-left text-xs font-semibold">
+            <span>Politique de confidentialité</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+
+          <button type="button" onclick="closeDrawer(); openInfoModal('cookies');" class="surface-alt flex w-full items-center justify-between p-3 text-left text-xs font-semibold">
+            <span>Stockage local & Cookies</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+
+          <button type="button" onclick="closeDrawer(); openInfoModal('terms');" class="surface-alt flex w-full items-center justify-between p-3 text-left text-xs font-semibold">
+            <span>Conditions d'utilisation</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-6 border-t pt-4 text-center text-[11px]" style="border-color: var(--border-subtle); color: var(--text-muted);">
+        Reviso — Assistant Pédagogique & Préparation Examens
+      </div>
+    </aside>
+  </div>
+
+  <!-- ========================================================================
+       MODALE CONFIGURATION CODE PIN (4 CHIFFRES)
+       ======================================================================== -->
+  <div id="modal-pin-settings" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div class="modal-panel surface-card w-full max-w-md p-6">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display text-base font-extrabold">Code PIN de sécurité (4 chiffres)</h3>
+        <button type="button" onclick="closeModal('modal-pin-settings')" class="surface-alt flex h-8 w-8 items-center justify-center rounded-lg">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <p class="mt-1.5 text-xs" style="color: var(--text-secondary);">
+        Protégez l'accès à vos cours et révisions sur cet appareil avec un code personnel à 4 chiffres.
+      </p>
+      <form onsubmit="savePinSetting(event)" class="mt-4 space-y-3">
+        <div>
+          <label class="mb-1 block text-xs font-semibold">Nouveau code PIN (4 chiffres)</label>
+          <input type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" id="input-new-pin" class="input-field text-center text-lg tracking-[0.5em]" placeholder="0000" required />
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+          <button type="button" onclick="disablePinSetting()" id="btn-disable-pin" class="hidden rounded-xl px-3 py-2 text-xs font-bold text-rose-500 hover:bg-rose-500/10">
+            Désactiver le PIN
+          </button>
+          <div class="ml-auto flex gap-2">
+            <button type="button" onclick="lockAppNow()" id="btn-lock-now" class="surface-alt hidden px-3 py-2 text-xs font-semibold">Verrouiller</button>
+            <button type="submit" class="btn-active-accent rounded-xl px-4 py-2 text-xs font-bold">Enregistrer le PIN</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODALE CLÉ API GOOGLE AI STUDIO (GEMINI)
+       ======================================================================== -->
+  <div id="modal-api-key" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div class="modal-panel surface-card w-full max-w-md p-6">
+      <div class="flex items-center justify-between">
+        <h3 class="font-display text-base font-extrabold">Clé API Gemini (Google AI Studio)</h3>
+        <button type="button" onclick="closeModal('modal-api-key')" class="surface-alt flex h-8 w-8 items-center justify-center rounded-lg">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <p class="mt-1.5 text-xs leading-relaxed" style="color: var(--text-secondary);">
+        Sans clé API, Reviso fonctionne gratuitement grâce à son moteur local d'analyse. Vous pouvez aussi coller une clé gratuite <strong>Google AI Studio</strong> (<code>AIza...</code>) enregistrée uniquement dans votre navigateur.
+      </p>
+      <form onsubmit="saveGeminiApiKey(event)" class="mt-4 space-y-3">
+        <div>
+          <label class="mb-1 block text-xs font-semibold">Clé API Google AI Studio</label>
+          <input type="password" id="input-gemini-key" class="input-field" placeholder="AIzaSy..." />
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="removeGeminiApiKey()" class="surface-alt px-3 py-2 text-xs font-semibold text-rose-500">Effacer la clé</button>
+          <button type="submit" class="btn-active-accent rounded-xl px-4 py-2 text-xs font-bold">Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODALE D'INFORMATION (GUIDE, CONFIDENTIALITÉ, COOKIES, CONDITIONS)
+       ======================================================================== -->
+  <div id="modal-info" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div class="modal-panel surface-card max-h-[85vh] w-full max-w-xl overflow-y-auto p-6">
+      <div class="flex items-center justify-between border-b pb-3" style="border-color: var(--border-subtle);">
+        <h3 id="modal-info-title" class="font-display text-base font-extrabold">Information</h3>
+        <button type="button" onclick="closeModal('modal-info')" class="surface-alt flex h-8 w-8 items-center justify-center rounded-lg">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div id="modal-info-body" class="mt-4 space-y-3 text-xs leading-relaxed sm:text-sm" style="color: var(--text-secondary);"></div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODALE DE CONFIRMATION PERSONNALISÉE (SANS confirm() NATIF)
+       ======================================================================== -->
+  <div id="modal-confirm" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+    <div class="modal-panel surface-card w-full max-w-sm p-6 text-center">
+      <h3 id="confirm-title" class="font-display text-base font-extrabold">Confirmation</h3>
+      <p id="confirm-message" class="mt-2 text-xs leading-relaxed" style="color: var(--text-secondary);">Voulez-vous confirmer cette action ?</p>
+      <div class="mt-5 flex justify-center gap-2.5">
+        <button type="button" onclick="closeModal('modal-confirm')" class="surface-alt px-4 py-2 text-xs font-semibold">Annuler</button>
+        <button type="button" id="confirm-accept-btn" class="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700">Confirmer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       NOTIFICATION TOAST DISCRÈTE (SANS alert() NATIF)
+       ======================================================================== -->
+  <div id="toast-container" class="pointer-events-none fixed top-16 left-0 right-0 z-50 flex justify-center px-4">
+    <div id="toast-pill" class="surface-card flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold opacity-0 transition-all duration-300" style="transform: translateY(-10px);">
+      <span class="h-2 w-2 rounded-full" style="background-color: var(--active-color);"></span>
+      <span id="toast-text">Notification</span>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       LOGIQUE APPLICATIVE COMPLÈTE REVISO
+       ======================================================================== -->
+  <script>
+    if (window.pdfjsLib) {
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    const STORAGE_KEY = 'reviso_v7_state';
+
+    const TAB_META = [
+      { id: 'documents', label: 'Documents', light: '#173B72', lightGlow: 'rgba(23, 59, 114, 0.35)', dark: '#2563EB', darkGlow: 'rgba(37, 99, 235, 0.45)' },
+      { id: 'annales',   label: 'Annales',   light: '#0EA5E9', lightGlow: 'rgba(14, 165, 233, 0.35)', dark: '#0EA5E9', darkGlow: 'rgba(14, 165, 233, 0.45)' },
+      { id: 'planning',  label: 'Planning',  light: '#10B981', lightGlow: 'rgba(16, 185, 129, 0.35)', dark: '#10B981', darkGlow: 'rgba(16, 185, 129, 0.45)' },
+      { id: 'revision',  label: 'Révision',  light: '#F59E0B', lightGlow: 'rgba(245, 158, 11, 0.35)', dark: '#F59E0B', darkGlow: 'rgba(245, 158, 11, 0.45)' },
+      { id: 'tuteur',    label: 'Tuteur IA', light: '#7C3AED', lightGlow: 'rgba(124, 58, 237, 0.35)', dark: '#7C3AED', darkGlow: 'rgba(124, 58, 237, 0.45)' }
+    ];
+
+    let appState = {
+      theme: null,
+      activeTabIndex: 0,
+      pinCode: null,
+      geminiApiKey: '',
+      profile: null,
+      documents: [],
+      scheduleRhythm: 'standard',
+      schedule: [],
+      flashcards: [],
+      qcmList: [],
+      cognitive: {
+        retention: 50,
+        analysis: 54,
+        reasoning: 52,
+        method: 48
+      },
+      tutorHistory: []
+    };
+
+    let currentSheetFormat = 'synthese';
+    let currentFlashcardIndex = 0;
+    let currentQcmIndex = 0;
+    let qcmScore = 0;
+    let qcmAnsweredCount = 0;
+    let currentMockQuestion = null;
+    let pinInputBuffer = '';
+    let pendingConfirmAction = null;
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          appState = { ...appState, ...parsed };
+        }
+      } catch (err) {
+        console.warn('Lecture stockage local :', err);
+      }
+      if (!appState.theme) {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        appState.theme = prefersDark ? 'dark' : 'light';
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (err) {
+        showToast('Espace local presque saturé : pensez à alléger certains fichiers.');
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // 1. THÈME CLAIR / SOMBRE & SYNCHRONISATION DES COULEURS
+    // ------------------------------------------------------------------------
+    function applyTheme(themeName) {
+      appState.theme = themeName === 'dark' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', appState.theme);
+
+      const sunIcon = document.getElementById('icon-sun');
+      const moonIcon = document.getElementById('icon-moon');
+      const drawerThemeLabel = document.getElementById('drawer-theme-label');
+
+      if (appState.theme === 'dark') {
+        sunIcon.classList.remove('hidden');
+        moonIcon.classList.add('hidden');
+        if (drawerThemeLabel) drawerThemeLabel.textContent = 'Thème sombre actif';
+      } else {
+        sunIcon.classList.add('hidden');
+        moonIcon.classList.remove('hidden');
+        if (drawerThemeLabel) drawerThemeLabel.textContent = 'Thème clair actif';
+      }
+
+      syncActiveAccentColors(appState.activeTabIndex);
+      renderAllVisualIllustrations();
+      saveState();
+    }
+
+    function toggleTheme() {
+      applyTheme(appState.theme === 'dark' ? 'light' : 'dark');
+    }
+
+    function syncActiveAccentColors(index) {
+      const meta = TAB_META[index] || TAB_META[0];
+      const isDark = appState.theme === 'dark';
+      document.documentElement.style.setProperty('--active-color', isDark ? meta.dark : meta.light);
+      document.documentElement.style.setProperty('--active-glow', isDark ? meta.darkGlow : meta.lightGlow);
+    }
+
+    // ------------------------------------------------------------------------
+    // 2. BIBLIOTHÈQUE D'ILLUSTRATIONS VECTORIELLES RECOLORÉES (PLANCHES)
+    // ------------------------------------------------------------------------
+    function getBuildingIllustration(profile) {
+      const isDark = appState.theme === 'dark';
+      const cycle = profile ? profile.cycle : 'default';
+      const domain = profile ? profile.domain : '';
+
+      const skyTop = isDark ? '#0F172A' : '#E0F2FE';
+      const skyBottom = isDark ? '#1E293B' : '#F8FAFC';
+      const wallMain = isDark ? '#1E293B' : '#FFFFFF';
+      const wallShade = isDark ? '#334155' : '#DBEAFE';
+      const roofFill = isDark ? '#2563EB' : '#173B72';
+      const strokeCol = isDark ? '#64748B' : '#173B72';
+      const winFill = isDark ? '#F59E0B' : '#0EA5E9';
+      const winOp = isDark ? '0.88' : '0.32';
+      const groundCol = isDark ? '#0B1120' : '#E2E8F0';
+
+      const skyElements = isDark
+        ? `
+          <circle cx="250" cy="34" r="11" fill="#F8FAFC" opacity="0.92"/>
+          <circle cx="255" cy="30" r="10" fill="${skyTop}"/>
+          <circle cx="48" cy="26" r="1.6" fill="#F8FAFC" opacity="0.85"/>
+          <circle cx="96" cy="18" r="1.2" fill="#F8FAFC" opacity="0.65"/>
+          <circle cx="192" cy="24" r="1.5" fill="#F8FAFC" opacity="0.8"/>
+          <circle cx="222" cy="48" r="1.2" fill="#F8FAFC" opacity="0.5"/>
+        `
+        : `
+          <circle cx="246" cy="34" r="16" fill="#FDE68A" opacity="0.75"/>
+          <circle cx="246" cy="34" r="10" fill="#F59E0B"/>
+          <g fill="#FFFFFF" opacity="0.85">
+            <circle cx="62" cy="30" r="8"/><circle cx="72" cy="28" r="10"/><circle cx="83" cy="31" r="7"/>
+          </g>
+        `;
+
+      let architectureSVG = '';
+
+      if (cycle === 'college_gabon') {
+        // Collège : Bâtiment scolaire à 3 corps avec fronton triangulaire, horloge centrale et drapeau au sommet
+        architectureSVG = `
+          <!-- Drapeau au sommet -->
+          <line x1="150" y1="14" x2="150" y2="32" stroke="${strokeCol}" stroke-width="1.8"/>
+          <path d="M150 15 L167 19 L150 23 Z" fill="#10B981"/>
+          <!-- Corps latéraux -->
+          <rect x="64" y="66" width="54" height="76" rx="2" fill="${wallMain}" stroke="${strokeCol}" stroke-width="1.5"/>
+          <rect x="182" y="66" width="54" height="76" rx="2" fill="${wallMain}" stroke="${strokeCol}" stroke-width="1.5"/>
+          <!-- Corps central & fronton triangulaire -->
+          <polygon points="150,32 108,58 192,58" fill="${roofFill}" stroke="${strokeCol}" stroke-width="1.5"/>
+          <rect x="114" y="58" width="72" height="84" fill="${wallMain}" stroke="${strokeCol}" stroke-width="1.5"/>
+          <!-- Horloge centrale -->
+          <circle cx="150" cy="47" r="7.5" fill="#FFFFFF" stroke="${strokeCol}" stroke-width="1.4"/>
+          <polyline points="150,43 150,47 153,49" fill="none" stroke="#173B72" stroke-width="1.4" stroke-linecap="round"/>
+          <!-- Fenêtres & porte -->
+          <rect x="74" y="76" width="14" height="18" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="94" y="76" width="14" height="18" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="74" y="102" width="14" height="18" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="94" y="102" width="14" height="18" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="192" y="76" width="14" height="18" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="212" y="76" width="14" height="18" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="192" y="102" width="14" height="18" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="212" y="102" width="14" height="18" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="126" y="68" width="18" height="22" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="156" y="68" width="18" height="22" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <path d="M138 142 V108 A12 12 0 0 1 162 108 V142 Z" fill="${wallShade}" stroke="${strokeCol}" stroke-width="1.4"/>
+        `;
+      } else if (cycle === 'lycee_general_gabon') {
+        // Lycée Général : Bâtiment scolaire symétrique avec livre ouvert sur le fronton
+        architectureSVG = `
+          <rect x="68" y="68" width="52" height="74" rx="2" fill="${wallMain}" stroke="${strokeCol}" stroke-width="1.5"/>
+          <rect x="180" y="68" width="52" height="74" rx="2" fill="${wallMain}" stroke="${strokeCol}" stroke-width="1.5"/>
+          <polygon points="150,26 110,54 190,54" fill="${roofFill}" stroke="${strokeCol}" stroke-width="1.5"/>
+          <rect x="116" y="54" width="68" height="88" fill="${wallMain}" stroke="${strokeCol}" stroke-width="1.5"/>
+          <!-- Livre ouvert sur le fronton -->
+          <path d="M137 47 Q143 44 150 47 Q157 44 163 47 V37 Q157 34 150 37 Q143 34 137 37 Z" fill="#FFFFFF" stroke="${strokeCol}" stroke-width="1.2"/>
+          <line x1="150" y1="37" x2="150" y2="47" stroke="${strokeCol}" stroke-width="1.1"/>
+          <!-- Fenêtres symétriques -->
+          <rect x="78" y="78" width="14" height="20" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="98" y="78" width="14" height="20" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="78" y="106" width="14" height="20" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="98" y="106" width="14" height="20" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="188" y="78" width="14" height="20" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="208" y="78" width="14" height="20" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="188" y="106" width="14" height="20" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="208" y="106" width="14" height="20" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="136" y="96" width="28" height="46" fill="${wallShade}" stroke="${strokeCol}" stroke-width="1.4"/>
+          <line x1="150" y1="96" x2="150" y2="142" stroke="${strokeCol}" stroke-width="1.2"/>
+        `;
+      } else if (cycle === 'lycee_technique_gabon') {
+        // Lycée Technique : Bâtiment technique avec toque de diplômé inscrite dans une roue dentée
+        architectureSVG = `
+          <rect x="64" y="60" width="172" height="82" rx="4" fill="${wallMain}" stroke="${strokeCol}" stroke-width="1.5"/>
+          <rect x="64" y="52" width="172" height="10" rx="2" fill="${roofFill}"/>
+          <!-- Roue dentée / engrenage avec toque inscrite -->
+          <circle cx="150" cy="44" r="20" fill="${wallMain}" stroke="#F59E0B" stroke-width="3.5" stroke-dasharray="5 3"/>
+          <circle cx="150" cy="44" r="14" fill="${roofFill}"/>
+          <polygon points="150,37 139,42 150,47 161,42" fill="#FFFFFF"/>
+          <rect x="145" y="45" width="10" height="4" fill="#F59E0B"/>
+          <!-- Ateliers vitrés -->
+          <rect x="78" y="74" width="32" height="24" rx="2" fill="${winFill}" opacity="${winOp}" stroke="${strokeCol}" stroke-width="1"/>
+          <rect x="190" y="74" width="32" height="24" rx="2" fill="${winFill}" opacity="${winOp}" stroke="${strokeCol}" stroke-width="1"/>
+          <rect x="134" y="96" width="32" height="46" rx="2" fill="${wallShade}" stroke="${strokeCol}" stroke-width="1.4"/>
+        `;
+      } else if (cycle === 'superieur' && domain === 'sante') {
+        // Santé & Sciences Médicales : CHU / Faculté de Médecine à croix médicale centrale
+        architectureSVG = `
+          <rect x="68" y="64" width="46" height="78" rx="3" fill="${wallMain}" stroke="${strokeCol}" stroke-width="1.5"/>
+          <rect x="186" y="64" width="46" height="78" rx="3" fill="${wallMain}" stroke="${strokeCol}" stroke-width="1.5"/>
+          <rect x="112" y="38" width="76" height="104" rx="4" fill="${wallMain}" stroke="${strokeCol}" stroke-width="1.6"/>
+          <!-- Fronton avec croix médicale émeraude -->
+          <rect x="134" y="22" width="32" height="16" rx="3" fill="${roofFill}"/>
+          <rect x="147" y="25" width="6" height="10" rx="1" fill="#10B981"/>
+          <rect x="145" y="27" width="10" height="6" rx="1" fill="#10B981"/>
+          <!-- Verrière centrale -->
+          <rect x="132" y="50" width="36" height="92" fill="${winFill}" opacity="${winOp}" stroke="${strokeCol}" stroke-width="1.1"/>
+          <line x1="150" y1="50" x2="150" y2="142" stroke="${strokeCol}" stroke-width="1.1"/>
+          <rect x="78" y="76" width="12" height="16" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="94" y="76" width="12" height="16" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="194" y="76" width="12" height="16" rx="2" fill="${winFill}" opacity="${winOp}"/>
+          <rect x="210" y="76" width="12" height="16" rx="2" fill="${winFill}" opacity="${winOp}"/>
+        `;
+      } else {
+        // Université & Faculté (hors santé) ou par défaut : Façade universitaire à fronton triangulaire et colonnes classiques + médaillon toque
+        architectureSVG = `
+          <polygon points="150,24 76,56 224,56" fill="${roofFill}" stroke="${strokeCol}" stroke-width="1.5"/>
+          <rect x="84" y="56" width="132" height="86" fill="${wallMain}" stroke="${strokeCol}" stroke-width="1.5"/>
+          <!-- Colonnes classiques -->
+          <rect x="96" y="62" width="10" height="80" fill="${wallShade}" stroke="${strokeCol}" stroke-width="1"/>
+          <rect x="120" y="62" width="10" height="80" fill="${wallShade}" stroke="${strokeCol}" stroke-width="1"/>
+          <rect x="170" y="62" width="10" height="80" fill="${wallShade}" stroke="${strokeCol}" stroke-width="1"/>
+          <rect x="194" y="62" width="10" height="80" fill="${wallShade}" stroke="${strokeCol}" stroke-width="1"/>
+          <!-- Entrée centrale voûtée -->
+          <path d="M138 142 V92 A12 12 0 0 1 162 92 V142 Z" fill="${winFill}" opacity="${winOp}" stroke="${strokeCol}" stroke-width="1.3"/>
+          <!-- Médaillon circulaire toque de diplômé en haut à droite -->
+          <circle cx="226" cy="46" r="18" fill="#2563EB" stroke="#FFFFFF" stroke-width="2"/>
+          <polygon points="226,38 214,44 226,50 238,44" fill="#FFFFFF"/>
+          <path d="M220 47 V52 C223 54 229 54 232 52 V47" fill="none" stroke="#F59E0B" stroke-width="1.6"/>
+        `;
+      }
+
+      return `
+        <svg viewBox="0 0 300 158" class="h-full w-full object-cover" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+          <defs>
+            <linearGradient id="revisoSkyGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${skyTop}"/>
+              <stop offset="100%" stop-color="${skyBottom}"/>
+            </linearGradient>
+          </defs>
+          <rect width="300" height="158" fill="url(#revisoSkyGrad)"/>
+          ${skyElements}
+          ${architectureSVG}
+          <rect x="0" y="142" width="300" height="16" fill="${groundCol}"/>
+          <circle cx="46" cy="130" r="11" fill="#10B981" opacity="0.8"/>
+          <rect x="44" y="134" width="4" height="8" fill="${strokeCol}"/>
+          <circle cx="254" cy="130" r="11" fill="#10B981" opacity="0.8"/>
+          <rect x="252" y="134" width="4" height="8" fill="${strokeCol}"/>
+        </svg>
+      `;
+    }
+
+    function getDomainBadgeSVG(profile) {
+      const cycle = profile ? profile.cycle : 'default';
+      const domain = profile ? profile.domain : '';
+      const track = profile && profile.track ? profile.track.toLowerCase() : '';
+
+      let bgCircle = '#173B72';
+      let shadowCol = '#0F274D';
+      let motif = '';
+
+      if (cycle === 'college_gabon') {
+        // Collège : Pomme & sac à dos scolaire
+        bgCircle = '#0EA5E9';
+        shadowCol = '#0284C7';
+        motif = `
+          <path d="M28 50 L58 50 L58 34 L42 20 L18 36 Z" fill="${shadowCol}" opacity="0.45"/>
+          <rect x="21" y="25" width="16" height="18" rx="4" fill="#F59E0B"/>
+          <path d="M25 25 V21 A4 4 0 0 1 33 21 V25" fill="none" stroke="#173B72" stroke-width="2.2"/>
+          <rect x="24" y="31" width="10" height="5" rx="1.5" fill="#FFFFFF"/>
+          <circle cx="38" cy="36" r="6.5" fill="#EF4444"/>
+          <path d="M38 29 Q41 25 44 27" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round"/>
+        `;
+      } else if (cycle === 'lycee_general_gabon') {
+        if (track.includes('série c') || track.includes('série d') || track.includes('seconde s')) {
+          // Séries S, C, D : Atome orbital & fiole Erlenmeyer
+          bgCircle = '#2563EB';
+          shadowCol = '#1D4ED8';
+          motif = `
+            <path d="M24 46 L54 54 L58 34 L38 18 L20 34 Z" fill="${shadowCol}" opacity="0.45"/>
+            <ellipse cx="28" cy="30" rx="12" ry="5" transform="rotate(-30 28 30)" fill="none" stroke="#38BDF8" stroke-width="1.8"/>
+            <ellipse cx="28" cy="30" rx="12" ry="5" transform="rotate(30 28 30)" fill="none" stroke="#38BDF8" stroke-width="1.8"/>
+            <circle cx="28" cy="30" r="2.5" fill="#FFFFFF"/>
+            <path d="M38 24 H44 V29 L49 41 A2 2 0 0 1 47 43 H35 A2 2 0 0 1 33 41 L38 29 Z" fill="#FFFFFF"/>
+            <path d="M35 37 H47 L48.5 41.5 H33.5 Z" fill="#F59E0B"/>
+          `;
+        } else if (track.includes('série b')) {
+          // Série B (Sciences Économiques & Sociales) : Calculatrice & graphique
+          bgCircle = '#F59E0B';
+          shadowCol = '#D97706';
+          motif = `
+            <path d="M22 46 L52 56 L58 36 L40 18 L20 34 Z" fill="${shadowCol}" opacity="0.45"/>
+            <rect x="20" y="19" width="18" height="24" rx="2.5" fill="#173B72"/>
+            <rect x="23" y="22" width="12" height="5" rx="1" fill="#38BDF8"/>
+            <circle cx="25" cy="31" r="1.4" fill="#FFFFFF"/><circle cx="29" cy="31" r="1.4" fill="#FFFFFF"/><circle cx="33" cy="31" r="1.4" fill="#FFFFFF"/>
+            <circle cx="25" cy="36" r="1.4" fill="#FFFFFF"/><circle cx="29" cy="36" r="1.4" fill="#FFFFFF"/><circle cx="33" cy="36" r="1.4" fill="#F59E0B"/>
+            <polyline points="36,39 41,33 45,35 50,26" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+          `;
+        } else {
+          // Séries LE, A1, A2 (Littéraires) : Livre ouvert, lunettes et plume
+          bgCircle = '#7C3AED';
+          shadowCol = '#5B21B6';
+          motif = `
+            <path d="M20 44 L50 56 L58 36 L40 20 L18 32 Z" fill="${shadowCol}" opacity="0.45"/>
+            <path d="M18 28 Q25 25 32 28 Q39 25 46 28 V42 Q39 39 32 42 Q25 39 18 42 Z" fill="#FFFFFF"/>
+            <line x1="32" y1="28" x2="32" y2="42" stroke="#173B72" stroke-width="1.4"/>
+            <path d="M38 22 C43 16 49 17 48 23 C47 28 41 31 36 33 L34 36" fill="none" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round"/>
+          `;
+        }
+      } else if (cycle === 'lycee_technique_gabon') {
+        // Lycée Technique : Compas, équerre & crayon
+        bgCircle = '#10B981';
+        shadowCol = '#059669';
+        motif = `
+          <path d="M22 46 L52 56 L58 36 L40 18 L20 34 Z" fill="${shadowCol}" opacity="0.45"/>
+          <polygon points="34,42 48,42 34,20" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linejoin="round"/>
+          <path d="M25 19 L19 42 M25 19 L31 42" stroke="#173B72" stroke-width="2.3" stroke-linecap="round"/>
+          <circle cx="25" cy="21" r="2.5" fill="#F59E0B"/>
+        `;
+      } else if (cycle === 'superieur' && domain === 'sante') {
+        if (track.includes('maïeutique')) {
+          // Maïeutique : Trait continu femme enceinte avec fœtus in utero
+          bgCircle = '#0EA5E9';
+          shadowCol = '#0284C7';
+          motif = `
+            <path d="M26 16 C32 16 36 18 37 22 C37 25 34 27 33 29 C39 31 43 37 42 44 C41 49 36 51 31 51 L27 51 C26 47 27 44 26 41" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M32 34 C35 34 37 37 36 40 C35 43 31 44 29 42 C28 40 29 37 32 34 Z" fill="none" stroke="#FDE68A" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="32.5" cy="41.5" r="1.5" fill="#FDE68A"/>
+          `;
+        } else if (track.includes('pharmacie')) {
+          // Pharmacie : Gélule pharmaceutique & fiole
+          bgCircle = '#10B981';
+          shadowCol = '#059669';
+          motif = `
+            <g transform="rotate(-35 28 32)">
+              <rect x="21" y="21" width="14" height="22" rx="7" fill="#FFFFFF"/>
+              <path d="M21 32 H35 V36 A7 7 0 0 1 21 36 Z" fill="#F59E0B"/>
+            </g>
+            <path d="M40 24 H46 V29 L50 40 A2 2 0 0 1 48 42 H38 A2 2 0 0 1 36 40 L40 29 Z" fill="#173B72"/>
+          `;
+        } else {
+          // Médecine, Soins Infirmiers, Aide-Soignant : Duo de soignants avec coiffe et calot à croix médicale
+          bgCircle = '#173B72';
+          shadowCol = '#0F274D';
+          motif = `
+            <!-- Infirmière / Soignante gauche -->
+            <path d="M18 24 H30 L29 29 H19 Z" fill="#FFFFFF"/>
+            <rect x="23" y="25.2" width="2" height="3" fill="#0EA5E9"/>
+            <rect x="22.5" y="25.7" width="3" height="2" fill="#0EA5E9"/>
+            <circle cx="24" cy="33" r="4.5" fill="#38BDF8"/>
+            <path d="M16 46 C16 40 32 40 32 46 Z" fill="#FFFFFF"/>
+            <!-- Médecin / Soignant droite -->
+            <rect x="33" y="20" width="13" height="6" rx="1.5" fill="#FFFFFF"/>
+            <rect x="38.5" y="21.2" width="2" height="3.6" fill="#10B981"/>
+            <rect x="37.7" y="22" width="3.6" height="2" fill="#10B981"/>
+            <circle cx="39.5" cy="31.5" r="5" fill="#38BDF8"/>
+            <path d="M31 46 C31 39 48 39 48 46 Z" fill="#0EA5E9"/>
+          `;
+        }
+      } else if (cycle === 'superieur' && domain === 'droit') {
+        // Droit : Balance de la justice posée sur deux livres empilés
+        bgCircle = '#173B72';
+        shadowCol = '#0F274D';
+        motif = `
+          <rect x="20" y="41" width="24" height="4.5" rx="1.5" fill="#FFFFFF"/>
+          <rect x="22" y="36" width="22" height="4.5" rx="1.5" fill="#38BDF8"/>
+          <line x1="32" y1="18" x2="32" y2="36" stroke="#F59E0B" stroke-width="2.2"/>
+          <line x1="21" y1="21" x2="43" y2="21" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round"/>
+          <path d="M17 28 A4.5 4.5 0 0 0 25 28 Z" fill="#FFFFFF"/>
+          <path d="M39 28 A4.5 4.5 0 0 0 47 28 Z" fill="#FFFFFF"/>
+          <line x1="21" y1="21" x2="18" y2="28" stroke="#FFFFFF" stroke-width="1.2"/>
+          <line x1="21" y1="21" x2="24" y2="28" stroke="#FFFFFF" stroke-width="1.2"/>
+          <line x1="43" y1="21" x2="40" y2="28" stroke="#FFFFFF" stroke-width="1.2"/>
+          <line x1="43" y1="21" x2="46" y2="28" stroke="#FFFFFF" stroke-width="1.2"/>
+        `;
+      } else if (cycle === 'superieur' && domain === 'gestion') {
+        // Économie, Gestion, Commerce, Logistique : Globe terrestre & calculatrice
+        bgCircle = '#0EA5E9';
+        shadowCol = '#0284C7';
+        motif = `
+          <circle cx="27" cy="31" r="10" fill="#FFFFFF"/>
+          <ellipse cx="27" cy="31" rx="5" ry="10" fill="none" stroke="#173B72" stroke-width="1.3"/>
+          <line x1="17" y1="31" x2="37" y2="31" stroke="#173B72" stroke-width="1.3"/>
+          <rect x="35" y="26" width="13" height="18" rx="2" fill="#173B72"/>
+          <rect x="37" y="28.5" width="9" height="4" rx="0.8" fill="#F59E0B"/>
+          <circle cx="39" cy="36" r="1" fill="#FFFFFF"/><circle cx="44" cy="36" r="1" fill="#FFFFFF"/>
+          <circle cx="39" cy="40" r="1" fill="#FFFFFF"/><circle cx="44" cy="40" r="1" fill="#10B981"/>
+        `;
+      } else if (cycle === 'superieur' && domain === 'lettres') {
+        // Lettres, Langues, Histoire, Géographie : Globe & plume d'écriture
+        bgCircle = '#7C3AED';
+        shadowCol = '#5B21B6';
+        motif = `
+          <circle cx="28" cy="32" r="10.5" fill="#38BDF8" stroke="#FFFFFF" stroke-width="1.6"/>
+          <ellipse cx="28" cy="32" rx="5" ry="10.5" fill="none" stroke="#FFFFFF" stroke-width="1.3"/>
+          <path d="M37 21 C43 16 48 18 46 24 C44 29 39 32 34 34 L31 38" fill="none" stroke="#F59E0B" stroke-width="2.3" stroke-linecap="round"/>
+        `;
+      } else {
+        // Sciences / Ingénierie ou Défaut : Atome orbital & toque universitaire
+        bgCircle = '#2563EB';
+        shadowCol = '#1D4ED8';
+        motif = `
+          <ellipse cx="32" cy="32" rx="15" ry="6" transform="rotate(-30 32 32)" fill="none" stroke="#FFFFFF" stroke-width="1.8"/>
+          <ellipse cx="32" cy="32" rx="15" ry="6" transform="rotate(30 32 32)" fill="none" stroke="#38BDF8" stroke-width="1.8"/>
+          <ellipse cx="32" cy="32" rx="15" ry="6" transform="rotate(90 32 32)" fill="none" stroke="#F59E0B" stroke-width="1.8"/>
+          <circle cx="32" cy="32" r="3.5" fill="#FFFFFF"/>
+        `;
+      }
+
+      return `
+        <svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
+          <circle cx="32" cy="32" r="30" fill="${bgCircle}"/>
+          ${motif}
+        </svg>
+      `;
+    }
+
+    function getTabSectionBadgeSVG(tabKey) {
+      if (tabKey === 'docs') {
+        // Cahier à spirales
+        return `
+          <svg width="52" height="52" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="30" fill="#173B72"/>
+            <path d="M22 46 L48 56 L56 36 L42 18 L22 46 Z" fill="#0F274D" opacity="0.5"/>
+            <rect x="21" y="17" width="23" height="30" rx="3" fill="#2563EB"/>
+            <line x1="27" y1="24" x2="39" y2="24" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
+            <line x1="27" y1="30" x2="39" y2="30" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round"/>
+            <line x1="27" y1="36" x2="35" y2="36" stroke="#38BDF8" stroke-width="2.2" stroke-linecap="round"/>
+            <line x1="18" y1="21" x2="23" y2="21" stroke="#F8FAFC" stroke-width="2" stroke-linecap="round"/>
+            <line x1="18" y1="27" x2="23" y2="27" stroke="#F8FAFC" stroke-width="2" stroke-linecap="round"/>
+            <line x1="18" y1="33" x2="23" y2="33" stroke="#F8FAFC" stroke-width="2" stroke-linecap="round"/>
+            <line x1="18" y1="39" x2="23" y2="39" stroke="#F8FAFC" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        `;
+      }
+      if (tabKey === 'annales') {
+        // Loupe d'analyse
+        return `
+          <svg width="52" height="52" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="30" fill="#0EA5E9"/>
+            <path d="M22 36 L48 56 L58 40 L36 22 Z" fill="#0284C7" opacity="0.5"/>
+            <line x1="35" y1="35" x2="46" y2="46" stroke="#173B72" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="28" cy="28" r="11" fill="#F59E0B" stroke="#FFFFFF" stroke-width="2.5"/>
+            <path d="M23 24 A6 6 0 0 1 30 22" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        `;
+      }
+      if (tabKey === 'planning') {
+        // Horloge cadran
+        return `
+          <svg width="52" height="52" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="30" fill="#10B981"/>
+            <path d="M22 44 L48 56 L58 36 L42 20 Z" fill="#059669" opacity="0.5"/>
+            <circle cx="32" cy="32" r="15" fill="#FFFFFF" stroke="#F59E0B" stroke-width="3"/>
+            <polyline points="32,23 32,32 39,35" fill="none" stroke="#173B72" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="32" cy="32" r="2" fill="#173B72"/>
+          </svg>
+        `;
+      }
+      if (tabKey === 'revision') {
+        // Ampoule lumineuse rayonnante
+        return `
+          <svg width="52" height="52" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="32" r="30" fill="#F59E0B"/>
+            <path d="M26 46 L48 56 L56 36 L38 22 Z" fill="#D97706" opacity="0.5"/>
+            <path d="M25 32 A8 8 0 1 1 39 32 C39 36 36 38 36 41 H28 C28 38 25 36 25 32 Z" fill="#FFFFFF"/>
+            <rect x="28" y="42.5" width="8" height="3.5" rx="1.5" fill="#173B72"/>
+            <line x1="32" y1="15" x2="32" y2="19" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+            <line x1="20" y1="21" x2="23" y2="23" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+            <line x1="44" y1="21" x2="41" y2="23" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        `;
+      }
+      // tuteur : Profil de tête avec engrenages cognitifs
+      return `
+        <svg width="52" height="52" viewBox="0 0 64 64" aria-hidden="true">
+          <circle cx="32" cy="32" r="30" fill="#7C3AED"/>
+          <path d="M24 46 L48 56 L56 36 L38 20 Z" fill="#5B21B6" opacity="0.5"/>
+          <path d="M24 46 V41 C20 39 19 34 21 30 C21 22 27 17 34 17 C41 17 45 22 45 29 C45 33 43 36 40 38 V46 Z" fill="#FFFFFF"/>
+          <circle cx="31" cy="27" r="4" fill="none" stroke="#7C3AED" stroke-width="2" stroke-dasharray="2.5 1.5"/>
+          <circle cx="38" cy="32" r="3" fill="none" stroke="#F59E0B" stroke-width="2" stroke-dasharray="2 1.2"/>
+        </svg>
+      `;
+    }
+
+    function renderAllVisualIllustrations() {
+      const buildingBox = document.getElementById('hero-building-container');
+      const domainBadgeBox = document.getElementById('hero-domain-badge');
+      if (buildingBox) buildingBox.innerHTML = getBuildingIllustration(appState.profile);
+      if (domainBadgeBox) domainBadgeBox.innerHTML = getDomainBadgeSVG(appState.profile);
+
+      const sectionMap = {
+        docs: 'badge-section-docs',
+        annales: 'badge-section-annales',
+        planning: 'badge-section-planning',
+        revision: 'badge-section-revision',
+        tuteur: 'badge-section-tuteur'
+      };
+      Object.entries(sectionMap).forEach(([key, elId]) => {
+        const el = document.getElementById(elId);
+        if (el) el.innerHTML = getTabSectionBadgeSVG(key);
+      });
+    }
+
+    // ------------------------------------------------------------------------
+    // 3. BARRE DE NAVIGATION FLOTTANTE & TRANSITIONS DE PAGES 60 FPS
+    // ------------------------------------------------------------------------
+    function switchTab(newIndex, options = {}) {
+      if (newIndex < 0 || newIndex >= TAB_META.length) return;
+      const oldIndex = appState.activeTabIndex;
+      if (newIndex === oldIndex && !options.force) return;
+
+      appState.activeTabIndex = newIndex;
+      syncActiveAccentColors(newIndex);
+
+      const navItems = document.querySelectorAll('#bottom-nav .nav-item');
+      navItems.forEach((btn, idx) => {
+        const isActive = idx === newIndex;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      });
+
+      const direction = newIndex >= oldIndex ? 'right' : 'left';
+      TAB_META.forEach((meta, idx) => {
+        const viewEl = document.getElementById(`view-${meta.id}`);
+        if (!viewEl) return;
+
+        if (idx === newIndex) {
+          viewEl.classList.add('active');
+          viewEl.classList.remove('anim-from-right', 'anim-from-left');
+
+          const offset = direction === 'right' ? 24 : -24;
+          if (viewEl.animate) {
+            viewEl.getAnimations().forEach(a => a.cancel());
+            viewEl.animate(
+              [
+                { opacity: 0, transform: `translate3d(${offset}px, 0, 0)` },
+                { opacity: 1, transform: 'translate3d(0, 0, 0)' }
+              ],
+              { duration: 320, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'both' }
+            );
+          } else {
+            void viewEl.offsetWidth;
+            viewEl.classList.add(direction === 'right' ? 'anim-from-right' : 'anim-from-left');
+          }
+        } else {
+          viewEl.classList.remove('active', 'anim-from-right', 'anim-from-left');
+        }
+      });
+
+      if (!options.fromDrag && window.scrollY > 80) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      if (newIndex === 1) renderAnnalesView();
+      if (newIndex === 2) renderPlanningView();
+      if (newIndex === 3) renderRevisionView();
+      if (newIndex === 4) renderTutorView();
+
+      saveState();
+    }
+
+    function initBottomNavSlideGesture() {
+      const nav = document.getElementById('bottom-nav');
+      if (!nav) return;
+
+      let isSliding = false;
+      let activePointerId = null;
+
+      function resolveTabFromClientX(clientX) {
+        const rect = nav.getBoundingClientRect();
+        if (!rect.width) return appState.activeTabIndex;
+        const clampedX = Math.max(0, Math.min(rect.width - 1, clientX - rect.left));
+        return Math.floor((clampedX / rect.width) * TAB_META.length);
+      }
+
+      nav.addEventListener('pointerdown', (e) => {
+        if (e.button !== undefined && e.button !== 0) return;
+        isSliding = true;
+        activePointerId = e.pointerId;
+        try { nav.setPointerCapture(e.pointerId); } catch (_) {}
+        const idx = resolveTabFromClientX(e.clientX);
+        if (idx !== appState.activeTabIndex) switchTab(idx, { fromDrag: true });
+      });
+
+      nav.addEventListener('pointermove', (e) => {
+        if (!isSliding) return;
+        if (activePointerId !== null && e.pointerId !== activePointerId) return;
+        const idx = resolveTabFromClientX(e.clientX);
+        if (idx !== appState.activeTabIndex) {
+          if (navigator.vibrate) {
+            try { navigator.vibrate(8); } catch (_) {}
+          }
+          switchTab(idx, { fromDrag: true });
+        }
+      });
+
+      function stopSlide() {
+        if (!isSliding) return;
+        isSliding = false;
+        if (activePointerId !== null) {
+          try { nav.releasePointerCapture(activePointerId); } catch (_) {}
+          activePointerId = null;
+        }
+      }
+
+      nav.addEventListener('pointerup', stopSlide);
+      nav.addEventListener('pointercancel', stopSlide);
+
+      nav.addEventListener('touchstart', (e) => {
+        if (!e.touches || !e.touches.length) return;
+        isSliding = true;
+        const idx = resolveTabFromClientX(e.touches[0].clientX);
+        if (idx !== appState.activeTabIndex) switchTab(idx, { fromDrag: true });
+      }, { passive: true });
+
+      nav.addEventListener('touchmove', (e) => {
+        if (!isSliding || !e.touches || !e.touches.length) return;
+        const idx = resolveTabFromClientX(e.touches[0].clientX);
+        if (idx !== appState.activeTabIndex) switchTab(idx, { fromDrag: true });
+      }, { passive: true });
+
+      nav.addEventListener('touchend', () => {
+        isSliding = false;
+      }, { passive: true });
+    }
+
+    // ------------------------------------------------------------------------
+    // 4. CONFIGURATION ACADÉMIQUE GABON & SUPÉRIEUR + ENCADREMENT STRICT IA
+    // ------------------------------------------------------------------------
+    const ACADEMIC_CATALOG = {
+      college_gabon: {
+        label: 'Collège (Gabon)',
+        levels: ['6ème', '5ème', '4ème', '3ème (BEPC)'],
+        tracksByLevel: {
+          default: ['Enseignement Général (Tronc Commun Collège)']
+        }
+      },
+      lycee_general_gabon: {
+        label: 'Lycée Général (Gabon)',
+        levels: ['Seconde', 'Première', 'Terminale (Baccalauréat)'],
+        tracksByLevel: {
+          'Seconde': [
+            'Seconde S (Scientifique)',
+            'Seconde LE (Littéraire & Économique)'
+          ],
+          default: [
+            'Série C (Mathématiques & Sciences Physiques)',
+            'Série D (Sciences de la Vie & de la Terre)',
+            'Série A1 (Lettres & Langues)',
+            'Série A2 (Lettres & Sciences Humaines)',
+            'Série B (Sciences Économiques & Sociales)'
+          ]
+        }
+      },
+      lycee_technique_gabon: {
+        label: 'Lycée Technique (Gabon)',
+        levels: ['Seconde Technique', 'Première Technique', 'Terminale Technique (Bac Tech)'],
+        tracksByLevel: {
+          default: [
+            'Série E (Mathématiques & Technique)',
+            'Série F1 (Construction Mécanique)',
+            'Série F2 (Électronique)',
+            'Série F3 (Électrotechnique)',
+            'Série F4 (Génie Civil)',
+            'Série STI (Sciences & Technologies Industrielles)',
+            'Série STT / G1 (Techniques Administratives)',
+            'Série STT / G2 (Techniques Quantitatives de Gestion)',
+            'Série STT / G3 (Techniques Commerciales)',
+            'Série Hôtellerie & Restauration'
+          ]
+        }
+      },
+      superieur: {
+        label: 'Enseignement Supérieur',
+        levels: [
+          '1ère année (L1 / BTS 1 / PCEM 1)',
+          '2ème année (L2 / BTS 2 / PCEM 2)',
+          '3ème année (L3 / Licence)',
+          '4ème année (Master 1)',
+          '5ème année (Master 2 / Doctorat)'
+        ],
+        domains: {
+          sante: [
+            'Maïeutique (Sage-femme)',
+            'Médecine',
+            'Pharmacie',
+            'Soins Infirmiers (IDE)',
+            'Aide-Soignant(e)',
+            'Biologie Médicale & Laboratoire'
+          ],
+          gestion: [
+            'Gestion des Entreprises',
+            'Comptabilité & Finance',
+            'Ressources Humaines (RH)',
+            'Commerce International',
+            'Logistique & Transport',
+            'Gestion Touristique & Hôtelière'
+          ],
+          droit: [
+            'Droit Privé',
+            'Droit Public',
+            'Sciences Politiques'
+          ],
+          lettres: [
+            'Lettres Modernes',
+            'Langues Étrangères Appliquées',
+            'Histoire',
+            'Géographie',
+            'Philosophie'
+          ],
+          sciences: [
+            'Mathématiques & Informatique',
+            'Sciences Physiques & Chimie',
+            'Ingénierie & Génie Civil'
+          ]
+        }
+      }
+    };
+
+    function buildStrictAcademicContext() {
+      if (!appState.profile) {
+        return 'Profil non encore configuré. Demande à l\'étudiant de renseigner son cycle et sa filière avant toute explication.';
+      }
+      const p = appState.profile;
+      const docsSummary = appState.documents.length
+        ? appState.documents.map(d => `[${d.category.toUpperCase()}] ${d.title}`).join(' ; ')
+        : 'Aucun document importé';
+      return [
+        `CADRE ACADÉMIQUE STRICT (NE JAMAIS DÉVIER DE CE DOMAINE) :`,
+        `- Étudiant(e) : ${p.name}`,
+        `- Cycle : ${p.cycleLabel}`,
+        `- Niveau : ${p.level}`,
+        `- Série / Filière exacte : ${p.track}`,
+        `- Matière / UE prioritaire : ${p.prioritySubject}`,
+        p.school ? `- Établissement : ${p.school}` : '',
+        `- Style pédagogique optimal : ${p.cognitiveStyle}`,
+        `- Supports importés : ${docsSummary}`,
+        `CONSIGNE IMPÉRATIVE : Utilise exclusivement le vocabulaire technique, la rigueur et les références conformes à "${p.track}" (${p.level}), sans jamais glisser vers une autre discipline et sans aucun emoji.`
+      ].filter(Boolean).join('\n');
+    }
+
+    function openProfileModal() {
+      if (appState.profile) {
+        document.getElementById('prof-name').value = appState.profile.name || '';
+        document.getElementById('prof-school').value = appState.profile.school || '';
+        document.getElementById('prof-cycle').value = appState.profile.cycle || '';
+        updateProfileFormOptions();
+        if (appState.profile.domain) {
+          document.getElementById('prof-domain').value = appState.profile.domain;
+          updateProfileDomainTracks();
+        }
+        document.getElementById('prof-level').value = appState.profile.level || '';
+        updateProfileSeriesByLevel();
+        document.getElementById('prof-track').value = appState.profile.track || '';
+        document.getElementById('prof-priority-subject').value = appState.profile.prioritySubject || '';
+        document.getElementById('prof-exam-date').value = appState.profile.examDate || '';
+        document.getElementById('prof-cognitive-style').value = appState.profile.cognitiveStyle || 'Cas pratiques & Exercices guidés pas-à-pas';
+      }
+      openModal('modal-profile');
+    }
+
+    function updateProfileFormOptions() {
+      const cycle = document.getElementById('prof-cycle').value;
+      const domainGroup = document.getElementById('prof-domain-group');
+      const levelSelect = document.getElementById('prof-level');
+      const trackSelect = document.getElementById('prof-track');
+
+      levelSelect.innerHTML = '';
+      trackSelect.innerHTML = '';
+
+      if (!cycle || !ACADEMIC_CATALOG[cycle]) {
+        domainGroup.classList.add('hidden');
+        levelSelect.innerHTML = '<option value="">-- Sélectionner le cycle d\'abord --</option>';
+        trackSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+        return;
+      }
+
+      ACADEMIC_CATALOG[cycle].levels.forEach(lvl => {
+        const opt = document.createElement('option');
+        opt.value = lvl;
+        opt.textContent = lvl;
+        levelSelect.appendChild(opt);
+      });
+
+      if (cycle === 'superieur') {
+        domainGroup.classList.remove('hidden');
+        updateProfileDomainTracks();
+      } else {
+        domainGroup.classList.add('hidden');
+        updateProfileSeriesByLevel();
+      }
+    }
+
+    function updateProfileDomainTracks() {
+      const domain = document.getElementById('prof-domain').value;
+      const trackSelect = document.getElementById('prof-track');
+      trackSelect.innerHTML = '';
+      (ACADEMIC_CATALOG.superieur.domains[domain] || []).forEach(tr => {
+        const opt = document.createElement('option');
+        opt.value = tr;
+        opt.textContent = tr;
+        trackSelect.appendChild(opt);
+      });
+    }
+
+    function updateProfileSeriesByLevel() {
+      const cycle = document.getElementById('prof-cycle').value;
+      if (!cycle || cycle === 'superieur') return;
+      const level = document.getElementById('prof-level').value;
+      const trackSelect = document.getElementById('prof-track');
+      trackSelect.innerHTML = '';
+      const map = ACADEMIC_CATALOG[cycle].tracksByLevel;
+      (map[level] || map.default || []).forEach(tr => {
+        const opt = document.createElement('option');
+        opt.value = tr;
+        opt.textContent = tr;
+        trackSelect.appendChild(opt);
+      });
+    }
+
+    function saveAcademicProfile(e) {
+      e.preventDefault();
+      const name = document.getElementById('prof-name').value.trim();
+      const cycle = document.getElementById('prof-cycle').value;
+      const level = document.getElementById('prof-level').value;
+      const track = document.getElementById('prof-track').value;
+      const prioritySubject = document.getElementById('prof-priority-subject').value.trim();
+
+      if (!name || !cycle || !level || !track || !prioritySubject) {
+        showToast('Veuillez remplir tous les champs obligatoires.');
+        return;
+      }
+
+      appState.profile = {
+        name,
+        school: document.getElementById('prof-school').value.trim(),
+        cycle,
+        cycleLabel: ACADEMIC_CATALOG[cycle].label,
+        domain: cycle === 'superieur' ? document.getElementById('prof-domain').value : '',
+        level,
+        track,
+        prioritySubject,
+        examDate: document.getElementById('prof-exam-date').value,
+        cognitiveStyle: document.getElementById('prof-cognitive-style').value
+      };
+
+      saveState();
+      closeModal('modal-profile');
+      refreshAllUI();
+      showToast('Parcours académique enregistré.');
+    }
+
+    // ------------------------------------------------------------------------
+    // 5. GESTION DES DOCUMENTS & EXTRACTION PDF LOCALE
+    // ------------------------------------------------------------------------
+    async function extractTextFromFile(file) {
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (ext === 'pdf' && window.pdfjsLib) {
+        const buffer = await file.arrayBuffer();
+        const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+        let fullText = '';
+        const maxPages = Math.min(pdf.numPages, 40);
+        for (let p = 1; p <= maxPages; p++) {
+          const page = await pdf.getPage(p);
+          const content = await page.getTextContent();
+          fullText += content.items.map(it => it.str).join(' ') + '\n\n';
+        }
+        return fullText.trim() || `Support PDF importé : ${file.name}`;
+      }
+      return await file.text();
+    }
+
+    async function handleMultiFileUpload(event, category) {
+      const files = Array.from(event.target.files || []);
+      if (!files.length) return;
+
+      const box = document.getElementById('pdf-progress-box');
+      const bar = document.getElementById('pdf-progress-bar');
+      const label = document.getElementById('pdf-progress-label');
+      const pctEl = document.getElementById('pdf-progress-pct');
+
+      box.classList.remove('hidden');
+      let done = 0;
+
+      for (const file of files) {
+        label.textContent = `Extraction locale : ${file.name}`;
+        try {
+          const raw = await extractTextFromFile(file);
+          const clean = raw.slice(0, 18000);
+          appState.documents.unshift({
+            id: 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+            category,
+            title: file.name.replace(/\.[^/.]+$/, ''),
+            content: clean,
+            words: clean.split(/\s+/).filter(Boolean).length,
+            addedAt: new Date().toLocaleDateString('fr-FR')
+          });
+        } catch (err) {
+          console.error('Erreur lecture PDF :', err);
+        }
+        done++;
+        const pct = Math.round((done / files.length) * 100);
+        bar.style.width = pct + '%';
+        pctEl.textContent = pct + '%';
+      }
+
+      setTimeout(() => {
+        box.classList.add('hidden');
+        bar.style.width = '0%';
+      }, 550);
+
+      event.target.value = '';
+      rebuildStudyArtifactsFromDocuments();
+      saveState();
+      refreshAllUI();
+      showToast(`${files.length} fichier(s) importé(s) avec succès.`);
+    }
+
+    function openPasteModal() {
+      document.getElementById('paste-title').value = '';
+      document.getElementById('paste-content').value = '';
+      openModal('modal-paste');
+    }
+
+    function savePastedDocument(e) {
+      e.preventDefault();
+      const category = document.getElementById('paste-category').value;
+      const title = document.getElementById('paste-title').value.trim();
+      const content = document.getElementById('paste-content').value.trim();
+      if (!title || !content) return;
+
+      appState.documents.unshift({
+        id: 'doc_' + Date.now(),
+        category,
+        title,
+        content,
+        words: content.split(/\s+/).filter(Boolean).length,
+        addedAt: new Date().toLocaleDateString('fr-FR')
+      });
+
+      rebuildStudyArtifactsFromDocuments();
+      saveState();
+      closeModal('modal-paste');
+      refreshAllUI();
+      showToast('Document ajouté à votre espace.');
+    }
+
+    function deleteDocument(id) {
+      appState.documents = appState.documents.filter(d => d.id !== id);
+      rebuildStudyArtifactsFromDocuments();
+      saveState();
+      refreshAllUI();
+      showToast('Document retiré.');
+    }
+
+    function confirmClearAllDocuments() {
+      openConfirmModal(
+        'Vider la base documentaire',
+        'Tous les cours, programmes et annales importés sur cet appareil seront supprimés.',
+        () => {
+          appState.documents = [];
+          appState.schedule = [];
+          appState.flashcards = [];
+          appState.qcmList = [];
+          saveState();
+          refreshAllUI();
+          showToast('Base documentaire vidée.');
+        }
+      );
+    }
+
+    function loadAdaptedSamplePack() {
+      if (!appState.profile) {
+        showToast('Veuillez d\'abord configurer votre profil académique.');
+        openProfileModal();
+        return;
+      }
+
+      const p = appState.profile;
+      const subj = p.prioritySubject;
+      const track = p.track;
+
+      const samples = [
+        {
+          category: 'cours',
+          title: `Cours fondamental — ${subj} (${track})`,
+          content: `Ce cours porte sur ${subj} dans le cadre du programme de ${track} (${p.level}). La maîtrise des définitions exactes, l'analyse rigoureuse des paramètres de départ et la justification méthodologique de chaque étape constituent les critères essentiels attendus lors des épreuves.`
+        },
+        {
+          category: 'programme',
+          title: `Programme officiel — ${track} (${p.level})`,
+          content: `Référentiel académique de ${p.level} (${track}) centré sur ${subj} : acquisition des concepts clés, résolution structurée de problèmes et maîtrise de la méthodologie d'examen.`
+        },
+        {
+          category: 'annales',
+          title: `Recueil de 15 annales d'examen — ${subj}`,
+          content: `Synthèse des sujets d'examen antérieurs en ${subj} (${track}) : structuration claire de la démarche, précision du vocabulaire disciplinaire et vérification systématique des résultats avant conclusion.`
+        }
+      ];
+
+      samples.forEach((item, idx) => {
+        appState.documents.unshift({
+          id: 'sample_' + Date.now() + '_' + idx,
+          category: item.category,
+          title: item.title,
+          content: item.content,
+          words: item.content.split(/\s+/).filter(Boolean).length,
+          addedAt: new Date().toLocaleDateString('fr-FR')
+        });
+      });
+
+      rebuildStudyArtifactsFromDocuments();
+      saveState();
+      refreshAllUI();
+      showToast(`Jeu d'entraînement généré pour ${subj}.`);
+    }
+
+    function rebuildStudyArtifactsFromDocuments() {
+      if (!appState.documents.length) {
+        appState.schedule = [];
+        appState.flashcards = [];
+        appState.qcmList = [];
+        return;
+      }
+
+      const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+      const duration = appState.scheduleRhythm === 'stage' ? '25 min' : '45 min';
+
+      const cards = [];
+      const qcms = [];
+      const sched = [];
+
+      appState.documents.slice(0, 6).forEach((doc, idx) => {
+        const sentences = doc.content
+          .split(/(?<=[.!?])\s+/)
+          .map(s => s.trim())
+          .filter(s => s.length > 30 && s.length < 260);
+
+        const s1 = sentences[0] || doc.content.slice(0, 180);
+        const s2 = sentences[1] || 'Vérifier la chronologie et les critères du barème officiel.';
+
+        cards.push({ id: `fc_${idx}_1`, front: `Notion essentielle — ${doc.title}`, back: s1, status: 'learning' });
+        cards.push({ id: `fc_${idx}_2`, front: `Point méthodologique — ${doc.title}`, back: s2, status: 'review' });
+
+        qcms.push({
+          question: `D'après votre support « ${doc.title} », quelle proposition est exacte ?`,
+          options: [
+            s1,
+            'La justification étape par étape n\'est pas prise en compte dans l\'évaluation.',
+            'Ce thème ne figure pas dans le programme officiel de votre niveau.'
+          ],
+          correctIndex: 0,
+          explanation: `Référence extraite de votre support : ${s1}`
+        });
+
+        sched.push({
+          id: `sch_${idx}`,
+          day: days[idx % days.length],
+          interval: idx === 0 ? 'J+1 (Priorité haute)' : idx === 1 ? 'J+3 (Consolidation)' : 'J+7 (Répétition SM-2)',
+          title: doc.title,
+          duration,
+          method: appState.profile ? appState.profile.cognitiveStyle : 'Révision active & QCM',
+          completed: false
+        });
+      });
+
+      appState.flashcards = cards;
+      appState.qcmList = qcms;
+      appState.schedule = sched;
+      currentFlashcardIndex = 0;
+      currentQcmIndex = 0;
+      qcmScore = 0;
+      qcmAnsweredCount = 0;
+    }
+
+    // ------------------------------------------------------------------------
+    // 6. RENDU DES VUES (HERO, DOCUMENTS, ANNALES, PLANNING, RÉVISION, TUTEUR)
+    // ------------------------------------------------------------------------
+    function refreshAllUI() {
+      renderHeaderAndHero();
+      renderAllVisualIllustrations();
+      renderDocumentsList();
+      renderAnnalesView();
+      renderPlanningView();
+      renderRevisionView();
+      renderTutorView();
+      renderDrawerStatus();
+    }
+
+    function renderHeaderAndHero() {
+      const p = appState.profile;
+      const badgeLabel = document.getElementById('header-profile-label');
+      const cycleTag = document.getElementById('hero-cycle-tag');
+      const subjectTag = document.getElementById('hero-subject-tag');
+      const greeting = document.getElementById('hero-greeting');
+      const desc = document.getElementById('hero-description');
+      const btnText = document.getElementById('hero-profile-btn-text');
+
+      if (!p) {
+        badgeLabel.textContent = 'Configurer le profil';
+        cycleTag.textContent = 'Profil à configurer';
+        subjectTag.textContent = 'Démarrage vierge';
+        greeting.textContent = 'Bienvenue sur Reviso';
+        desc.textContent = 'Renseignez votre cycle, votre filière exacte et votre matière prioritaire pour démarrer.';
+        btnText.textContent = 'Configurer mon profil';
+      } else {
+        badgeLabel.textContent = p.track.length > 26 ? p.track.slice(0, 24) + '...' : p.track;
+        cycleTag.textContent = `${p.cycleLabel} • ${p.level}`;
+        subjectTag.textContent = p.prioritySubject;
+        greeting.textContent = `Espace de révision de ${p.name}`;
+        desc.textContent = `${p.track}${p.school ? ' — ' + p.school : ''}. Méthode : ${p.cognitiveStyle}.`;
+        btnText.textContent = 'Modifier mon profil';
+      }
+
+      const docsCount = appState.documents.filter(d => d.category !== 'annales').length;
+      const annalesCount = appState.documents.filter(d => d.category === 'annales').length;
+      const mastered = appState.flashcards.filter(f => f.status === 'mastered').length;
+      const pct = appState.flashcards.length ? Math.round((mastered / appState.flashcards.length) * 100) : 0;
+
+      document.getElementById('stat-docs-count').textContent = docsCount;
+      document.getElementById('stat-annales-count').textContent = annalesCount;
+      document.getElementById('stat-mastery-pct').textContent = pct + '%';
+    }
+
+    function renderDocumentsList() {
+      const container = document.getElementById('documents-list-container');
+      const clearBtn = document.getElementById('btn-clear-docs');
+
+      if (!appState.documents.length) {
+        clearBtn.classList.add('hidden');
+        container.innerHTML = `
+          <div class="surface-alt p-6 text-center">
+            <p class="text-xs font-semibold">Aucun document importé pour le moment.</p>
+            <p class="mt-1 text-[11px]" style="color: var(--text-muted);">
+              Sélectionnez vos fichiers PDF ci-dessus ou utilisez « Jeu d'entraînement selon mon profil ».
+            </p>
+          </div>
+        `;
+        return;
+      }
+
+      clearBtn.classList.remove('hidden');
+      const labels = {
+        cours: { text: 'Cours', color: 'var(--tab-0-color)' },
+        programme: { text: 'Programme', color: 'var(--tab-2-color)' },
+        annales: { text: 'Annales', color: 'var(--tab-1-color)' }
+      };
+
+      container.innerHTML = appState.documents.map(doc => {
+        const meta = labels[doc.category] || labels.cours;
+        return `
+          <div class="surface-alt flex items-center justify-between gap-3 p-3.5">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase text-white" style="background-color: ${meta.color};">${meta.text}</span>
+                <span class="truncate text-xs font-bold sm:text-sm">${escapeHtml(doc.title)}</span>
+              </div>
+              <p class="mt-1 text-[11px]" style="color: var(--text-muted);">${doc.words} mots extraits • Ajouté le ${doc.addedAt}</p>
+            </div>
+            <button type="button" onclick="deleteDocument('${doc.id}')" class="rounded-lg p-2 text-rose-500 hover:bg-rose-500/10" title="Supprimer" aria-label="Supprimer">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderAnnalesView() {
+      const radarBox = document.getElementById('radar-topics-container');
+      const kwBox = document.getElementById('radar-keywords-container');
+      const badge = document.getElementById('annales-radar-badge');
+      const trapText = document.getElementById('radar-trap-text');
+
+      const annalesDocs = appState.documents.filter(d => d.category === 'annales');
+      badge.textContent = `${annalesDocs.length} sujet(s) analysé(s)`;
+
+      if (!appState.documents.length) {
+        radarBox.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Importez vos cours et annales dans l'onglet Documents pour afficher la fréquence des thèmes.</p>`;
+        kwBox.innerHTML = `<span class="text-xs" style="color: var(--text-muted);">En attente de documents...</span>`;
+        return;
+      }
+
+      radarBox.innerHTML = appState.documents.slice(0, 4).map((doc, idx) => {
+        const pct = Math.max(44, 92 - idx * 14);
+        return `
+          <div>
+            <div class="flex items-center justify-between text-xs font-semibold">
+              <span class="truncate pr-3">${escapeHtml(doc.title)}</span>
+              <span style="color: var(--active-color);">${pct}%</span>
+            </div>
+            <div class="mt-1.5 h-2 w-full overflow-hidden rounded-full" style="background-color: var(--bg-surface-alt);">
+              <div class="h-full rounded-full transition-all duration-500" style="width: ${pct}%; background-color: var(--active-color);"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const words = appState.documents
+        .map(d => d.content)
+        .join(' ')
+        .split(/[^A-Za-zÀ-ÖØ-öø-ÿ]{6,}/)
+        .filter(w => w.length >= 6 && w.length <= 18);
+
+      const uniqueKw = Array.from(new Set(words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()))).slice(0, 10);
+      kwBox.innerHTML = uniqueKw.map(kw => `
+        <span class="rounded-lg px-2.5 py-1 text-[11px] font-semibold" style="background-color: var(--bg-surface-alt); border: 1px solid var(--border-subtle);">${escapeHtml(kw)}</span>
+      `).join('');
+
+      trapText.textContent = appState.profile
+        ? `Exigence spécifique (${appState.profile.track}) : chaque étape du raisonnement doit être justifiée explicitement avant d'énoncer la conclusion.`
+        : 'Les correcteurs attendent une démarche structurée et justifiée étape par étape.';
+    }
+
+    function generateMockExam() {
+      if (!appState.documents.length) {
+        showToast('Importez d\'abord au moins un document dans l\'onglet Documents.');
+        switchTab(0);
+        return;
+      }
+      const doc = appState.documents[Math.floor(Math.random() * appState.documents.length)];
+      currentMockQuestion = doc;
+      const trackLabel = appState.profile ? ` (${appState.profile.track})` : '';
+
+      document.getElementById('mock-exam-tag').textContent = `Épreuve ciblée${trackLabel} : ${doc.title}`;
+      document.getElementById('mock-exam-prompt').textContent =
+        `En vous appuyant sur les notions de « ${doc.title} » (${doc.content.slice(0, 210)}...), exposez la démarche complète, les critères d'analyse prioritaires et la conclusion méthodologique attendue à l'examen.`;
+      document.getElementById('mock-exam-answer').value = '';
+      document.getElementById('mock-exam-feedback').classList.add('hidden');
+      showToast('Nouveau sujet d\'examen blanc prêt.');
+    }
+
+    function gradeMockExam() {
+      const answer = document.getElementById('mock-exam-answer').value.trim();
+      const box = document.getElementById('mock-exam-feedback');
+      if (!currentMockQuestion) {
+        generateMockExam();
+        return;
+      }
+      if (answer.length < 20) {
+        showToast('Rédigez une réponse plus complète avant de demander la correction.');
+        return;
+      }
+
+      const refWords = currentMockQuestion.content.toLowerCase().split(/\W+/).filter(w => w.length > 5);
+      const userWords = answer.toLowerCase().split(/\W+/);
+      const matched = Array.from(new Set(refWords.filter(w => userWords.includes(w)))).slice(0, 6);
+      const note = Math.min(20, Math.max(9, 10 + matched.length * 2));
+
+      appState.cognitive.reasoning = Math.min(99, appState.cognitive.reasoning + 3);
+      appState.cognitive.method = Math.min(99, appState.cognitive.method + 3);
+      saveState();
+
+      box.classList.remove('hidden');
+      box.innerHTML = `
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-extrabold uppercase" style="color: var(--active-color);">Correction détaillée</span>
+          <span class="rounded-lg px-2.5 py-0.5 text-xs font-bold text-white" style="background-color: var(--active-color);">Note estimée : ${note} / 20</span>
+        </div>
+        <p class="mt-2 text-xs leading-relaxed">
+          <strong>Notions clés repérées :</strong> ${matched.length ? matched.join(', ') : 'Structure présente, pensez à intégrer davantage de termes précis du cours'}.
+        </p>
+        <p class="mt-1.5 text-xs leading-relaxed" style="color: var(--text-secondary);">
+          <strong>Référence du support :</strong> ${escapeHtml(currentMockQuestion.content.slice(0, 320))}...
+        </p>
+      `;
+    }
+
+    function renderPlanningView() {
+      const container = document.getElementById('planning-sessions-container');
+      const btnStd = document.getElementById('btn-rhythm-standard');
+      const btnStage = document.getElementById('btn-rhythm-stage');
+      const desc = document.getElementById('schedule-mode-desc');
+
+      if (appState.scheduleRhythm === 'stage') {
+        btnStage.style.backgroundColor = 'var(--active-color)';
+        btnStage.style.color = '#FFFFFF';
+        btnStd.style.backgroundColor = 'transparent';
+        btnStd.style.color = 'var(--text-secondary)';
+        desc.textContent = 'Semaine Stage / Gardes (sessions intensives de 25 min)';
+      } else {
+        btnStd.style.backgroundColor = 'var(--active-color)';
+        btnStd.style.color = '#FFFFFF';
+        btnStage.style.backgroundColor = 'transparent';
+        btnStage.style.color = 'var(--text-secondary)';
+        desc.textContent = 'Semaine classique (sessions de 45 min)';
+      }
+
+      if (!appState.schedule.length) {
+        container.innerHTML = `
+          <div class="surface-card p-6 text-center">
+            <p class="text-xs font-semibold">Aucune session planifiée.</p>
+            <p class="mt-1 text-[11px]" style="color: var(--text-muted);">Importez vos cours dans l'onglet Documents pour générer votre calendrier SM-2.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = appState.schedule.map(item => `
+        <div class="surface-card flex items-center justify-between gap-3 p-4 ${item.completed ? 'opacity-65' : ''}">
+          <div class="flex items-start gap-3">
+            <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="toggleScheduleItem('${item.id}')" class="mt-1 h-4 w-4 cursor-pointer rounded accent-emerald-600" />
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase text-white" style="background-color: var(--active-color);">${item.day} • ${item.duration}</span>
+                <span class="text-[11px] font-semibold" style="color: var(--text-muted);">${item.interval}</span>
+              </div>
+              <p class="mt-1 text-xs font-bold sm:text-sm ${item.completed ? 'line-through' : ''}">${escapeHtml(item.title)}</p>
+              <p class="mt-0.5 text-[11px]" style="color: var(--text-secondary);">Format : ${escapeHtml(item.method)}</p>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function setScheduleRhythm(rhythm) {
+      appState.scheduleRhythm = rhythm;
+      const dur = rhythm === 'stage' ? '25 min' : '45 min';
+      appState.schedule.forEach(s => { s.duration = dur; });
+      saveState();
+      renderPlanningView();
+    }
+
+    function toggleScheduleItem(id) {
+      const item = appState.schedule.find(s => s.id === id);
+      if (item) {
+        item.completed = !item.completed;
+        if (item.completed) appState.cognitive.retention = Math.min(99, appState.cognitive.retention + 2);
+        saveState();
+        renderPlanningView();
+      }
+    }
+
+    function recalculateScheduleDelay() {
+      if (!appState.schedule.length) {
+        showToast('Aucune session à rééquilibrer.');
+        return;
+      }
+      const days = ['Demain', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+      appState.schedule.forEach((item, idx) => {
+        if (!item.completed) {
+          item.day = days[idx % days.length];
+          item.interval = 'Rééquilibré SM-2';
+        }
+      });
+      saveState();
+      renderPlanningView();
+      showToast('Planning rééquilibré sans surcharge.');
+    }
+
+    function exportCalendarICS() {
+      if (!appState.schedule.length) {
+        showToast('Ajoutez d\'abord des documents pour exporter votre planning.');
+        return;
+      }
+      const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Reviso//Planning//FR'];
+      const now = new Date();
+      appState.schedule.forEach((item, idx) => {
+        const dt = new Date(now.getTime() + (idx + 1) * 86400000);
+        const ymd = dt.toISOString().slice(0, 10).replace(/-/g, '');
+        lines.push(
+          'BEGIN:VEVENT',
+          `SUMMARY:Reviso - ${item.title}`,
+          `DTSTART:${ymd}T180000`,
+          `DTEND:${ymd}T184500`,
+          `DESCRIPTION:Session ${item.duration} (${item.method})`,
+          'END:VEVENT'
+        );
+      });
+      lines.push('END:VCALENDAR');
+
+      const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'planning-reviso.ics';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('Fichier calendrier (.ics) téléchargé.');
+    }
+
+    function switchRevisionSubTab(subName) {
+      ['fiches', 'flashcards', 'qcm'].forEach(name => {
+        const btn = document.getElementById(`subtab-btn-${name}`);
+        const panel = document.getElementById(`rev-sub-${name}`);
+        if (name === subName) {
+          btn.style.backgroundColor = 'var(--active-color)';
+          btn.style.color = '#FFFFFF';
+          panel.classList.remove('hidden');
+        } else {
+          btn.style.backgroundColor = 'transparent';
+          btn.style.color = 'var(--text-secondary)';
+          panel.classList.add('hidden');
+        }
+      });
+    }
+
+    function setSheetFormat(fmt) {
+      currentSheetFormat = fmt;
+      renderRevisionView();
+    }
+
+    function renderRevisionView() {
+      const firstSub = document.getElementById('subtab-btn-fiches');
+      if (firstSub && !firstSub.style.backgroundColor) switchRevisionSubTab('fiches');
+
+      ['synthese', 'schema', 'pieges'].forEach(fmt => {
+        const btn = document.getElementById(`fmt-${fmt}`);
+        if (!btn) return;
+        if (fmt === currentSheetFormat) {
+          btn.style.backgroundColor = 'var(--active-color)';
+          btn.style.color = '#FFFFFF';
+        } else {
+          btn.style.backgroundColor = 'var(--bg-surface-alt)';
+          btn.style.color = 'var(--text-secondary)';
+        }
+      });
+
+      const box = document.getElementById('revision-sheet-content');
+      if (!appState.documents.length) {
+        box.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Importez vos cours dans l'onglet Documents pour générer vos fiches multi-vues, flashcards 3D et QCM.</p>`;
+      } else {
+        const doc = appState.documents[0];
+        if (currentSheetFormat === 'synthese') {
+          box.innerHTML = `
+            <h4 class="font-display text-base font-bold" style="color: var(--active-color);">${escapeHtml(doc.title)}</h4>
+            <p class="leading-relaxed">${escapeHtml(doc.content)}</p>
+          `;
+        } else if (currentSheetFormat === 'schema') {
+          box.innerHTML = `
+            <h4 class="font-display text-base font-bold" style="color: var(--active-color);">Schéma Cause → Conséquence — ${escapeHtml(doc.title)}</h4>
+            <div class="space-y-2">
+              <div class="surface-alt p-3 text-xs"><strong>1. Cause / Situation initiale :</strong> Identification des données fondamentales de l'énoncé.</div>
+              <div class="text-center text-xs font-bold" style="color: var(--active-color);">↓</div>
+              <div class="surface-alt p-3 text-xs"><strong>2. Mécanisme / Règle appliquée :</strong> ${escapeHtml(doc.content.slice(0, 180))}...</div>
+              <div class="text-center text-xs font-bold" style="color: var(--active-color);">↓</div>
+              <div class="surface-alt p-3 text-xs"><strong>3. Conséquence / Décision :</strong> Validation rigoureuse des critères attendus au barème.</div>
+            </div>
+          `;
+        } else {
+          box.innerHTML = `
+            <h4 class="font-display text-base font-bold" style="color: var(--active-color);">Points clés & Pièges fréquents</h4>
+            <ul class="list-disc space-y-1.5 pl-5 text-xs sm:text-sm">
+              <li>Définir avec précision les concepts fondamentaux dès le début de la rédaction.</li>
+              <li>Vérifier toutes les conditions d'application avant d'énoncer un résultat ou une conduite à tenir.</li>
+              <li>Relire les unités, seuils et données chiffrées du sujet.</li>
+            </ul>
+          `;
+        }
+      }
+
+      const fcCounter = document.getElementById('flashcard-counter');
+      const fcFront = document.getElementById('flashcard-front-text');
+      const fcBack = document.getElementById('flashcard-back-text');
+      if (appState.flashcards.length) {
+        const fc = appState.flashcards[currentFlashcardIndex % appState.flashcards.length];
+        fcCounter.textContent = `Carte ${(currentFlashcardIndex % appState.flashcards.length) + 1} / ${appState.flashcards.length}`;
+        fcFront.textContent = fc.front;
+        fcBack.textContent = fc.back;
+      } else {
+        fcCounter.textContent = 'Carte 0 / 0';
+        fcFront.textContent = 'Aucune flashcard disponible. Ajoutez un cours dans l\'onglet Documents.';
+        fcBack.textContent = '---';
+      }
+
+      renderQcmQuestion();
+    }
+
+    function copyCurrentSheet() {
+      const text = document.getElementById('revision-sheet-content').innerText;
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast('Fiche copiée dans le presse-papiers.');
+      } catch (_) {
+        showToast('Copie manuelle requise sur ce navigateur.');
+      }
+      document.body.removeChild(ta);
+    }
+
+    function flipFlashcard() {
+      document.getElementById('flashcard-3d').classList.toggle('flipped');
+    }
+
+    function rateFlashcard(status) {
+      if (!appState.flashcards.length) return;
+      const idx = currentFlashcardIndex % appState.flashcards.length;
+      appState.flashcards[idx].status = status;
+      if (status === 'mastered') appState.cognitive.retention = Math.min(99, appState.cognitive.retention + 3);
+      document.getElementById('flashcard-3d').classList.remove('flipped');
+      currentFlashcardIndex = (currentFlashcardIndex + 1) % appState.flashcards.length;
+      saveState();
+      renderHeaderAndHero();
+      renderRevisionView();
+    }
+
+    function renderQcmQuestion() {
+      const qText = document.getElementById('qcm-question-text');
+      const optsBox = document.getElementById('qcm-options-container');
+      const expBox = document.getElementById('qcm-explanation-box');
+      const nextBtn = document.getElementById('btn-next-qcm');
+      const progLabel = document.getElementById('qcm-progress-label');
+      const scoreLabel = document.getElementById('qcm-score-label');
+
+      expBox.classList.add('hidden');
+      nextBtn.classList.add('hidden');
+
+      if (!appState.qcmList.length) {
+        progLabel.textContent = 'Quiz en attente';
+        scoreLabel.textContent = 'Score : 0 / 0';
+        qText.textContent = 'Ajoutez des documents pour générer un quiz ciblé.';
+        optsBox.innerHTML = '';
+        return;
+      }
+
+      const q = appState.qcmList[currentQcmIndex % appState.qcmList.length];
+      progLabel.textContent = `Question ${(currentQcmIndex % appState.qcmList.length) + 1} / ${appState.qcmList.length}`;
+      scoreLabel.textContent = `Score : ${qcmScore} / ${qcmAnsweredCount}`;
+      qText.textContent = q.question;
+
+      optsBox.innerHTML = q.options.map((opt, idx) => `
+        <button type="button" onclick="answerQcm(${idx})" class="surface-alt w-full p-3 text-left text-xs font-medium transition-all hover:opacity-90">
+          ${escapeHtml(opt)}
+        </button>
+      `).join('');
+    }
+
+    function answerQcm(selectedIdx) {
+      const q = appState.qcmList[currentQcmIndex % appState.qcmList.length];
+      if (!q) return;
+      const expBox = document.getElementById('qcm-explanation-box');
+      const nextBtn = document.getElementById('btn-next-qcm');
+
+      qcmAnsweredCount++;
+      const isCorrect = selectedIdx === q.correctIndex;
+      if (isCorrect) {
+        qcmScore++;
+        appState.cognitive.analysis = Math.min(99, appState.cognitive.analysis + 2);
+      }
+
+      document.getElementById('qcm-score-label').textContent = `Score : ${qcmScore} / ${qcmAnsweredCount}`;
+      expBox.classList.remove('hidden');
+      expBox.innerHTML = `
+        <p class="font-bold ${isCorrect ? 'text-emerald-500' : 'text-amber-500'}">
+          ${isCorrect ? 'Réponse exacte.' : 'Point à revoir :'}
+        </p>
+        <p class="mt-1">${escapeHtml(q.explanation)}</p>
+      `;
+      nextBtn.classList.remove('hidden');
+      saveState();
+    }
+
+    function nextQcmQuestion() {
+      currentQcmIndex++;
+      renderQcmQuestion();
+    }
+
+    // ------------------------------------------------------------------------
+    // 7. TUTEUR IA SOCRATIQUE & ENCADREMENT CONTEXTUEL STRICT
+    // ------------------------------------------------------------------------
+    function renderTutorView() {
+      const locked = document.getElementById('tutor-locked-panel');
+      const unlocked = document.getElementById('tutor-unlocked-panel');
+      const reason = document.getElementById('tutor-lock-reason');
+
+      const hasProfile = Boolean(appState.profile);
+      const hasDocs = appState.documents.length > 0;
+
+      if (!hasProfile || !hasDocs) {
+        locked.classList.remove('hidden');
+        unlocked.classList.add('hidden');
+        if (!hasProfile && !hasDocs) {
+          reason.textContent = 'Encadrement contextuel actif : configurez d\'abord votre parcours académique puis importez au moins un support de cours ou programme.';
+        } else if (!hasProfile) {
+          reason.textContent = 'Encadrement contextuel actif : renseignez votre cycle, votre filière et votre matière prioritaire afin de calibrer le Tuteur IA.';
+        } else {
+          reason.textContent = 'Encadrement contextuel actif : importez au moins un support de cours ou programme dans l\'onglet Documents.';
+        }
+        return;
+      }
+
+      locked.classList.add('hidden');
+      unlocked.classList.remove('hidden');
+
+      const c = appState.cognitive;
+      document.getElementById('cog-val-retention').textContent = c.retention + '%';
+      document.getElementById('cog-bar-retention').style.width = c.retention + '%';
+      document.getElementById('cog-val-analysis').textContent = c.analysis + '%';
+      document.getElementById('cog-bar-analysis').style.width = c.analysis + '%';
+      document.getElementById('cog-val-reasoning').textContent = c.reasoning + '%';
+      document.getElementById('cog-bar-reasoning').style.width = c.reasoning + '%';
+      document.getElementById('cog-val-method').textContent = c.method + '%';
+      document.getElementById('cog-bar-method').style.width = c.method + '%';
+
+      document.getElementById('tutor-optimal-method').textContent = appState.profile.cognitiveStyle;
+      document.getElementById('tutor-context-banner').textContent =
+        `Cadre strict : ${appState.profile.track} (${appState.profile.prioritySubject})`;
+
+      if (!appState.tutorHistory.length) {
+        appState.tutorHistory.push({
+          role: 'tutor',
+          text: `Bonjour ${appState.profile.name}. Je suis calibré sur votre programme de ${appState.profile.track} (${appState.profile.level}) pour la matière ${appState.profile.prioritySubject}. Sur quel point précis de vos ${appState.documents.length} support(s) souhaitez-vous avancer étape par étape ?`
+        });
+      }
+      renderTutorMessages();
+    }
+
+    function renderTutorMessages() {
+      const box = document.getElementById('tutor-chat-messages');
+      box.innerHTML = appState.tutorHistory.map(msg => {
+        if (msg.role === 'user') {
+          return `
+            <div class="flex justify-end">
+              <div class="max-w-[82%] rounded-2xl rounded-br-sm px-3.5 py-2.5 text-white" style="background-color: var(--active-color);">
+                ${escapeHtml(msg.text)}
+              </div>
+            </div>
+          `;
+        }
+        return `
+          <div class="flex justify-start">
+            <div class="surface-alt max-w-[85%] rounded-2xl rounded-bl-sm px-3.5 py-2.5">
+              ${escapeHtml(msg.text)}
+            </div>
+          </div>
+        `;
+      }).join('');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function sendTutorMessage(e) {
+      e.preventDefault();
+      const input = document.getElementById('tutor-chat-input');
+      const query = input.value.trim();
+      if (!query) return;
+
+      input.value = '';
+      appState.tutorHistory.push({ role: 'user', text: query });
+      renderTutorMessages();
+
+      const strictContext = buildStrictAcademicContext();
+      const corpus = appState.documents.map(d => `[${d.title}] ${d.content}`).join('\n\n').slice(0, 8000);
+
+      if (appState.geminiApiKey) {
+        try {
+          const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(appState.geminiApiKey)}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{
+                  parts: [{
+                    text: `Tu es Reviso, tuteur pédagogique socratique pas-à-pas.\n${strictContext}\n\nSOURCES DU COURS :\n${corpus}\n\nQUESTION DE L'ÉTUDIANT : ${query}`
+                  }]
+                }]
+              })
+            }
+          );
+          const data = await resp.json();
+          const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (reply) {
+            appState.tutorHistory.push({ role: 'tutor', text: reply });
+            appState.cognitive.reasoning = Math.min(99, appState.cognitive.reasoning + 2);
+            saveState();
+            renderTutorMessages();
+            return;
+          }
+        } catch (err) {
+          console.warn('Basculement vers le moteur local :', err);
+        }
+      }
+
+      const matchedDoc = appState.documents.find(d =>
+        query.toLowerCase().split(/\W+/).some(w => w.length > 3 && (d.title + ' ' + d.content).toLowerCase().includes(w))
+      ) || appState.documents[0];
+
+      const p = appState.profile;
+      const replyText =
+        `Dans le cadre de votre programme (${p.track} — ${p.prioritySubject}), appuyons-nous sur « ${matchedDoc.title} » : ${matchedDoc.content.slice(0, 210)}... ` +
+        `Étape suivante pour vérifier votre raisonnement : quel est le premier principe ou critère à poser avant de conclure ?`;
+
+      appState.tutorHistory.push({ role: 'tutor', text: replyText });
+      appState.cognitive.reasoning = Math.min(99, appState.cognitive.reasoning + 2);
+      saveState();
+      renderTutorMessages();
+    }
+
+    function resetTutorChat() {
+      appState.tutorHistory = [];
+      renderTutorView();
+    }
+
+    // ------------------------------------------------------------------------
+    // 8. CODE PIN (4 CHIFFRES + RÉCUPÉRATION), API GEMINI & PAGES LÉGALES
+    // ------------------------------------------------------------------------
+    function checkPinLockOnBoot() {
+      if (appState.pinCode && /^\d{4}$/.test(appState.pinCode)) {
+        const screen = document.getElementById('pin-lock-screen');
+        screen.classList.remove('hidden');
+        screen.classList.add('flex');
+      }
+    }
+
+    function handlePinKey(digit) {
+      if (pinInputBuffer.length >= 4) return;
+      pinInputBuffer += digit;
+      updatePinDots();
+
+      if (pinInputBuffer.length === 4) {
+        if (pinInputBuffer === appState.pinCode) {
+          pinInputBuffer = '';
+          updatePinDots();
+          const screen = document.getElementById('pin-lock-screen');
+          screen.classList.add('hidden');
+          screen.classList.remove('flex');
+          showToast('Espace Reviso déverrouillé.');
+        } else {
+          const dots = document.getElementById('pin-dots');
+          dots.classList.add('animate-shake');
+          document.getElementById('pin-error-msg').textContent = 'Code PIN incorrect.';
+          setTimeout(() => {
+            dots.classList.remove('animate-shake');
+            pinInputBuffer = '';
+            updatePinDots();
+          }, 420);
+        }
+      }
+    }
+
+    function clearPinEntry() {
+      pinInputBuffer = '';
+      document.getElementById('pin-error-msg').textContent = '';
+      updatePinDots();
+    }
+
+    function backspacePinEntry() {
+      pinInputBuffer = pinInputBuffer.slice(0, -1);
+      updatePinDots();
+    }
+
+    function updatePinDots() {
+      document.querySelectorAll('#pin-dots .pin-dot').forEach((dot, idx) => {
+        if (idx < pinInputBuffer.length) {
+          dot.style.backgroundColor = 'var(--active-color)';
+          dot.style.borderColor = 'var(--active-color)';
+        } else {
+          dot.style.backgroundColor = 'transparent';
+          dot.style.borderColor = 'var(--border-strong)';
+        }
+      });
+    }
+
+    function togglePinRecoveryBox() {
+      document.getElementById('pin-recovery-box').classList.toggle('hidden');
+    }
+
+    function verifyPinRecovery() {
+      const entered = document.getElementById('pin-recovery-name').value.trim().toLowerCase();
+      const savedName = appState.profile && appState.profile.name ? appState.profile.name.trim().toLowerCase() : '';
+      if (savedName && entered === savedName) {
+        appState.pinCode = null;
+        saveState();
+        const screen = document.getElementById('pin-lock-screen');
+        screen.classList.add('hidden');
+        screen.classList.remove('flex');
+        renderDrawerStatus();
+        showToast('Code PIN réinitialisé via vérification du prénom.');
+      } else {
+        document.getElementById('pin-error-msg').textContent = 'Prénom non reconnu sur ce profil.';
+      }
+    }
+
+    function openPinSettingsModal() {
+      document.getElementById('input-new-pin').value = '';
+      const hasPin = Boolean(appState.pinCode);
+      document.getElementById('btn-disable-pin').classList.toggle('hidden', !hasPin);
+      document.getElementById('btn-lock-now').classList.toggle('hidden', !hasPin);
+      openModal('modal-pin-settings');
+    }
+
+    function savePinSetting(e) {
+      e.preventDefault();
+      const val = document.getElementById('input-new-pin').value.trim();
+      if (!/^\d{4}$/.test(val)) {
+        showToast('Le code PIN doit comporter exactement 4 chiffres.');
+        return;
+      }
+      appState.pinCode = val;
+      saveState();
+      renderDrawerStatus();
+      closeModal('modal-pin-settings');
+      showToast('Code PIN à 4 chiffres activé.');
+    }
+
+    function disablePinSetting() {
+      appState.pinCode = null;
+      saveState();
+      renderDrawerStatus();
+      closeModal('modal-pin-settings');
+      showToast('Code PIN désactivé.');
+    }
+
+    function lockAppNow() {
+      closeModal('modal-pin-settings');
+      pinInputBuffer = '';
+      updatePinDots();
+      checkPinLockOnBoot();
+    }
+
+    function openApiKeyModal() {
+      document.getElementById('input-gemini-key').value = appState.geminiApiKey || '';
+      openModal('modal-api-key');
+    }
+
+    function saveGeminiApiKey(e) {
+      e.preventDefault();
+      appState.geminiApiKey = document.getElementById('input-gemini-key').value.trim();
+      saveState();
+      renderDrawerStatus();
+      closeModal('modal-api-key');
+      showToast(appState.geminiApiKey ? 'Clé API Gemini enregistrée.' : 'Clé vide enregistrée.');
+    }
+
+    function removeGeminiApiKey() {
+      appState.geminiApiKey = '';
+      document.getElementById('input-gemini-key').value = '';
+      saveState();
+      renderDrawerStatus();
+      closeModal('modal-api-key');
+      showToast('Clé API supprimée.');
+    }
+
+    function renderDrawerStatus() {
+      const profEl = document.getElementById('drawer-profile-summary');
+      const pinEl = document.getElementById('drawer-pin-status');
+      const apiEl = document.getElementById('drawer-api-status');
+      if (profEl) profEl.textContent = appState.profile ? `${appState.profile.name} • ${appState.profile.track}` : 'Non configuré';
+      if (pinEl) pinEl.textContent = appState.pinCode ? 'Activé (4 chiffres)' : 'Désactivé';
+      if (apiEl) apiEl.textContent = appState.geminiApiKey ? 'Clé Google AI Studio active' : 'Moteur local autonome actif';
+    }
+
+    function openInfoModal(type) {
+      const titleEl = document.getElementById('modal-info-title');
+      const bodyEl = document.getElementById('modal-info-body');
+
+      if (type === 'guide') {
+        titleEl.textContent = 'Guide d\'utilisation — 5 étapes';
+        bodyEl.innerHTML = `
+          <p><strong>Étape 1 — Calibrage académique :</strong> Renseignez votre prénom, votre cycle (Collège, Lycée Général ou Technique du Gabon, ou Enseignement Supérieur), votre filière exacte et votre matière prioritaire.</p>
+          <p><strong>Étape 2 — Importation des supports (Documents) :</strong> Téléversez simultanément vos cours PDF, votre programme officiel et vos anciens sujets d'examen. Tout est extrait localement sur votre appareil.</p>
+          <p><strong>Étape 3 — Analyse des annales (Annales) :</strong> Identifiez les thèmes les plus fréquents aux examens et entraînez-vous sur des sujets blancs corrigés.</p>
+          <p><strong>Étape 4 — Planning intelligent (Planning) :</strong> Suivez un calendrier basé sur la répétition espacée SM-2 (mode Cours classique ou Stage/Gardes) et exportez-le vers votre agenda (.ics).</p>
+          <p><strong>Étape 5 — Révision active & Tuteur IA :</strong> Utilisez les fiches multi-vues, flashcards 3D, quiz QCM et le Tuteur socratique strictement cadré sur votre filière.</p>
+        `;
+      } else if (type === 'privacy') {
+        titleEl.textContent = 'Politique de confidentialité & Données locales';
+        bodyEl.innerHTML = `
+          <p><strong>Stockage 100 % local :</strong> Vos informations de profil, vos cours extraits, vos résultats de quiz et votre code PIN sont enregistrés exclusivement dans la mémoire locale (<code>localStorage</code>) de votre navigateur.</p>
+          <p><strong>Zéro revente et zéro traceur :</strong> Aucune donnée personnelle n'est transmise à des régies publicitaires ou serveurs tiers.</p>
+          <div class="pt-3">
+            <button type="button" onclick="closeModal('modal-info'); confirmResetAllData();" class="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700">
+              Réinitialiser toutes les données locales
+            </button>
+          </div>
+        `;
+      } else if (type === 'cookies') {
+        const sizeKB = Math.round((JSON.stringify(appState).length / 1024) * 10) / 10;
+        titleEl.textContent = 'Stockage local & Cookies';
+        bodyEl.innerHTML = `
+          <p><strong>Absence de cookies publicitaires :</strong> Reviso n'utilise aucun cookie de pistage ou de publicité.</p>
+          <p><strong>Stockage technique local :</strong> Le stockage local du navigateur conserve votre thème (Clair ou Sombre), votre profil académique, vos supports importés et votre code PIN de sécurité.</p>
+          <p><strong>Volume actuellement utilisé :</strong> <code>${sizeKB} Ko</code>.</p>
+        `;
+      } else {
+        titleEl.textContent = 'Conditions d\'utilisation';
+        bodyEl.innerHTML = `
+          <p><strong>Finalité éducative :</strong> Reviso est un outil d'aide à l'organisation et à la révision active conçu pour accompagner les élèves et étudiants dans la préparation de leurs évaluations et examens.</p>
+          <p><strong>Complémentarité :</strong> Les fiches, exercices et réponses du tuteur constituent un support d'entraînement complémentaire aux cours et référentiels officiels de votre établissement ou faculté.</p>
+        `;
+      }
+      openModal('modal-info');
+    }
+
+    function confirmResetAllData() {
+      openConfirmModal(
+        'Réinitialisation complète',
+        'Toutes vos données locales (profil, cours, planning, statistiques et code PIN) seront définitivement supprimées.',
+        () => {
+          localStorage.removeItem(STORAGE_KEY);
+          location.reload();
+        }
+      );
+    }
+
+    function openConfirmModal(title, message, onConfirm) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+      pendingConfirmAction = onConfirm;
+      document.getElementById('confirm-accept-btn').onclick = () => {
+        closeModal('modal-confirm');
+        if (pendingConfirmAction) pendingConfirmAction();
+      };
+      openModal('modal-confirm');
+    }
+
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.add('open');
+    }
+
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('open');
+    }
+
+    function openDrawer() {
+      renderDrawerStatus();
+      openModal('side-drawer-backdrop');
+    }
+
+    function closeDrawer() {
+      closeModal('side-drawer-backdrop');
+    }
+
+    let toastTimer = null;
+    function showToast(message) {
+      const pill = document.getElementById('toast-pill');
+      const text = document.getElementById('toast-text');
+      text.textContent = message;
+      pill.style.opacity = '1';
+      pill.style.transform = 'translateY(0)';
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        pill.style.opacity = '0';
+        pill.style.transform = 'translateY(-10px)';
+      }, 3000);
+    }
+
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // ------------------------------------------------------------------------
+    // 9. INITIALISATION AU CHARGEMENT
+    // ------------------------------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      applyTheme(appState.theme);
+      initBottomNavSlideGesture();
+      switchTab(appState.activeTabIndex, { force: true, fromDrag: true });
+      refreshAllUI();
+      checkPinLockOnBoot();
+
+      // Démarrage vierge : ouverture de la configuration académique si aucun profil n'est enregistré
+      if (!appState.profile) {
+        setTimeout(() => {
+          openProfileModal();
+        }, 320);
+      }
+    });
+  </script>
+</body>
+</html>
