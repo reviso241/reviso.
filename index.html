@@ -14,6 +14,9 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
 
+  <!-- Supabase pour la synchronisation cloud facultative -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <!-- PDF.js pour l'extraction locale gratuite des fichiers PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
@@ -2323,6 +2326,24 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </button>
 
+          <section class="surface-alt space-y-3 p-3.5" aria-labelledby="cloud-account-title">
+            <div>
+              <p id="cloud-account-title" class="text-xs font-bold">Compte & Synchronisation Cloud</p>
+              <p id="cloud-account-status" class="mt-1 text-[11px]" style="color: var(--text-muted);">Mode local hors ligne — aucun compte requis.</p>
+              <p id="cloud-account-email" class="mt-1 hidden break-all text-[11px] font-semibold" style="color: var(--text-secondary);"></p>
+            </div>
+            <form id="cloud-auth-form" onsubmit="signInToCloud(event)" class="space-y-2">
+              <input type="email" id="cloud-auth-email" class="input-field" autocomplete="email" placeholder="Adresse e-mail" aria-label="Adresse e-mail du compte cloud" required />
+              <input type="password" id="cloud-auth-password" class="input-field" autocomplete="current-password" placeholder="Mot de passe" aria-label="Mot de passe du compte cloud" required />
+              <div class="flex gap-2">
+                <button type="submit" class="btn-active-accent flex-1 rounded-lg px-3 py-2 text-[11px] font-bold">Se connecter</button>
+                <button type="button" onclick="signUpToCloud()" class="surface-card flex-1 px-3 py-2 text-[11px] font-bold">Créer un compte</button>
+              </div>
+            </form>
+            <button type="button" id="cloud-signout-button" onclick="signOutFromCloud()" class="surface-card hidden w-full px-3 py-2 text-[11px] font-bold">Se déconnecter</button>
+            <p class="text-[10px] leading-relaxed" style="color: var(--text-muted);">Sans connexion, Reviso continue de fonctionner et conserve vos données sur cet appareil.</p>
+          </section>
+
           <!-- Interrupteur animé Mode Clair / Mode Sombre -->
           <button type="button" onclick="toggleTheme()" class="surface-alt flex w-full items-center justify-between p-3.5 text-left transition-opacity hover:opacity-90">
             <div class="flex items-center gap-3">
@@ -2505,6 +2526,11 @@
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
 
+    const supabaseClient = window.supabase
+      ? window.supabase.createClient('https://kfdetwgmfpdvislnjzphi.supabase.co', 'sb_publishable_gHfUWOTNsBRHgs7rFHPMLQ_krpywbEN')
+      : null;
+    let currentCloudUser = null;
+
     const STORAGE_KEY = 'reviso_v7_state';
 
     const TAB_META = [
@@ -2566,6 +2592,173 @@
       } catch (err) {
         showToast('Espace local presque saturé : pensez à alléger certains fichiers.');
       }
+    }
+
+    function renderCloudAccount() {
+      const status = document.getElementById('cloud-account-status');
+      const email = document.getElementById('cloud-account-email');
+      const authForm = document.getElementById('cloud-auth-form');
+      const signOutButton = document.getElementById('cloud-signout-button');
+      if (!status || !email || !authForm || !signOutButton) return;
+
+      if (currentCloudUser) {
+        status.textContent = 'Compte connecté — synchronisation active.';
+        email.textContent = currentCloudUser.email || 'Compte Supabase connecté';
+        email.classList.remove('hidden');
+        authForm.classList.add('hidden');
+        signOutButton.classList.remove('hidden');
+      } else {
+        status.textContent = supabaseClient
+          ? 'Mode local hors ligne ou connexion cloud facultative.'
+          : 'Service cloud indisponible — mode local actif.';
+        email.textContent = '';
+        email.classList.add('hidden');
+        authForm.classList.remove('hidden');
+        signOutButton.classList.add('hidden');
+        authForm.querySelectorAll('input, button').forEach(control => {
+          control.disabled = !supabaseClient;
+        });
+      }
+    }
+
+    async function signInToCloud(event) {
+      event.preventDefault();
+      if (!supabaseClient) {
+        showToast('Connexion cloud indisponible. Reviso reste utilisable en mode local.');
+        return;
+      }
+      const email = document.getElementById('cloud-auth-email').value.trim();
+      const password = document.getElementById('cloud-auth-password').value;
+      try {
+        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        if (error) {
+          console.error('Connexion Supabase :', error);
+          showToast(`Connexion impossible : ${error.message}`);
+          return;
+        }
+        showToast('Connexion au compte cloud réussie.');
+      } catch (err) {
+        console.error('Réseau Supabase (connexion) :', err);
+        showToast('Connexion impossible : service cloud indisponible.');
+        return;
+      }
+    }
+
+    async function signUpToCloud() {
+      if (!supabaseClient) {
+        showToast('Inscription cloud indisponible. Reviso reste utilisable en mode local.');
+        return;
+      }
+      const email = document.getElementById('cloud-auth-email').value.trim();
+      const password = document.getElementById('cloud-auth-password').value;
+      if (!email || !password) {
+        showToast('Saisissez votre e-mail et votre mot de passe pour créer un compte.');
+        return;
+      }
+      try {
+        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+        if (error) {
+          console.error('Inscription Supabase :', error);
+          showToast(`Inscription impossible : ${error.message}`);
+          return;
+        }
+        showToast(data.session
+          ? 'Compte créé et connecté.'
+          : 'Compte créé. Vérifiez votre e-mail pour confirmer l’inscription.');
+      } catch (err) {
+        console.error('Réseau Supabase (inscription) :', err);
+        showToast('Inscription impossible : service cloud indisponible.');
+        return;
+      }
+    }
+
+    async function signOutFromCloud() {
+      if (!supabaseClient) return;
+      try {
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) {
+          console.error('Déconnexion Supabase :', error);
+          showToast(`Déconnexion impossible : ${error.message}`);
+          return;
+        }
+        showToast('Déconnecté. Vos données locales restent disponibles.');
+      } catch (err) {
+        console.error('Réseau Supabase (déconnexion) :', err);
+        showToast('Déconnexion impossible : service cloud indisponible.');
+        return;
+      }
+    }
+
+    async function writeCloudRows(table, rows, description) {
+      if (!supabaseClient || !currentCloudUser || !rows.length) return;
+      try {
+        const { error } = await supabaseClient.from(table).insert(rows);
+        if (error) {
+          console.error(`Synchronisation Supabase (${table}) :`, error);
+          showToast(`${description} : ${error.message}`);
+        }
+      } catch (err) {
+        console.error(`Réseau Supabase (${table}) :`, err);
+        showToast(`${description} : connexion cloud indisponible.`);
+      }
+    }
+
+    async function syncProfileToCloud() {
+      if (!supabaseClient || !currentCloudUser || !appState.profile) return;
+      const profile = appState.profile;
+      try {
+        const { error } = await supabaseClient.from('profiles').upsert({
+          id: currentCloudUser.id,
+          academic_level: profile.level,
+          academic_track: profile.track,
+          academic_detail: profile.prioritySubject,
+          cognitive_style: profile.cognitiveStyle,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+        if (error) {
+          console.error('Synchronisation du profil Supabase :', error);
+          showToast(`Profil non synchronisé : ${error.message}`);
+        }
+      } catch (err) {
+        console.error('Réseau Supabase (profiles) :', err);
+        showToast('Profil non synchronisé : connexion cloud indisponible.');
+      }
+    }
+
+    function syncStudyItemToCloud(document) {
+      const summary = String(document.content || '').slice(0, 1000);
+      void writeCloudRows('study_items', [{
+        user_id: currentCloudUser && currentCloudUser.id,
+        category: document.category,
+        title: document.title,
+        subject: appState.profile ? appState.profile.prioritySubject : '',
+        summary
+      }], 'Cours non synchronisé');
+    }
+
+    function syncPlanningToCloud(schedule) {
+      const now = new Date();
+      const rows = schedule.map((item, index) => {
+        const scheduledFor = new Date(now.getTime() + (index + 1) * 86400000);
+        return {
+          user_id: currentCloudUser && currentCloudUser.id,
+          topic: item.title,
+          score: null,
+          scheduled_for: scheduledFor.toISOString(),
+          completed: Boolean(item.completed)
+        };
+      });
+      void writeCloudRows('study_sessions', rows, 'Planning non synchronisé');
+    }
+
+    function syncCompletedStudySession(topic, score) {
+      void writeCloudRows('study_sessions', [{
+        user_id: currentCloudUser && currentCloudUser.id,
+        topic,
+        score,
+        scheduled_for: null,
+        completed: true
+      }], 'Résultat non synchronisé');
     }
 
     // ------------------------------------------------------------------------
@@ -3360,6 +3553,7 @@
       };
 
       saveState();
+      void syncProfileToCloud();
       closeModal('modal-profile');
       refreshAllUI();
       showToast('Parcours académique enregistré.');
@@ -3402,14 +3596,16 @@
         try {
           const raw = await extractTextFromFile(file);
           const clean = raw.slice(0, 18000);
-          appState.documents.unshift({
+          const document = {
             id: 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
             category,
             title: file.name.replace(/\.[^/.]+$/, ''),
             content: clean,
             words: clean.split(/\s+/).filter(Boolean).length,
             addedAt: new Date().toLocaleDateString('fr-FR')
-          });
+          };
+          appState.documents.unshift(document);
+          syncStudyItemToCloud(document);
         } catch (err) {
           console.error('Erreur lecture PDF :', err);
         }
@@ -3444,14 +3640,16 @@
       const content = document.getElementById('paste-content').value.trim();
       if (!title || !content) return;
 
-      appState.documents.unshift({
+      const document = {
         id: 'doc_' + Date.now(),
         category,
         title,
         content,
         words: content.split(/\s+/).filter(Boolean).length,
         addedAt: new Date().toLocaleDateString('fr-FR')
-      });
+      };
+      appState.documents.unshift(document);
+      syncStudyItemToCloud(document);
 
       rebuildStudyArtifactsFromDocuments();
       saveState();
@@ -3514,14 +3712,16 @@
       ];
 
       samples.forEach((item, idx) => {
-        appState.documents.unshift({
+        const document = {
           id: 'sample_' + Date.now() + '_' + idx,
           category: item.category,
           title: item.title,
           content: item.content,
           words: item.content.split(/\s+/).filter(Boolean).length,
           addedAt: new Date().toLocaleDateString('fr-FR')
-        });
+        };
+        appState.documents.unshift(document);
+        syncStudyItemToCloud(document);
       });
 
       rebuildStudyArtifactsFromDocuments();
@@ -3582,6 +3782,7 @@
       appState.flashcards = cards;
       appState.qcmList = qcms;
       appState.schedule = sched;
+      syncPlanningToCloud(sched);
       currentFlashcardIndex = 0;
       currentQcmIndex = 0;
       qcmScore = 0;
@@ -3767,6 +3968,8 @@
       appState.cognitive.reasoning = Math.min(99, appState.cognitive.reasoning + 3);
       appState.cognitive.method = Math.min(99, appState.cognitive.method + 3);
       saveState();
+      void syncProfileToCloud();
+      syncCompletedStudySession(`Examen blanc — ${currentMockQuestion.title}`, note);
 
       box.classList.remove('hidden');
       box.innerHTML = `
@@ -3842,7 +4045,10 @@
       const item = appState.schedule.find(s => s.id === id);
       if (item) {
         item.completed = !item.completed;
-        if (item.completed) appState.cognitive.retention = Math.min(99, appState.cognitive.retention + 2);
+        if (item.completed) {
+          appState.cognitive.retention = Math.min(99, appState.cognitive.retention + 2);
+          void syncProfileToCloud();
+        }
         saveState();
         renderPlanningView();
       }
@@ -4007,6 +4213,7 @@
       const idx = currentFlashcardIndex % appState.flashcards.length;
       appState.flashcards[idx].status = status;
       if (status === 'mastered') appState.cognitive.retention = Math.min(99, appState.cognitive.retention + 3);
+      if (status === 'mastered') void syncProfileToCloud();
       document.getElementById('flashcard-3d').classList.remove('flipped');
       currentFlashcardIndex = (currentFlashcardIndex + 1) % appState.flashcards.length;
       saveState();
@@ -4056,6 +4263,7 @@
       if (isCorrect) {
         qcmScore++;
         appState.cognitive.analysis = Math.min(99, appState.cognitive.analysis + 2);
+        void syncProfileToCloud();
       }
 
       document.getElementById('qcm-score-label').textContent = `Score : ${qcmScore} / ${qcmAnsweredCount}`;
@@ -4068,6 +4276,13 @@
       `;
       nextBtn.classList.remove('hidden');
       saveState();
+      if (qcmAnsweredCount > 0 && qcmAnsweredCount % appState.qcmList.length === 0) {
+        const subject = appState.profile ? appState.profile.prioritySubject : 'Révision';
+        syncCompletedStudySession(
+          `Quiz QCM — ${subject}`,
+          Math.round((qcmScore / qcmAnsweredCount) * 100)
+        );
+      }
     }
 
     function nextQcmQuestion() {
@@ -4183,6 +4398,7 @@
             appState.tutorHistory.push({ role: 'tutor', text: reply });
             appState.cognitive.reasoning = Math.min(99, appState.cognitive.reasoning + 2);
             saveState();
+            void syncProfileToCloud();
             renderTutorMessages();
             return;
           }
@@ -4203,6 +4419,7 @@
       appState.tutorHistory.push({ role: 'tutor', text: replyText });
       appState.cognitive.reasoning = Math.min(99, appState.cognitive.reasoning + 2);
       saveState();
+      void syncProfileToCloud();
       renderTutorMessages();
     }
 
@@ -4355,6 +4572,7 @@
       const profEl = document.getElementById('drawer-profile-summary');
       const pinEl = document.getElementById('drawer-pin-status');
       const apiEl = document.getElementById('drawer-api-status');
+      renderCloudAccount();
       if (profEl) profEl.textContent = appState.profile ? `${appState.profile.name} • ${appState.profile.track}` : 'Non configuré';
       if (pinEl) pinEl.textContent = appState.pinCode ? 'Activé (4 chiffres)' : 'Désactivé';
       if (apiEl) apiEl.textContent = appState.geminiApiKey ? 'Clé Google AI Studio active' : 'Moteur local autonome actif';
@@ -4368,16 +4586,17 @@
         titleEl.textContent = 'Guide d\'utilisation — 5 étapes';
         bodyEl.innerHTML = `
           <p><strong>Étape 1 — Calibrage académique :</strong> Renseignez votre prénom, votre cycle (Collège, Lycée Général ou Technique du Gabon, ou Enseignement Supérieur), votre filière exacte et votre matière prioritaire.</p>
-          <p><strong>Étape 2 — Importation des supports (Documents) :</strong> Téléversez simultanément vos cours PDF, votre programme officiel et vos anciens sujets d'examen. Tout est extrait localement sur votre appareil.</p>
+          <p><strong>Étape 2 — Importation des supports (Documents) :</strong> Téléversez vos cours PDF, votre programme officiel et vos anciens sujets d'examen. Les fichiers restent sur votre appareil ; avec un compte cloud connecté, seuls les titres et de courts extraits textuels sont synchronisés.</p>
           <p><strong>Étape 3 — Analyse des annales (Annales) :</strong> Identifiez les thèmes les plus fréquents aux examens et entraînez-vous sur des sujets blancs corrigés.</p>
           <p><strong>Étape 4 — Planning intelligent (Planning) :</strong> Suivez un calendrier basé sur la répétition espacée SM-2 (mode Cours classique ou Stage/Gardes) et exportez-le vers votre agenda (.ics).</p>
           <p><strong>Étape 5 — Révision active & Tuteur IA :</strong> Utilisez les fiches multi-vues, flashcards 3D, quiz QCM et le Tuteur socratique strictement cadré sur votre filière.</p>
         `;
       } else if (type === 'privacy') {
-        titleEl.textContent = 'Politique de confidentialité & Données locales';
+        titleEl.textContent = 'Confidentialité & Synchronisation Cloud';
         bodyEl.innerHTML = `
-          <p><strong>Stockage 100 % local :</strong> Vos informations de profil, vos cours extraits, vos résultats de quiz et votre code PIN sont enregistrés exclusivement dans la mémoire locale (<code>localStorage</code>) de votre navigateur.</p>
-          <p><strong>Zéro revente et zéro traceur :</strong> Aucune donnée personnelle n'est transmise à des régies publicitaires ou serveurs tiers.</p>
+          <p><strong>Mode local par défaut :</strong> Sans connexion à un compte, vos données restent enregistrées sur cet appareil dans la mémoire locale (<code>localStorage</code>).</p>
+          <p><strong>Synchronisation facultative :</strong> Quand vous êtes connecté, le profil académique, les titres et extraits textuels (limités à 1 000 caractères) des supports, ainsi que le planning et les résultats de quiz/examen sont transmis à votre projet Supabase. Les fichiers PDF bruts ne sont jamais envoyés et restent sur votre appareil.</p>
+          <p><strong>Contrôle du compte :</strong> Vous pouvez vous déconnecter à tout moment depuis le menu ; cela arrête les futures synchronisations sans supprimer vos données locales.</p>
           <div class="pt-3">
             <button type="button" onclick="closeModal('modal-info'); confirmResetAllData();" class="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-700">
               Réinitialiser toutes les données locales
@@ -4470,6 +4689,26 @@
     // ------------------------------------------------------------------------
     window.addEventListener('DOMContentLoaded', () => {
       loadState();
+      renderCloudAccount();
+      if (supabaseClient) {
+        supabaseClient.auth.onAuthStateChange((_event, session) => {
+          currentCloudUser = session ? session.user : null;
+          renderCloudAccount();
+          if (currentCloudUser) setTimeout(() => { void syncProfileToCloud(); }, 0);
+        });
+        supabaseClient.auth.getSession().then(({ data, error }) => {
+          if (error) {
+            console.error('Lecture de la session Supabase :', error);
+            showToast('Session cloud indisponible. Reviso continue en mode local.');
+            return;
+          }
+          currentCloudUser = data.session ? data.session.user : null;
+          renderCloudAccount();
+        }).catch(err => {
+          console.error('Lecture de la session Supabase :', err);
+          showToast('Session cloud indisponible. Reviso continue en mode local.');
+        });
+      }
       applyTheme(appState.theme);
       initBottomNavSlideGesture();
       switchTab(appState.activeTabIndex, { force: true, fromDrag: true });
