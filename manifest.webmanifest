@@ -1,0 +1,18 @@
+{
+  "name": "Reviso — Assistant Pédagogique & Préparation aux Examens",
+  "short_name": "Reviso",
+  "description": "Espace privé de révision, bibliothèque partagée et accompagnement pédagogique.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F8FAFC",
+  "theme_color": "#173B72",
+  "icons": [
+    {
+      "src": "./reviso-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

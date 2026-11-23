@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
   <meta name="theme-color" content="#173B72" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="./reviso-icon.svg" />
   <title>Reviso — Assistant Pédagogique & Préparation Examens</title>
 
   <!-- Polices Google Fonts : Plus Jakarta Sans & Inter -->
@@ -1098,10 +1100,11 @@
     #welcome-portal .m-globe, #welcome-portal .m-tools{ left: 20px; }
     }
 
-    #reviso-app[hidden] { display: none !important; }
+    #portalScreen[hidden], #welcome-portal[hidden], #reviso-app[hidden] { display: none !important; }
 </style>
 </head>
 <body>
+  <div id="portalScreen">
   <div id="welcome-portal" data-theme="light">
   <!-- Arrière-plan lumineux doux -->
   <div class="ambient-backdrop" aria-hidden="true">
@@ -1270,16 +1273,27 @@
     </section>
   </main>
   </div>
+  </div>
   <script>
 (function() {
 
-    // 1. Démarrage forcé en Mode Clair lumineux (#F8FAFC / #FFFFFF)
     const themeToggle = document.getElementById('themeToggle');
     const themeLabel = document.getElementById('themeLabel');
     const themeIcon = document.getElementById('themeIcon');
     const htmlEl = document.getElementById('welcome-portal');
 
-    function applyTheme(theme) {
+    function persistPortalTheme(theme) {
+      try {
+        const saved = JSON.parse(localStorage.getItem('reviso_v7_state') || '{}');
+        saved.theme = theme;
+        localStorage.setItem('reviso_v7_state', JSON.stringify(saved));
+      } catch (error) {
+        console.warn('Persistance du thème du portail :', error);
+      }
+      window.dispatchEvent(new CustomEvent('reviso:theme', { detail: theme }));
+    }
+
+    function renderPortalTheme(theme) {
       if (theme === 'dark') {
         htmlEl.setAttribute('data-theme', 'dark');
         themeLabel.textContent = 'Mode clair';
@@ -1291,8 +1305,21 @@
       }
     }
 
-    // Initialisation systématique en mode clair lumineux au chargement
-    applyTheme('light');
+    function applyTheme(theme) {
+      renderPortalTheme(theme);
+      persistPortalTheme(theme);
+    }
+
+    window.addEventListener('reviso:portal-theme', event => renderPortalTheme(event.detail));
+
+    let savedPortalTheme = 'light';
+    try {
+      const savedState = JSON.parse(localStorage.getItem('reviso_v7_state') || '{}');
+      if (savedState.theme === 'dark' || savedState.theme === 'light') savedPortalTheme = savedState.theme;
+    } catch (error) {
+      console.warn('Lecture du thème du portail :', error);
+    }
+    applyTheme(savedPortalTheme);
 
     themeToggle.addEventListener('click', () => {
       const isDark = htmlEl.getAttribute('data-theme') === 'dark';
@@ -1424,6 +1451,10 @@
       }
 
       requestAnimationFrame(renderFrame);
+      window.addEventListener('reviso:portal', () => {
+        lastTimestamp = performance.now();
+        requestAnimationFrame(renderFrame);
+      });
     })();
 
     // Reveal the application when the user enters.
@@ -1432,10 +1463,19 @@
 
     function enterReviso() {
       htmlEl.hidden = true;
+      document.getElementById('portalScreen').hidden = true;
       document.getElementById('reviso-app').hidden = false;
       window.scrollTo(0, 0);
       window.dispatchEvent(new CustomEvent('reviso:enter'));
     }
+
+    window.returnToPortal = function() {
+      document.getElementById('reviso-app').hidden = true;
+      document.getElementById('portalScreen').hidden = false;
+      htmlEl.hidden = false;
+      window.scrollTo(0, 0);
+      window.dispatchEvent(new CustomEvent('reviso:portal'));
+    };
 
     enterAppBtn.addEventListener('click', enterReviso);
     centerEmblem.addEventListener('click', enterReviso);
@@ -1534,6 +1574,12 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <button type="button" onclick="returnToPortal()" class="flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-[11px] font-semibold transition-colors" style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle);" title="Retour au portail d’accueil">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 18 3 12l6-6"></path><path d="M3 12h12a6 6 0 0 1 6 6v2"></path>
+          </svg>
+          <span class="hidden sm:inline">Portail</span>
+        </button>
         <button type="button" onclick="openProfileModal()" id="header-profile-badge" class="hidden sm:flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all" style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle); color: var(--text-primary);">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--active-color);">
             <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
@@ -1669,6 +1715,12 @@
             </svg>
             Jeu d'entraînement selon mon profil
           </button>
+          <button type="button" onclick="loadDemonstrationPack('maieutique')" class="surface-alt inline-flex items-center rounded-xl px-3.5 py-2 text-xs font-semibold">
+            Pack Maïeutique — 3e année
+          </button>
+          <button type="button" onclick="loadDemonstrationPack('general')" class="surface-alt inline-flex items-center rounded-xl px-3.5 py-2 text-xs font-semibold">
+            Pack Parcours Général
+          </button>
         </div>
       </div>
 
@@ -1748,13 +1800,13 @@
       <section id="shared-library-r2" class="surface-card space-y-5 p-5">
         <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
-            <h3 class="font-display text-base font-extrabold">Bibliothèque Partagée (Cloudflare R2)</h3>
-            <p class="mt-1 text-xs" style="color: var(--text-muted);">Explorez les rayons pédagogiques, trouvez des références et importez un PDF dans vos révisions privées.</p>
+            <h3 class="font-display text-base font-extrabold">Bibliothèque Partagée — Cloudflare R2</h3>
+            <p class="mt-1 text-xs" style="color: var(--text-muted);">Explorez les rayons pédagogiques de <strong>reviso-bibliotheque</strong>, trouvez des références et importez un PDF dans vos révisions privées.</p>
           </div>
           <button type="button" onclick="refreshR2Library()" class="surface-alt shrink-0 px-3 py-2 text-xs font-semibold">Actualiser la bibliothèque</button>
         </div>
 
-        <form id="r2-filter-form" onsubmit="searchR2Catalog(event)" class="surface-alt grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <form id="r2-filter-form" onsubmit="searchR2Catalog(event)" class="surface-alt grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
           <div>
             <label for="r2-filter-rayon" class="mb-1 block text-[11px] font-semibold">Rayon</label>
             <select id="r2-filter-rayon" class="input-field" onchange="populateR2Branches('filter')">
@@ -1772,21 +1824,25 @@
             </select>
           </div>
           <div>
-            <label for="r2-filter-type" class="mb-1 block text-[11px] font-semibold">Type</label>
+            <label for="r2-filter-level" class="mb-1 block text-[11px] font-semibold">Niveau / classe</label>
+            <input id="r2-filter-level" type="search" class="input-field" placeholder="Ex. Terminale, L3..." />
+          </div>
+          <div>
+            <label for="r2-filter-type" class="mb-1 block text-[11px] font-semibold">Catégorie</label>
             <select id="r2-filter-type" class="input-field">
-              <option value="">Tous les types</option>
+              <option value="">Toutes les catégories</option>
               <option value="cours">Cours</option>
-              <option value="livre">Livre</option>
-              <option value="annale">Annale</option>
-              <option value="rapport-stage">Rapport de stage</option>
+              <option value="livres">Livres</option>
               <option value="recherche">Recherche</option>
+              <option value="annales">Annales</option>
+              <option value="rapports-stage">Rapports de stage</option>
             </select>
           </div>
           <div>
             <label for="r2-filter-query" class="mb-1 block text-[11px] font-semibold">Mot-clé, titre, auteur ou matière</label>
             <input id="r2-filter-query" type="search" class="input-field" placeholder="Ex. anatomie, gestion..." />
           </div>
-          <div class="flex items-end sm:col-span-2 lg:col-span-4">
+          <div class="flex items-end sm:col-span-2 lg:col-span-5">
             <button type="submit" class="btn-active-accent rounded-xl px-4 py-2 text-xs font-bold">Rechercher dans la bibliothèque</button>
           </div>
         </form>
@@ -1824,20 +1880,24 @@
                 <label for="r2-share-category" class="mb-1 block text-[11px] font-semibold">Catégorie *</label>
                 <select id="r2-share-category" class="input-field" required onchange="updateR2FolderPath()">
                   <option value="cours">Cours</option>
-                  <option value="livre">Livre</option>
-                  <option value="annale">Annale</option>
-                  <option value="rapport-stage">Rapport de stage</option>
+                  <option value="livres">Livres</option>
                   <option value="recherche">Recherche</option>
+                  <option value="annales">Annales</option>
+                  <option value="rapports-stage">Rapports de stage</option>
                 </select>
               </div>
               <div>
-                <label for="r2-share-rayon" class="mb-1 block text-[11px] font-semibold">Rayon *</label>
+                <label for="r2-share-rayon" class="mb-1 block text-[11px] font-semibold">Rayon / Cycle *</label>
                 <select id="r2-share-rayon" class="input-field" required onchange="populateR2Branches('share')">
                   <option value="college">Collège</option>
                   <option value="lycee-general">Lycée Général</option>
                   <option value="lycee-technique">Lycée Technique</option>
                   <option value="universites-grandes-ecoles">Universités & Grandes Écoles</option>
                 </select>
+              </div>
+              <div>
+                <label for="r2-share-level" class="mb-1 block text-[11px] font-semibold">Niveau / Classe d'étude *</label>
+                <input id="r2-share-level" type="text" class="input-field" maxlength="80" placeholder="Ex. Terminale, 3e année" required />
               </div>
               <div>
                 <label for="r2-share-filiere" class="mb-1 block text-[11px] font-semibold">Filière / tiroir *</label>
@@ -1876,7 +1936,7 @@
             </div>
             <label class="flex items-start gap-2 text-[11px] leading-relaxed">
               <input id="r2-share-rights" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-blue-700" required />
-              <span>Je certifie que le nom de l'auteur/enseignant indiqué est exact et que j'ai le droit de partager ce document pédagogique.</span>
+              <span>Je certifie que le nom de l'auteur ou de l'enseignant et la source sont exacts, et que j'ai le droit de partager ce document pédagogique.</span>
             </label>
             <div class="flex justify-end">
               <div class="flex flex-col items-end gap-2">
@@ -1906,7 +1966,7 @@
       <div class="grid grid-cols-1 gap-4 md:grid-cols-12">
         <div class="surface-card p-5 md:col-span-7">
           <div class="mb-4 flex items-center justify-between">
-            <h3 class="font-display text-sm font-bold">Probabilité d'apparition aux examens</h3>
+            <h3 class="font-display text-sm font-bold">Récurrence observée dans les annales</h3>
             <span id="annales-radar-badge" class="rounded-full px-2.5 py-0.5 text-[11px] font-semibold" style="background-color: var(--bg-surface-alt); color: var(--active-color);">0 sujet analysé</span>
           </div>
           <div id="radar-topics-container" class="space-y-3.5"></div>
@@ -1917,6 +1977,8 @@
             <h3 class="font-display text-sm font-bold">Mots-clés attendus au barème</h3>
             <p class="mt-1 text-xs" style="color: var(--text-muted);">Notions discriminantes repérées dans vos documents :</p>
             <div id="radar-keywords-container" class="mt-3 flex flex-wrap gap-1.5"></div>
+            <p class="mt-4 text-xs font-bold">Formats de consigne observés</p>
+            <div id="radar-formats-container" class="mt-2 flex flex-wrap gap-1.5"></div>
           </div>
 
           <div class="surface-alt mt-4 p-3.5">
@@ -2020,6 +2082,22 @@
         </div>
       </div>
 
+      <div class="surface-card flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p class="text-xs font-bold">Jours disponibles pour réviser</p>
+          <p class="mt-1 text-[11px]" style="color: var(--text-muted);">Les séances tiennent compte de ces disponibilités et de la date d’examen de votre profil.</p>
+        </div>
+        <div id="schedule-days" class="flex flex-wrap gap-2">
+          <label class="surface-alt inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px]"><input type="checkbox" data-study-day value="1" onchange="updateScheduleAvailability()" /> Lun</label>
+          <label class="surface-alt inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px]"><input type="checkbox" data-study-day value="2" onchange="updateScheduleAvailability()" /> Mar</label>
+          <label class="surface-alt inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px]"><input type="checkbox" data-study-day value="3" onchange="updateScheduleAvailability()" /> Mer</label>
+          <label class="surface-alt inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px]"><input type="checkbox" data-study-day value="4" onchange="updateScheduleAvailability()" /> Jeu</label>
+          <label class="surface-alt inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px]"><input type="checkbox" data-study-day value="5" onchange="updateScheduleAvailability()" /> Ven</label>
+          <label class="surface-alt inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px]"><input type="checkbox" data-study-day value="6" onchange="updateScheduleAvailability()" /> Sam</label>
+          <label class="surface-alt inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px]"><input type="checkbox" data-study-day value="0" onchange="updateScheduleAvailability()" /> Dim</label>
+        </div>
+      </div>
+
       <div id="planning-sessions-container" class="space-y-3"></div>
     </section>
 
@@ -2075,6 +2153,15 @@
       <!-- Sous-vue 2 : Flashcards 3D -->
       <div id="rev-sub-flashcards" class="hidden space-y-4">
         <div class="flex items-center justify-between text-xs">
+          <label class="flex items-center gap-2 font-semibold">
+            Filtrer
+            <select id="flashcard-filter" class="input-field py-1.5" onchange="setFlashcardFilter()">
+              <option value="all">Toutes</option>
+              <option value="review">À revoir</option>
+              <option value="learning">En cours</option>
+              <option value="mastered">Maîtrisées</option>
+            </select>
+          </label>
           <span id="flashcard-counter" class="font-bold">Carte 0 / 0</span>
           <span class="rounded-full px-2.5 py-0.5 font-semibold" style="background-color: var(--bg-surface); border: 1px solid var(--border-subtle);">Touchez la carte pour retourner</span>
         </div>
@@ -2212,6 +2299,7 @@
               </div>
             </div>
           </div>
+          <p id="cog-session-time" class="mt-3 text-[11px]" style="color: var(--text-muted);">Temps d’étude actif estimé : 0 min</p>
         </div>
 
         <div class="surface-card flex flex-col overflow-hidden">
@@ -2485,6 +2573,13 @@
             </form>
             <button type="button" id="cloud-signout-button" onclick="signOutFromCloud()" class="surface-card hidden w-full px-3 py-2 text-[11px] font-bold">Se déconnecter</button>
             <p class="text-[10px] leading-relaxed" style="color: var(--text-muted);">Sans connexion, Reviso continue de fonctionner et conserve vos données sur cet appareil.</p>
+            <details class="border-t pt-2" style="border-color: var(--border-subtle);">
+              <summary class="cursor-pointer text-[10px] font-semibold">Paramètres de connexion Supabase</summary>
+              <label for="cloud-supabase-key" class="mb-1 mt-2 block text-[10px] font-medium">Clé publishable</label>
+              <input id="cloud-supabase-key" type="password" class="input-field" autocomplete="off" spellcheck="false" aria-label="Clé publishable Supabase" />
+              <button type="button" onclick="saveSupabasePublishableKey()" class="surface-card mt-2 w-full px-3 py-2 text-[10px] font-bold">Enregistrer la clé Supabase</button>
+              <p class="mt-1 text-[10px] leading-relaxed" style="color: var(--text-muted);">La clé est enregistrée uniquement sur cet appareil. La clé publishable n’est pas un secret serveur.</p>
+            </details>
           </section>
 
           <!-- Interrupteur animé Mode Clair / Mode Sombre -->
@@ -2557,6 +2652,14 @@
 
       <div class="mt-6 border-t pt-4 text-center text-[11px]" style="border-color: var(--border-subtle); color: var(--text-muted);">
         Reviso — Assistant Pédagogique & Préparation Examens
+        <div class="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1">
+          <a href="https://github.com/reviso241/reviso." target="_blank" rel="noopener noreferrer" class="underline">Dépôt GitHub</a>
+          <a href="https://reviso241.github.io/reviso./" target="_blank" rel="noopener noreferrer" class="underline">GitHub Pages</a>
+          <a href="https://reviso-r2.vercel.app" target="_blank" rel="noopener noreferrer" class="underline">Projet Vercel reviso-r2</a>
+          <a href="https://reviso-r2-1y9smng4j-reviso2.vercel.app" target="_blank" rel="noopener noreferrer" class="underline">Déploiement Vercel</a>
+        </div>
+        <p class="mt-2 break-all text-[9px]">Bibliothèque : reviso-bibliotheque · API : https://reviso-r2.vercel.app/api/r2</p>
+        <p class="mt-1 break-all text-[9px]">S3 R2 : https://f7e5cd54a87349d05caa39ea3e891a26.r2.cloudflarestorage.com</p>
       </div>
     </aside>
   </div>
@@ -2669,9 +2772,9 @@
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
 
-    const supabaseClient = window.supabase
-      ? window.supabase.createClient('https://kfdetwgmfpdvislnjzphi.supabase.co', 'sb_publishable_gHfUWOTNsBRHgs7rFHPMLQ_krpywbEN')
-      : null;
+    const SUPABASE_URL = 'https://kfdetwgmfpdvislnjzphi.supabase.co';
+    const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_gHfUWOTNsB8NgsTrFKPMLQ_krpyw';
+    let supabaseClient = null;
     let currentCloudUser = null;
     const R2_API_URL = 'https://reviso-r2.vercel.app/api/r2';
     const R2_ROOT_PREFIX = 'reviso-tiroirs/';
@@ -2720,6 +2823,9 @@
     ];
 
     const STORAGE_KEY = 'reviso_v7_state';
+    const LOCAL_FILES_DB = 'reviso-local-files';
+    const LOCAL_FILES_STORE = 'documents';
+    let localFilesDatabasePromise = null;
 
     const TAB_META = [
       { id: 'documents', label: 'Documents', light: '#173B72', lightGlow: 'rgba(23, 59, 114, 0.35)', dark: '#2563EB', darkGlow: 'rgba(37, 99, 235, 0.45)' },
@@ -2734,9 +2840,11 @@
       activeTabIndex: 0,
       pinCode: null,
       geminiApiKey: '',
+      supabasePublishableKey: DEFAULT_SUPABASE_PUBLISHABLE_KEY,
       profile: null,
       documents: [],
       scheduleRhythm: 'standard',
+      availableStudyDays: [1, 2, 3, 4, 5, 6],
       schedule: [],
       flashcards: [],
       qcmList: [],
@@ -2746,6 +2854,7 @@
         reasoning: 52,
         method: 48
       },
+      studyMinutes: 0,
       tutorHistory: []
     };
 
@@ -2769,6 +2878,27 @@
       } catch (err) {
         console.warn('Lecture stockage local :', err);
       }
+      if (!appState.supabasePublishableKey ||
+          appState.supabasePublishableKey === 'sb_publishable_gHfUWOTNsBRHgs7rFHPMLQ_krpywbEN') {
+        appState.supabasePublishableKey = DEFAULT_SUPABASE_PUBLISHABLE_KEY;
+      }
+      if (!Array.isArray(appState.documents)) appState.documents = [];
+      appState.studyMinutes = Math.max(0, Number(appState.studyMinutes) || 0);
+      appState.cognitive = {
+        retention: 50,
+        analysis: 54,
+        reasoning: 52,
+        method: 48,
+        ...(appState.cognitive || {})
+      };
+      ['retention', 'analysis', 'reasoning', 'method'].forEach(metric => {
+        appState.cognitive[metric] = Math.min(99, Math.max(0, Number(appState.cognitive[metric]) || 0));
+      });
+      if (!Array.isArray(appState.availableStudyDays)) appState.availableStudyDays = [1, 2, 3, 4, 5, 6];
+      appState.availableStudyDays = appState.availableStudyDays
+        .map(Number)
+        .filter((day, index, days) => Number.isInteger(day) && day >= 0 && day <= 6 && days.indexOf(day) === index);
+      if (!appState.availableStudyDays.length) appState.availableStudyDays = [1, 2, 3, 4, 5, 6];
       if (!appState.theme) {
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         appState.theme = prefersDark ? 'dark' : 'light';
@@ -2783,12 +2913,147 @@
       }
     }
 
+    function renderCognitiveProfile() {
+      if (!appState.cognitive) return;
+      ['retention', 'analysis', 'reasoning', 'method'].forEach(metric => {
+        const value = Number(appState.cognitive[metric]) || 0;
+        const label = document.getElementById(`cog-val-${metric}`);
+        const bar = document.getElementById(`cog-bar-${metric}`);
+        if (label) label.textContent = `${value}%`;
+        if (bar) bar.style.width = `${value}%`;
+      });
+      const timeLabel = document.getElementById('cog-session-time');
+      if (timeLabel) timeLabel.textContent = `Temps d’étude actif estimé : ${appState.studyMinutes} min`;
+    }
+
+    function startActiveStudyTimer() {
+      let lastTickAt = Date.now();
+      let lastActivityAt = lastTickAt;
+      let activeMilliseconds = 0;
+      const markActivity = () => { lastActivityAt = Date.now(); };
+      ['pointerdown', 'keydown', 'input'].forEach(eventName => {
+        document.addEventListener(eventName, markActivity, { passive: true });
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) activeMilliseconds = 0;
+        lastTickAt = Date.now();
+      });
+      setInterval(() => {
+        const now = Date.now();
+        const elapsed = now - lastTickAt;
+        const appVisible = !document.getElementById('reviso-app').hidden;
+        if (!document.hidden && appVisible && now - lastActivityAt <= 120000) {
+          activeMilliseconds += elapsed;
+        }
+        lastTickAt = now;
+        const earnedMinutes = Math.floor(activeMilliseconds / 60000);
+        if (!earnedMinutes) return;
+        activeMilliseconds -= earnedMinutes * 60000;
+        const priorMilestones = Math.floor(appState.studyMinutes / 10);
+        appState.studyMinutes += earnedMinutes;
+        const nextMilestones = Math.floor(appState.studyMinutes / 10);
+        const metricByTab = ['method', 'analysis', 'method', 'retention', 'reasoning'];
+        const metric = metricByTab[appState.activeTabIndex] || 'method';
+        if (nextMilestones > priorMilestones) {
+          appState.cognitive[metric] = Math.min(99, appState.cognitive[metric] + nextMilestones - priorMilestones);
+          void syncProfileToCloud();
+        }
+        saveState();
+        renderCognitiveProfile();
+      }, 15000);
+    }
+
+    function openLocalFilesDatabase() {
+      if (!('indexedDB' in window)) return Promise.reject(new Error('IndexedDB n’est pas disponible dans ce navigateur.'));
+      if (!localFilesDatabasePromise) {
+        localFilesDatabasePromise = new Promise((resolve, reject) => {
+          const request = indexedDB.open(LOCAL_FILES_DB, 1);
+          request.onupgradeneeded = () => {
+            const database = request.result;
+            if (!database.objectStoreNames.contains(LOCAL_FILES_STORE)) {
+              database.createObjectStore(LOCAL_FILES_STORE, { keyPath: 'id' });
+            }
+          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error || new Error('Ouverture du stockage IndexedDB impossible.'));
+          request.onblocked = () => reject(new Error('Le stockage IndexedDB est bloqué par un autre onglet Reviso.'));
+        });
+      }
+      return localFilesDatabasePromise;
+    }
+
+    async function saveLocalDocumentAsset(document, rawFile = null) {
+      const database = await openLocalFilesDatabase();
+      await new Promise((resolve, reject) => {
+        const transaction = database.transaction(LOCAL_FILES_STORE, 'readwrite');
+        transaction.objectStore(LOCAL_FILES_STORE).put({
+          id: document.id,
+          document,
+          rawFile,
+          fileName: rawFile ? rawFile.name : document.fileName || '',
+          updatedAt: new Date().toISOString()
+        });
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error || new Error('Écriture IndexedDB impossible.'));
+        transaction.onabort = () => reject(transaction.error || new Error('Écriture IndexedDB annulée.'));
+      });
+    }
+
+    async function removeLocalDocumentAsset(id) {
+      const database = await openLocalFilesDatabase();
+      await new Promise((resolve, reject) => {
+        const transaction = database.transaction(LOCAL_FILES_STORE, 'readwrite');
+        transaction.objectStore(LOCAL_FILES_STORE).delete(id);
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error || new Error('Suppression IndexedDB impossible.'));
+        transaction.onabort = () => reject(transaction.error || new Error('Suppression IndexedDB annulée.'));
+      });
+    }
+
+    async function clearLocalDocumentAssets() {
+      const database = await openLocalFilesDatabase();
+      await new Promise((resolve, reject) => {
+        const transaction = database.transaction(LOCAL_FILES_STORE, 'readwrite');
+        transaction.objectStore(LOCAL_FILES_STORE).clear();
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error || new Error('Vidage IndexedDB impossible.'));
+        transaction.onabort = () => reject(transaction.error || new Error('Vidage IndexedDB annulé.'));
+      });
+    }
+
+    async function restoreLocalDocumentsFromIndexedDB() {
+      try {
+        const database = await openLocalFilesDatabase();
+        const savedRecords = await new Promise((resolve, reject) => {
+          const transaction = database.transaction(LOCAL_FILES_STORE, 'readonly');
+          const request = transaction.objectStore(LOCAL_FILES_STORE).getAll();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error || new Error('Lecture IndexedDB impossible.'));
+        });
+        const knownIds = new Set(appState.documents.map(document => document.id));
+        const restored = savedRecords
+          .map(record => record.document)
+          .filter(document => document && document.id && !knownIds.has(document.id));
+        if (restored.length) {
+          appState.documents.push(...restored);
+          saveState();
+        }
+      } catch (err) {
+        console.error('Restauration des documents IndexedDB :', err);
+        showToast(`Stockage local des fichiers indisponible : ${err.message}`);
+      }
+    }
+
     function renderCloudAccount() {
       const status = document.getElementById('cloud-account-status');
       const email = document.getElementById('cloud-account-email');
       const authForm = document.getElementById('cloud-auth-form');
       const signOutButton = document.getElementById('cloud-signout-button');
       if (!status || !email || !authForm || !signOutButton) return;
+      const keyInput = document.getElementById('cloud-supabase-key');
+      if (keyInput && document.activeElement !== keyInput) {
+        keyInput.value = appState.supabasePublishableKey || DEFAULT_SUPABASE_PUBLISHABLE_KEY;
+      }
 
       if (currentCloudUser) {
         status.textContent = 'Compte connecté — synchronisation active.';
@@ -2808,6 +3073,56 @@
           control.disabled = !supabaseClient;
         });
       }
+    }
+
+    let supabaseAuthSubscription = null;
+    function connectSupabaseClient() {
+      if (supabaseAuthSubscription) {
+        supabaseAuthSubscription.unsubscribe();
+        supabaseAuthSubscription = null;
+      }
+      currentCloudUser = null;
+      try {
+        supabaseClient = window.supabase
+          ? window.supabase.createClient(
+            SUPABASE_URL,
+            appState.supabasePublishableKey || DEFAULT_SUPABASE_PUBLISHABLE_KEY
+          )
+          : null;
+      } catch (err) {
+        console.error('Initialisation du client Supabase :', err);
+        supabaseClient = null;
+        showToast(`Connexion Supabase indisponible : ${err.message}`);
+      }
+      renderCloudAccount();
+      if (!supabaseClient) return;
+
+      const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+        currentCloudUser = session ? session.user : null;
+        renderCloudAccount();
+        if (currentCloudUser) setTimeout(() => { void syncProfileToCloud(); }, 0);
+      });
+      supabaseAuthSubscription = data.subscription;
+      supabaseClient.auth.getSession().then(({ data: sessionData, error }) => {
+        if (error) {
+          console.error('Lecture de la session Supabase :', error);
+          showToast('Session cloud indisponible. Reviso continue en mode local.');
+          return;
+        }
+        currentCloudUser = sessionData.session ? sessionData.session.user : null;
+        renderCloudAccount();
+      }).catch(err => {
+        console.error('Lecture de la session Supabase :', err);
+        showToast('Session cloud indisponible. Reviso continue en mode local.');
+      });
+    }
+
+    function saveSupabasePublishableKey() {
+      const enteredKey = document.getElementById('cloud-supabase-key').value.trim();
+      appState.supabasePublishableKey = enteredKey || DEFAULT_SUPABASE_PUBLISHABLE_KEY;
+      saveState();
+      connectSupabaseClient();
+      showToast('Paramètres Supabase enregistrés sur cet appareil.');
     }
 
     async function signInToCloud(event) {
@@ -2920,7 +3235,7 @@
         user_id: currentCloudUser && currentCloudUser.id,
         category: document.category,
         title: document.title,
-        subject: appState.profile ? appState.profile.prioritySubject : '',
+        subject: document.subject || (appState.profile ? appState.profile.prioritySubject : ''),
         summary
       }], 'Cours non synchronisé');
     }
@@ -2928,7 +3243,9 @@
     function syncPlanningToCloud(schedule) {
       const now = new Date();
       const rows = schedule.map((item, index) => {
-        const scheduledFor = new Date(now.getTime() + (index + 1) * 86400000);
+        const scheduledFor = item.scheduledFor
+          ? new Date(item.scheduledFor)
+          : new Date(now.getTime() + (index + 1) * 86400000);
         return {
           user_id: currentCloudUser && currentCloudUser.id,
           topic: item.title,
@@ -3031,11 +3348,13 @@
       const normalized = normalizeR2Text(value).replace(/-/g, ' ').trim();
       const labels = {
         cours: 'Cours',
-        livre: 'Livre',
-        annale: 'Annale',
-        annales: 'Annale',
+        livre: 'Livres',
+        livres: 'Livres',
+        annale: 'Annales',
+        annales: 'Annales',
         'rapport de stage': 'Rapport de stage',
         'rapport stage': 'Rapport de stage',
+        'rapports stage': 'Rapports de stage',
         recherche: 'Recherche'
       };
       return labels[normalized] || String(value || 'Document');
@@ -3043,9 +3362,10 @@
 
     function getR2DocumentSearchText(item) {
       return [
-        item.title, item.name, item.fileName, item.author, item.teacher, item.subject, item.matiere,
-        item.keywords, item.category, item.type, item.rayon, item.filiere, item.institution,
-        item.school, item.summary, item.description, item.textPreview, getR2DocumentFolder(item)
+        item.title, item.name, item.fileName, item.authorName, item.author, item.teacher,
+        item.subject, item.matiere, item.keywords, item.category, item.type, item.rayon,
+        item.level, item.field, item.filiere, item.institution, item.school, item.excerpt,
+        item.summary, item.description, item.textPreview, getR2DocumentFolder(item)
       ].flat().join(' ');
     }
 
@@ -3053,6 +3373,7 @@
       return {
         rayon: document.getElementById('r2-filter-rayon').value,
         filiere: document.getElementById('r2-filter-filiere').value,
+        level: document.getElementById('r2-filter-level').value.trim(),
         type: document.getElementById('r2-filter-type').value,
         q: document.getElementById('r2-filter-query').value.trim()
       };
@@ -3063,6 +3384,7 @@
         const folder = normalizeR2Text(getR2DocumentFolder(item));
         const rayonValue = normalizeR2Text(item.rayon);
         const filiereValue = normalizeR2Text(item.filiere);
+        const levelValue = normalizeR2Text(item.level || item.niveau);
         const category = normalizeR2Text(item.category || item.type);
         const query = normalizeR2Text(filters.q);
 
@@ -3075,18 +3397,23 @@
         if (filters.filiere && folder &&
             !folder.includes(normalizeR2Text(filters.filiere)) &&
             !filiereValue.includes(normalizeR2Text(filters.filiere.split('/').pop()))) return false;
+        if (filters.level && levelValue && !levelValue.includes(normalizeR2Text(filters.level))) return false;
+        if (filters.level && !levelValue && !normalizeR2Text(getR2DocumentSearchText(item)).includes(normalizeR2Text(filters.level))) return false;
         if (filters.type && category) {
-          const type = normalizeR2Text(filters.type);
-          const aliases = type === 'annale'
+          const type = normalizeR2Text(filters.type).replace(/-/g, ' ');
+          const aliases = type === 'annales'
             ? ['annale', 'annales', 'examen']
-            : type === 'rapport stage'
-              ? ['rapport stage', 'rapport de stage']
-              : [type];
+            : type === 'rapports stage'
+              ? ['rapport stage', 'rapport de stage', 'rapports stage']
+              : type === 'livres'
+                ? ['livre', 'livres']
+                : [type];
           if (!aliases.some(alias => category.includes(alias))) return false;
         }
         if (query) {
           const searchable = normalizeR2Text(getR2DocumentSearchText(item));
-          if (!query.split(/\s+/).every(term => searchable.includes(term))) return false;
+          const terms = query.split(/\s+/).filter(term => term.length >= 3);
+          if (terms.length && !terms.some(term => searchable.includes(term))) return false;
         }
         return true;
       });
@@ -3100,10 +3427,10 @@
       container.innerHTML = items.map(item => {
         const title = item.title || item.name || item.fileName || 'Document sans titre';
         const category = getR2CategoryLabel(item.category || item.type);
-        const author = item.author || item.teacher || '';
+        const author = item.authorName || item.author || item.teacher || '';
         const subject = item.subject || item.matiere || '';
         const institution = item.institution || item.school || '';
-        const summary = item.summary || item.description || item.textPreview || '';
+        const summary = item.excerpt || item.summary || item.description || item.textPreview || '';
         const key = getR2DocumentKey(item);
         const details = [author, subject, institution].filter(Boolean).map(escapeHtml).join(' • ');
         return `
@@ -3170,8 +3497,8 @@
       const rayon = document.getElementById('r2-share-rayon').value;
       const category = document.getElementById('r2-share-category').value;
       const filiere = document.getElementById('r2-share-filiere');
-      if (rayon === 'college' && ['cours', 'livre', 'annale'].includes(category)) {
-        const target = `college/${category === 'livre' ? 'livres' : category === 'annale' ? 'annales' : 'cours'}`;
+      if (rayon === 'college' && ['cours', 'livres', 'annales'].includes(category)) {
+        const target = `college/${category === 'livres' ? 'livres' : category === 'annales' ? 'annales' : 'cours'}`;
         if ([...filiere.options].some(option => option.value === target)) filiere.value = target;
       }
       document.getElementById('r2-share-folder-path').textContent = `${R2_ROOT_PREFIX}${filiere.value || 'college/cours'}/`;
@@ -3217,7 +3544,11 @@
         });
         const foldersMarkup = folders.map(folder => `
           <button type="button" data-r2-prefix="${escapeHtml(folder)}" class="surface-card w-full px-3 py-2 text-left text-[11px] font-semibold hover:opacity-80">
-            📁 ${escapeHtml(folder.slice(R2_ROOT_PREFIX.length))}
+            <svg class="mr-1 inline-block align-middle" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H10l2 2h7.5A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"></path>
+              <path d="M3 9h18"></path>
+            </svg>
+            ${escapeHtml(folder.slice(R2_ROOT_PREFIX.length))}
           </button>
         `).join('');
         container.innerHTML = foldersMarkup;
@@ -3249,7 +3580,7 @@
       populateR2Branches('share');
       populateR2BrowseOptions();
       updateR2FolderPath();
-      ['r2-catalog-container', 'r2-browse-container'].forEach(id => {
+      ['r2-catalog-container', 'r2-browse-container', 'tutor-chat-messages'].forEach(id => {
         document.getElementById(id).addEventListener('click', event => {
           const folderButton = event.target.closest('[data-r2-prefix]');
           if (folderButton) {
@@ -3308,19 +3639,24 @@
         showToast('Sélectionnez un rayon et un tiroir valides.');
         return;
       }
-      const folderPath = `${R2_ROOT_PREFIX}${filiere}/`;
+      const folderPath = `${R2_ROOT_PREFIX}${filiere}`;
       const metadata = {
         title: document.getElementById('r2-share-title').value.trim(),
         category: document.getElementById('r2-share-category').value,
+        level: document.getElementById('r2-share-level').value.trim(),
+        rayon,
+        field: selectedRayon.branches.find(branch => branch.value === filiere).label,
+        filiere,
         subject: document.getElementById('r2-share-subject').value.trim(),
-        author: document.getElementById('r2-share-author').value.trim(),
+        authorName: document.getElementById('r2-share-author').value.trim(),
+        authorAttested: document.getElementById('r2-share-rights').checked,
         institution: document.getElementById('r2-share-institution').value.trim(),
         year: document.getElementById('r2-share-year').value
           ? Number(document.getElementById('r2-share-year').value)
           : null,
         keywords: document.getElementById('r2-share-keywords').value.split(',').map(word => word.trim()).filter(Boolean)
       };
-      if (!metadata.title || !metadata.subject || !metadata.author) {
+      if (!metadata.title || !metadata.subject || !metadata.authorName || !metadata.level || !metadata.authorAttested) {
         showToast('Le titre, la matière et le nom de l’auteur/enseignant sont obligatoires.');
         return;
       }
@@ -3331,12 +3667,13 @@
       let uploaded = false;
       try {
         const summary = await extractR2PdfPreview(file);
-        const contentType = file.type || 'application/pdf';
+        const contentType = 'application/pdf';
         const presignResponse = await postR2Action({
           action: 'presign-upload',
           fileName: file.name,
           contentType,
-          folderPath
+          folderPath,
+          category: metadata.category
         });
         const presign = presignResponse.data || presignResponse;
         const uploadUrl = presign.uploadUrl || presign.signedUrl;
@@ -3360,10 +3697,8 @@
           fileName: file.name,
           contentType,
           folderPath,
-          rayon,
-          filiere,
           ...metadata,
-          summary
+          excerpt: summary
         });
         status.textContent = 'Document ajouté à la bibliothèque partagée.';
         showToast('Document partagé dans la bibliothèque R2.');
@@ -3448,16 +3783,29 @@
           id: 'r2_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
           category,
           title,
+          fileName,
+          subject: catalogItem && (catalogItem.subject || catalogItem.matiere) || '',
           content,
           words: content.split(/\s+/).filter(Boolean).length,
-          addedAt: new Date().toLocaleDateString('fr-FR')
+          addedAt: new Date().toLocaleDateString('fr-FR'),
+          rawFileStored: true
         };
+        let storageWarning = false;
+        try {
+          await saveLocalDocumentAsset(privateDocument, file);
+        } catch (storageError) {
+          privateDocument.rawFileStored = false;
+          storageWarning = true;
+          console.error('Archivage local du PDF partagé :', storageError);
+        }
         appState.documents.unshift(privateDocument);
         syncStudyItemToCloud(privateDocument);
         rebuildStudyArtifactsFromDocuments();
         saveState();
         refreshAllUI();
-        showToast(`« ${title} » importé dans vos révisions.`);
+        showToast(storageWarning
+          ? `« ${title} » importé, mais le PDF brut n’a pas pu être archivé localement.`
+          : `« ${title} » importé dans vos révisions.`);
       } catch (err) {
         console.error('Import du document partagé dans les révisions :', err);
         showToast(`Import impossible : ${err.message}`);
@@ -3507,12 +3855,20 @@
       const filters = {
         rayon: getR2AcademicRayon(profile),
         filiere: getR2AcademicFiliere(profile),
-        niveau: profile.level,
-        q: `${profile.level} ${profile.track} ${profile.prioritySubject} ${query}`
+        level: profile.level,
+        field: getR2AcademicFiliere(profile),
+        q: `${profile.prioritySubject} ${query}`
       };
       try {
         const payload = await readR2Response(await fetchR2(buildR2Url('list', filters)));
-        return getR2Collection(payload).slice(0, 4);
+        const items = getR2Collection(payload);
+        items.forEach(item => {
+          const key = getR2DocumentKey(item);
+          if (key && !r2CatalogDocuments.some(existing => getR2DocumentKey(existing) === key)) {
+            r2CatalogDocuments.push(item);
+          }
+        });
+        return items.slice(0, 4);
       } catch (err) {
         console.error('Recherche de références R2 pour le Tuteur :', err);
         showToast('Bibliothèque partagée indisponible ; le Tuteur continue sans références R2.');
@@ -3523,9 +3879,9 @@
     function formatR2TutorReferences(items) {
       return items.map(item => {
         const title = item.title || item.name || item.fileName || 'Document sans titre';
-        const author = item.author || item.teacher || 'Auteur non précisé';
+        const author = item.authorName || item.author || item.teacher || 'Auteur non précisé';
         const subject = item.subject || item.matiere || '';
-        const summary = String(item.summary || item.description || item.textPreview || '').slice(0, 500);
+        const summary = String(item.excerpt || item.summary || item.description || item.textPreview || '').slice(0, 500);
         return `- ${title} — ${author}${subject ? ` — ${subject}` : ''}${summary ? ` : ${summary}` : ''}`;
       }).join('\n');
     }
@@ -3536,6 +3892,7 @@
     function applyTheme(themeName) {
       appState.theme = themeName === 'dark' ? 'dark' : 'light';
       document.documentElement.setAttribute('data-theme', appState.theme);
+      window.dispatchEvent(new CustomEvent('reviso:portal-theme', { detail: appState.theme }));
 
       const sunIcon = document.getElementById('icon-sun');
       const moonIcon = document.getElementById('icon-moon');
@@ -4333,7 +4690,8 @@
     // ------------------------------------------------------------------------
     async function extractTextFromFile(file) {
       const ext = file.name.split('.').pop().toLowerCase();
-      if (ext === 'pdf' && window.pdfjsLib) {
+      if (ext === 'pdf') {
+        if (!window.pdfjsLib) throw new Error('PDF.js est indisponible : vérifiez la connexion puis réessayez.');
         const buffer = await file.arrayBuffer();
         const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
         let fullText = '';
@@ -4345,7 +4703,8 @@
         }
         return fullText.trim() || `Support PDF importé : ${file.name}`;
       }
-      return await file.text();
+      if (ext === 'txt' || ext === 'md') return await file.text();
+      throw new Error('Format non pris en charge. Importez un PDF, un fichier TXT ou un fichier Markdown.');
     }
 
     async function handleMultiFileUpload(event, category) {
@@ -4359,6 +4718,9 @@
 
       box.classList.remove('hidden');
       let done = 0;
+      let imported = 0;
+      let failed = 0;
+      let storageWarnings = 0;
 
       for (const file of files) {
         label.textContent = `Extraction locale : ${file.name}`;
@@ -4369,14 +4731,25 @@
             id: 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
             category,
             title: file.name.replace(/\.[^/.]+$/, ''),
+            fileName: file.name,
             content: clean,
             words: clean.split(/\s+/).filter(Boolean).length,
-            addedAt: new Date().toLocaleDateString('fr-FR')
+            addedAt: new Date().toLocaleDateString('fr-FR'),
+            rawFileStored: true
           };
+          try {
+            await saveLocalDocumentAsset(document, file);
+          } catch (storageError) {
+            document.rawFileStored = false;
+            storageWarnings++;
+            console.error('Archivage local du fichier :', storageError);
+          }
           appState.documents.unshift(document);
           syncStudyItemToCloud(document);
+          imported++;
         } catch (err) {
           console.error('Erreur lecture PDF :', err);
+          failed++;
         }
         done++;
         const pct = Math.round((done / files.length) * 100);
@@ -4393,7 +4766,10 @@
       rebuildStudyArtifactsFromDocuments();
       saveState();
       refreshAllUI();
-      showToast(`${files.length} fichier(s) importé(s) avec succès.`);
+      const notices = [`${imported} fichier(s) importé(s)`];
+      if (failed) notices.push(`${failed} échec(s) de lecture`);
+      if (storageWarnings) notices.push(`${storageWarnings} PDF brut(s) non archivé(s)`);
+      showToast(notices.join(' — ') + '.');
     }
 
     function openPasteModal() {
@@ -4402,7 +4778,7 @@
       openModal('modal-paste');
     }
 
-    function savePastedDocument(e) {
+    async function savePastedDocument(e) {
       e.preventDefault();
       const category = document.getElementById('paste-category').value;
       const title = document.getElementById('paste-title').value.trim();
@@ -4415,8 +4791,16 @@
         title,
         content,
         words: content.split(/\s+/).filter(Boolean).length,
-        addedAt: new Date().toLocaleDateString('fr-FR')
+        addedAt: new Date().toLocaleDateString('fr-FR'),
+        rawFileStored: false
       };
+      let storageWarning = '';
+      try {
+        await saveLocalDocumentAsset(document);
+      } catch (err) {
+        console.error('Archivage local du texte :', err);
+        storageWarning = ` IndexedDB indisponible : ${err.message}`;
+      }
       appState.documents.unshift(document);
       syncStudyItemToCloud(document);
 
@@ -4424,10 +4808,17 @@
       saveState();
       closeModal('modal-paste');
       refreshAllUI();
-      showToast('Document ajouté à votre espace.');
+      showToast(`Document ajouté à votre espace.${storageWarning}`);
     }
 
-    function deleteDocument(id) {
+    async function deleteDocument(id) {
+      try {
+        await removeLocalDocumentAsset(id);
+      } catch (err) {
+        console.error('Suppression du fichier local :', err);
+        showToast(`Suppression impossible : le fichier local n’a pas pu être retiré de IndexedDB (${err.message}).`);
+        return;
+      }
       appState.documents = appState.documents.filter(d => d.id !== id);
       rebuildStudyArtifactsFromDocuments();
       saveState();
@@ -4439,7 +4830,14 @@
       openConfirmModal(
         'Vider la base documentaire',
         'Tous les cours, programmes et annales importés sur cet appareil seront supprimés.',
-        () => {
+        async () => {
+          try {
+            await clearLocalDocumentAssets();
+          } catch (err) {
+            console.error('Vidage des fichiers locaux :', err);
+            showToast(`Vidage impossible : IndexedDB n’a pas pu être vidé (${err.message}).`);
+            return;
+          }
           appState.documents = [];
           appState.schedule = [];
           appState.flashcards = [];
@@ -4451,7 +4849,7 @@
       );
     }
 
-    function loadAdaptedSamplePack() {
+    async function loadAdaptedSamplePack() {
       if (!appState.profile) {
         showToast('Veuillez d\'abord configurer votre profil académique.');
         openProfileModal();
@@ -4480,23 +4878,131 @@
         }
       ];
 
-      samples.forEach((item, idx) => {
+      await addDemonstrationDocuments(samples, `Jeu d'entraînement généré pour ${subj}.`);
+    }
+
+    async function loadDemonstrationPack(name) {
+      const packs = {
+        maieutique: {
+          label: 'Pack Maïeutique — 3e année',
+          samples: [
+            {
+              category: 'cours',
+              title: 'Maïeutique 3e année — Physiologie de la grossesse',
+              content: 'Support pédagogique de synthèse sur les adaptations physiologiques maternelles au cours de la grossesse. L’analyse distingue les changements cardiovasculaires, respiratoires, rénaux et endocriniens, puis relie chaque mécanisme à ses conséquences sur l’équilibre maternel. Pour réviser, définir les termes, organiser les systèmes par fonction et justifier chaque relation cause-conséquence à partir du cours.'
+            },
+            {
+              category: 'cours',
+              title: 'Maïeutique 3e année — Démarche de suivi prénatal',
+              content: 'Cette fiche d’entraînement présente une démarche académique structurée du suivi prénatal : recueillir les informations pertinentes, les classer dans le temps, repérer les éléments qui nécessitent une vérification selon le référentiel enseigné et documenter le raisonnement. Les décisions cliniques doivent toujours être apprises à partir des protocoles officiels de l’établissement et de l’encadrement pédagogique.'
+            },
+            {
+              category: 'annales',
+              title: 'Maïeutique 3e année — Questions de révision',
+              content: 'Questions d’entraînement : expliquer les adaptations physiologiques observées pendant la grossesse ; distinguer observation, interprétation et conclusion ; construire une réponse chronologique et justifier chaque étape ; préciser les limites d’une conclusion lorsque les données du cas sont incomplètes. Corrigé attendu : vocabulaire exact, raisonnement explicite et référence au cours enseigné.'
+            }
+          ]
+        },
+        general: {
+          label: 'Pack Parcours Général',
+          samples: [
+            {
+              category: 'cours',
+              title: 'Parcours Général — Méthode de compréhension et de synthèse',
+              content: 'Pour étudier un chapitre, repérer d’abord son objectif et ses notions principales, puis classer les informations en idées, preuves et exemples. Reformuler chaque notion avec ses propres mots, vérifier la reformulation dans le cours et rédiger une synthèse courte qui conserve les liens logiques. Une réponse d’examen claire annonce l’idée, l’étaye et termine par une conclusion adaptée à la question.'
+            },
+            {
+              category: 'programme',
+              title: 'Parcours Général — Résolution raisonnée de problèmes',
+              content: 'Démarche de résolution : lire la consigne jusqu’au bout, relever les données utiles, préciser ce qui est recherché, choisir une méthode et expliquer pourquoi elle convient. Effectuer les calculs avec les unités attendues, vérifier la cohérence du résultat et rédiger une conclusion répondant exactement à la question. En cas d’erreur, reprendre la première étape où une hypothèse n’est plus justifiée.'
+            },
+            {
+              category: 'annales',
+              title: 'Parcours Général — Sujet d’entraînement transversal',
+              content: 'Sujet transversal : à partir d’un document pédagogique, dégager la question centrale, sélectionner trois informations pertinentes et construire une réponse argumentée. Barème de révision : compréhension de la consigne, exactitude des notions, organisation des arguments, exemples appropriés et conclusion. L’objectif est de s’entraîner à expliquer une démarche, pas de reproduire un corrigé.'
+            }
+          ]
+        }
+      };
+      const pack = packs[name];
+      if (!pack) {
+        showToast('Pack de démonstration introuvable.');
+        return;
+      }
+      await addDemonstrationDocuments(pack.samples, `${pack.label} ajouté à vos révisions.`);
+    }
+
+    async function addDemonstrationDocuments(samples, successMessage) {
+      let storageWarnings = 0;
+      for (const [idx, item] of samples.entries()) {
         const document = {
-          id: 'sample_' + Date.now() + '_' + idx,
+          id: 'sample_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).slice(2, 6),
           category: item.category,
           title: item.title,
           content: item.content,
           words: item.content.split(/\s+/).filter(Boolean).length,
-          addedAt: new Date().toLocaleDateString('fr-FR')
+          addedAt: new Date().toLocaleDateString('fr-FR'),
+          rawFileStored: false
         };
+        try {
+          await saveLocalDocumentAsset(document);
+        } catch (err) {
+          storageWarnings++;
+          console.error('Archivage local du pack de démonstration :', err);
+        }
         appState.documents.unshift(document);
         syncStudyItemToCloud(document);
-      });
-
+      }
       rebuildStudyArtifactsFromDocuments();
       saveState();
       refreshAllUI();
-      showToast(`Jeu d'entraînement généré pour ${subj}.`);
+      showToast(storageWarnings
+        ? `${successMessage} IndexedDB indisponible pour ${storageWarnings} élément(s).`
+        : successMessage);
+    }
+
+    function getNextAvailableStudyDate(dayOffset, afterDate = null) {
+      const today = new Date();
+      today.setHours(12, 0, 0, 0);
+      const examDate = appState.profile && appState.profile.examDate
+        ? new Date(`${appState.profile.examDate}T12:00:00`)
+        : null;
+      const validExamDate = examDate && !Number.isNaN(examDate.getTime()) && examDate >= today
+        ? examDate
+        : null;
+      const availableDays = appState.availableStudyDays.length
+        ? appState.availableStudyDays
+        : [1, 2, 3, 4, 5, 6];
+      let candidate = new Date(today);
+      candidate.setDate(candidate.getDate() + dayOffset);
+      if (afterDate && candidate <= afterDate) {
+        candidate = new Date(afterDate);
+        candidate.setDate(candidate.getDate() + 1);
+      }
+      for (let step = 0; step < 7; step++) {
+        if (validExamDate && candidate > validExamDate) break;
+        if (availableDays.includes(candidate.getDay())) return candidate;
+        candidate.setDate(candidate.getDate() + 1);
+      }
+      if (validExamDate) {
+        candidate = new Date(validExamDate);
+        for (let step = 0; step < 7 && candidate >= today; step++) {
+          if (availableDays.includes(candidate.getDay())) return candidate;
+          candidate.setDate(candidate.getDate() - 1);
+        }
+        return validExamDate;
+      }
+      return candidate;
+    }
+
+    function getDocumentSchedulePriority(document, annaleCorpus) {
+      if (!annaleCorpus) return document.category === 'annales' ? 100 : 0;
+      const words = normalizeR2Text(`${document.title} ${document.content}`)
+        .split(/[^a-z0-9]+/)
+        .filter(word => word.length >= 5);
+      const uniqueWords = new Set(words);
+      const recurringTerms = Array.from(uniqueWords).filter(word => annaleCorpus.includes(word)).length;
+      return recurringTerms + (document.category === 'annales' ? 100 : 0);
     }
 
     function rebuildStudyArtifactsFromDocuments() {
@@ -4507,14 +5013,25 @@
         return;
       }
 
-      const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+      const weekdayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
       const duration = appState.scheduleRhythm === 'stage' ? '25 min' : '45 min';
+      const annaleCorpus = appState.documents
+        .filter(document => document.category === 'annales')
+        .map(document => normalizeR2Text(`${document.title} ${document.content}`))
+        .join(' ');
+      const prioritizedDocuments = appState.documents
+        .slice()
+        .sort((left, right) =>
+          getDocumentSchedulePriority(right, annaleCorpus) - getDocumentSchedulePriority(left, annaleCorpus))
+        .slice(0, 6);
+      const spacedIntervals = [1, 3, 7, 10, 14, 21];
 
       const cards = [];
       const qcms = [];
       const sched = [];
+      let previousScheduledDate = null;
 
-      appState.documents.slice(0, 6).forEach((doc, idx) => {
+      prioritizedDocuments.forEach((doc, idx) => {
         const sentences = doc.content
           .split(/(?<=[.!?])\s+/)
           .map(s => s.trim())
@@ -4537,10 +5054,13 @@
           explanation: `Référence extraite de votre support : ${s1}`
         });
 
+        const scheduledDate = getNextAvailableStudyDate(spacedIntervals[idx], previousScheduledDate);
+        previousScheduledDate = scheduledDate;
         sched.push({
           id: `sch_${idx}`,
-          day: days[idx % days.length],
-          interval: idx === 0 ? 'J+1 (Priorité haute)' : idx === 1 ? 'J+3 (Consolidation)' : 'J+7 (Répétition SM-2)',
+          day: weekdayNames[scheduledDate.getDay()],
+          scheduledFor: scheduledDate.toISOString(),
+          interval: idx === 0 ? 'J+1 (Priorité haute)' : `J+${spacedIntervals[idx]} (Répétition espacée)`,
           title: doc.title,
           duration,
           method: appState.profile ? appState.profile.cognitiveStyle : 'Révision active & QCM',
@@ -4640,7 +5160,7 @@
                 <span class="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase text-white" style="background-color: ${meta.color};">${meta.text}</span>
                 <span class="truncate text-xs font-bold sm:text-sm">${escapeHtml(doc.title)}</span>
               </div>
-              <p class="mt-1 text-[11px]" style="color: var(--text-muted);">${doc.words} mots extraits • Ajouté le ${doc.addedAt}</p>
+              <p class="mt-1 text-[11px]" style="color: var(--text-muted);">${doc.words} mots extraits • ${doc.rawFileStored ? 'PDF original conservé localement' : 'Texte disponible hors ligne'} • Ajouté le ${doc.addedAt}</p>
             </div>
             <button type="button" onclick="deleteDocument('${doc.id}')" class="rounded-lg p-2 text-rose-500 hover:bg-rose-500/10" title="Supprimer" aria-label="Supprimer">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -4656,25 +5176,51 @@
     function renderAnnalesView() {
       const radarBox = document.getElementById('radar-topics-container');
       const kwBox = document.getElementById('radar-keywords-container');
+      const formatsBox = document.getElementById('radar-formats-container');
       const badge = document.getElementById('annales-radar-badge');
       const trapText = document.getElementById('radar-trap-text');
 
       const annalesDocs = appState.documents.filter(d => d.category === 'annales');
+      const sourceDocs = annalesDocs.length
+        ? annalesDocs
+        : appState.documents.filter(document => document.category !== 'programme');
       badge.textContent = `${annalesDocs.length} sujet(s) analysé(s)`;
 
       if (!appState.documents.length) {
         radarBox.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Importez vos cours et annales dans l'onglet Documents pour afficher la fréquence des thèmes.</p>`;
         kwBox.innerHTML = `<span class="text-xs" style="color: var(--text-muted);">En attente de documents...</span>`;
+        formatsBox.innerHTML = '';
         return;
       }
 
-      radarBox.innerHTML = appState.documents.slice(0, 4).map((doc, idx) => {
-        const pct = Math.max(44, 92 - idx * 14);
+      if (!annalesDocs.length) {
+        radarBox.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Aucune annale importée. Les mots-clés ci-dessous proviennent de vos autres supports.</p>`;
+      }
+
+      const stopWords = new Set([
+        'alors', 'ainsi', 'autres', 'avec', 'avoir', 'cela', 'cette', 'comme', 'dans', 'depuis',
+        'donc', 'elle', 'elles', 'entre', 'etre', 'fait', 'faire', 'leurs', 'mais', 'meme',
+        'notre', 'nous', 'parce', 'pour', 'quand', 'quelle', 'quelles', 'quels', 'sans',
+        'sont', 'sous', 'suite', 'tout', 'tous', 'tres', 'votre', 'vous'
+      ]);
+      const documentTerms = sourceDocs.map(document => new Set(
+        normalizeR2Text(`${document.title} ${document.content}`)
+          .split(/[^a-z0-9]+/)
+          .filter(word => word.length >= 6 && !stopWords.has(word))
+      ));
+      const frequencies = new Map();
+      documentTerms.forEach(terms => terms.forEach(term => frequencies.set(term, (frequencies.get(term) || 0) + 1)));
+      const rankedTerms = Array.from(frequencies.entries())
+        .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+        .slice(0, 5);
+
+      if (annalesDocs.length) radarBox.innerHTML = rankedTerms.map(([term, count]) => {
+        const pct = Math.round((count / annalesDocs.length) * 100);
         return `
           <div>
             <div class="flex items-center justify-between text-xs font-semibold">
-              <span class="truncate pr-3">${escapeHtml(doc.title)}</span>
-              <span style="color: var(--active-color);">${pct}%</span>
+              <span class="truncate pr-3">${escapeHtml(term.charAt(0).toUpperCase() + term.slice(1))}</span>
+              <span style="color: var(--active-color);">${count}/${annalesDocs.length} sujets · ${pct}%</span>
             </div>
             <div class="mt-1.5 h-2 w-full overflow-hidden rounded-full" style="background-color: var(--bg-surface-alt);">
               <div class="h-full rounded-full transition-all duration-500" style="width: ${pct}%; background-color: var(--active-color);"></div>
@@ -4682,21 +5228,42 @@
           </div>
         `;
       }).join('');
+      if (annalesDocs.length && !rankedTerms.length) {
+        radarBox.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Aucun thème textuel récurrent n’a pu être extrait des sujets.</p>`;
+      }
 
-      const words = appState.documents
-        .map(d => d.content)
-        .join(' ')
-        .split(/[^A-Za-zÀ-ÖØ-öø-ÿ]{6,}/)
-        .filter(w => w.length >= 6 && w.length <= 18);
-
-      const uniqueKw = Array.from(new Set(words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()))).slice(0, 10);
-      kwBox.innerHTML = uniqueKw.map(kw => `
-        <span class="rounded-lg px-2.5 py-1 text-[11px] font-semibold" style="background-color: var(--bg-surface-alt); border: 1px solid var(--border-subtle);">${escapeHtml(kw)}</span>
+      kwBox.innerHTML = rankedTerms.slice(0, 10).map(([keyword, count]) => `
+        <span class="rounded-lg px-2.5 py-1 text-[11px] font-semibold" style="background-color: var(--bg-surface-alt); border: 1px solid var(--border-subtle);">${escapeHtml(keyword)} · ${count}</span>
       `).join('');
+      if (!rankedTerms.length) kwBox.innerHTML = `<span class="text-xs" style="color: var(--text-muted);">Aucun mot-clé exploitable détecté.</span>`;
 
-      trapText.textContent = appState.profile
-        ? `Exigence spécifique (${appState.profile.track}) : chaque étape du raisonnement doit être justifiée explicitement avant d'énoncer la conclusion.`
-        : 'Les correcteurs attendent une démarche structurée et justifiée étape par étape.';
+      const formatMatchers = [
+        ['Expliquer', /expliqu/],
+        ['Comparer', /compar/],
+        ['Décrire', /decri/],
+        ['Justifier', /justifi/],
+        ['Calculer', /calcul/],
+        ['Définir', /defini/]
+      ];
+      const formatCounts = formatMatchers
+        .map(([label, matcher]) => [label, sourceDocs.filter(document => matcher.test(normalizeR2Text(document.content))).length])
+        .filter(([, count]) => count > 0)
+        .sort((left, right) => right[1] - left[1]);
+      formatsBox.innerHTML = formatCounts.length
+        ? formatCounts.map(([label, count]) => `<span class="rounded-lg px-2.5 py-1 text-[11px] font-semibold" style="background-color: var(--bg-surface-alt); border: 1px solid var(--border-subtle);">${label} · ${count}</span>`).join('')
+        : `<span class="text-[11px]" style="color: var(--text-muted);">Aucune consigne fréquente extraite.</span>`;
+
+      const cautionTerms = ['justifi', 'unite', 'condition', 'conclu'];
+      const cautionCounts = cautionTerms.map(term => ({
+        term,
+        count: sourceDocs.filter(document => normalizeR2Text(document.content).includes(term)).length
+      })).sort((left, right) => right.count - left.count);
+      const frequentCaution = cautionCounts.find(item => item.count > 0);
+      trapText.textContent = frequentCaution
+        ? `Point de vigilance repéré dans ${frequentCaution.count} document(s) : ${frequentCaution.term === 'justifi' ? 'justifier les étapes' : frequentCaution.term === 'unite' ? 'vérifier les unités' : frequentCaution.term === 'condition' ? 'vérifier les conditions' : 'formuler la conclusion'}.`
+        : appState.profile
+          ? `Exigence de méthode (${appState.profile.track}) : justifier chaque étape avant la conclusion.`
+          : 'Importez des annales avec leur texte pour repérer les pièges récurrents.';
     }
 
     function generateMockExam() {
@@ -4760,6 +5327,9 @@
       const btnStd = document.getElementById('btn-rhythm-standard');
       const btnStage = document.getElementById('btn-rhythm-stage');
       const desc = document.getElementById('schedule-mode-desc');
+      document.querySelectorAll('[data-study-day]').forEach(input => {
+        input.checked = appState.availableStudyDays.includes(Number(input.value));
+      });
 
       if (appState.scheduleRhythm === 'stage') {
         btnStage.style.backgroundColor = 'var(--active-color)';
@@ -4791,7 +5361,7 @@
             <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="toggleScheduleItem('${item.id}')" class="mt-1 h-4 w-4 cursor-pointer rounded accent-emerald-600" />
             <div>
               <div class="flex flex-wrap items-center gap-2">
-                <span class="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase text-white" style="background-color: var(--active-color);">${item.day} • ${item.duration}</span>
+                <span class="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase text-white" style="background-color: var(--active-color);">${escapeHtml(item.day)}${item.scheduledFor ? ` ${escapeHtml(new Date(item.scheduledFor).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }))}` : ''} • ${escapeHtml(item.duration)}</span>
                 <span class="text-[11px] font-semibold" style="color: var(--text-muted);">${item.interval}</span>
               </div>
               <p class="mt-1 text-xs font-bold sm:text-sm ${item.completed ? 'line-through' : ''}">${escapeHtml(item.title)}</p>
@@ -4800,6 +5370,21 @@
           </div>
         </div>
       `).join('');
+    }
+
+    function updateScheduleAvailability() {
+      const selectedDays = Array.from(document.querySelectorAll('[data-study-day]:checked'))
+        .map(input => Number(input.value));
+      if (!selectedDays.length) {
+        showToast('Sélectionnez au moins un jour disponible.');
+        renderPlanningView();
+        return;
+      }
+      appState.availableStudyDays = selectedDays;
+      if (appState.documents.length) rebuildStudyArtifactsFromDocuments();
+      saveState();
+      renderPlanningView();
+      showToast('Disponibilités enregistrées et planning recalculé.');
     }
 
     function setScheduleRhythm(rhythm) {
@@ -4828,13 +5413,21 @@
         showToast('Aucune session à rééquilibrer.');
         return;
       }
-      const days = ['Demain', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+      const weekdayNames = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+      let previousScheduledDate = appState.schedule
+        .filter(item => item.completed && item.scheduledFor)
+        .map(item => new Date(item.scheduledFor))
+        .sort((left, right) => right - left)[0] || null;
       appState.schedule.forEach((item, idx) => {
         if (!item.completed) {
-          item.day = days[idx % days.length];
+          const scheduledDate = getNextAvailableStudyDate(idx + 1, previousScheduledDate);
+          previousScheduledDate = scheduledDate;
+          item.day = weekdayNames[scheduledDate.getDay()];
+          item.scheduledFor = scheduledDate.toISOString();
           item.interval = 'Rééquilibré SM-2';
         }
       });
+      syncPlanningToCloud(appState.schedule);
       saveState();
       renderPlanningView();
       showToast('Planning rééquilibré sans surcharge.');
@@ -4848,7 +5441,9 @@
       const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Reviso//Planning//FR'];
       const now = new Date();
       appState.schedule.forEach((item, idx) => {
-        const dt = new Date(now.getTime() + (idx + 1) * 86400000);
+        const dt = item.scheduledFor
+          ? new Date(item.scheduledFor)
+          : new Date(now.getTime() + (idx + 1) * 86400000);
         const ymd = dt.toISOString().slice(0, 10).replace(/-/g, '');
         lines.push(
           'BEGIN:VEVENT',
@@ -4889,6 +5484,19 @@
 
     function setSheetFormat(fmt) {
       currentSheetFormat = fmt;
+      renderRevisionView();
+    }
+
+    function getVisibleFlashcards() {
+      const filter = document.getElementById('flashcard-filter')?.value || 'all';
+      return filter === 'all'
+        ? appState.flashcards
+        : appState.flashcards.filter(card => card.status === filter);
+    }
+
+    function setFlashcardFilter() {
+      currentFlashcardIndex = 0;
+      document.getElementById('flashcard-3d').classList.remove('flipped');
       renderRevisionView();
     }
 
@@ -4944,14 +5552,17 @@
       const fcCounter = document.getElementById('flashcard-counter');
       const fcFront = document.getElementById('flashcard-front-text');
       const fcBack = document.getElementById('flashcard-back-text');
-      if (appState.flashcards.length) {
-        const fc = appState.flashcards[currentFlashcardIndex % appState.flashcards.length];
-        fcCounter.textContent = `Carte ${(currentFlashcardIndex % appState.flashcards.length) + 1} / ${appState.flashcards.length}`;
+      const visibleFlashcards = getVisibleFlashcards();
+      if (visibleFlashcards.length) {
+        const fc = visibleFlashcards[currentFlashcardIndex % visibleFlashcards.length];
+        fcCounter.textContent = `Carte ${(currentFlashcardIndex % visibleFlashcards.length) + 1} / ${visibleFlashcards.length}`;
         fcFront.textContent = fc.front;
         fcBack.textContent = fc.back;
       } else {
         fcCounter.textContent = 'Carte 0 / 0';
-        fcFront.textContent = 'Aucune flashcard disponible. Ajoutez un cours dans l\'onglet Documents.';
+        fcFront.textContent = appState.flashcards.length
+          ? 'Aucune carte dans ce filtre.'
+          : 'Aucune flashcard disponible. Ajoutez un cours dans l\'onglet Documents.';
         fcBack.textContent = '---';
       }
 
@@ -4978,15 +5589,21 @@
     }
 
     function rateFlashcard(status) {
-      if (!appState.flashcards.length) return;
-      const idx = currentFlashcardIndex % appState.flashcards.length;
-      appState.flashcards[idx].status = status;
+      const visibleFlashcards = getVisibleFlashcards();
+      if (!visibleFlashcards.length) return;
+      const currentCard = visibleFlashcards[currentFlashcardIndex % visibleFlashcards.length];
+      const filter = document.getElementById('flashcard-filter').value;
+      currentCard.status = status;
       if (status === 'mastered') appState.cognitive.retention = Math.min(99, appState.cognitive.retention + 3);
       if (status === 'mastered') void syncProfileToCloud();
       document.getElementById('flashcard-3d').classList.remove('flipped');
-      currentFlashcardIndex = (currentFlashcardIndex + 1) % appState.flashcards.length;
+      const cardLeavesFilter = filter !== 'all' && status !== filter;
+      currentFlashcardIndex = cardLeavesFilter
+        ? currentFlashcardIndex % Math.max(visibleFlashcards.length - 1, 1)
+        : (currentFlashcardIndex + 1) % visibleFlashcards.length;
       saveState();
       renderHeaderAndHero();
+      renderCognitiveProfile();
       renderRevisionView();
     }
 
@@ -5066,6 +5683,7 @@
       const locked = document.getElementById('tutor-locked-panel');
       const unlocked = document.getElementById('tutor-unlocked-panel');
       const reason = document.getElementById('tutor-lock-reason');
+      renderCognitiveProfile();
 
       const hasProfile = Boolean(appState.profile);
       const hasDocs = appState.documents.length > 0;
@@ -5085,16 +5703,6 @@
 
       locked.classList.add('hidden');
       unlocked.classList.remove('hidden');
-
-      const c = appState.cognitive;
-      document.getElementById('cog-val-retention').textContent = c.retention + '%';
-      document.getElementById('cog-bar-retention').style.width = c.retention + '%';
-      document.getElementById('cog-val-analysis').textContent = c.analysis + '%';
-      document.getElementById('cog-bar-analysis').style.width = c.analysis + '%';
-      document.getElementById('cog-val-reasoning').textContent = c.reasoning + '%';
-      document.getElementById('cog-bar-reasoning').style.width = c.reasoning + '%';
-      document.getElementById('cog-val-method').textContent = c.method + '%';
-      document.getElementById('cog-bar-method').style.width = c.method + '%';
 
       document.getElementById('tutor-optimal-method').textContent = appState.profile.cognitiveStyle;
       document.getElementById('tutor-context-banner').textContent =
@@ -5121,10 +5729,19 @@
             </div>
           `;
         }
+        const referencesMarkup = Array.isArray(msg.references) && msg.references.length
+          ? `<div class="mt-3 space-y-2 border-t pt-2" style="border-color: var(--border-subtle);">${msg.references.map(reference => `
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="min-w-0 flex-1 text-[11px] font-semibold">${escapeHtml(reference.title)}</span>
+                <button type="button" data-r2-action="import" data-r2-key="${escapeHtml(reference.key)}" class="btn-active-accent rounded-lg px-2.5 py-1.5 text-[10px] font-bold">Importer la référence</button>
+              </div>
+            `).join('')}</div>`
+          : '';
         return `
           <div class="flex justify-start">
             <div class="surface-alt max-w-[85%] rounded-2xl rounded-bl-sm px-3.5 py-2.5">
               ${escapeHtml(msg.text)}
+              ${referencesMarkup}
             </div>
           </div>
         `;
@@ -5173,7 +5790,14 @@
           const data = await resp.json();
           const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
           if (reply) {
-            appState.tutorHistory.push({ role: 'tutor', text: `${reply}${sharedRecommendationText}` });
+            appState.tutorHistory.push({
+              role: 'tutor',
+              text: `${reply}${sharedRecommendationText}`,
+              references: sharedReferences.map(item => ({
+                key: getR2DocumentKey(item),
+                title: item.title || item.name || item.fileName || 'Document partagé'
+              })).filter(reference => reference.key)
+            });
             appState.cognitive.reasoning = Math.min(99, appState.cognitive.reasoning + 2);
             saveState();
             void syncProfileToCloud();
@@ -5195,7 +5819,14 @@
         `Étape suivante pour vérifier votre raisonnement : quel est le premier principe ou critère à poser avant de conclure ?` +
         sharedRecommendationText;
 
-      appState.tutorHistory.push({ role: 'tutor', text: replyText });
+      appState.tutorHistory.push({
+        role: 'tutor',
+        text: replyText,
+        references: sharedReferences.map(item => ({
+          key: getR2DocumentKey(item),
+          title: item.title || item.name || item.fileName || 'Document partagé'
+        })).filter(reference => reference.key)
+      });
       appState.cognitive.reasoning = Math.min(99, appState.cognitive.reasoning + 2);
       saveState();
       void syncProfileToCloud();
@@ -5365,16 +5996,17 @@
         titleEl.textContent = 'Guide d\'utilisation — 5 étapes';
         bodyEl.innerHTML = `
           <p><strong>Étape 1 — Calibrage académique :</strong> Renseignez votre prénom, votre cycle (Collège, Lycée Général ou Technique du Gabon, ou Enseignement Supérieur), votre filière exacte et votre matière prioritaire.</p>
-          <p><strong>Étape 2 — Importation des supports (Documents) :</strong> Téléversez vos cours PDF, votre programme officiel et vos anciens sujets d'examen. Les imports privés restent sur votre appareil ; avec un compte cloud connecté, leurs titres et de courts extraits textuels sont synchronisés. Vous pouvez aussi choisir de partager un PDF dans la Bibliothèque R2 après certification de vos droits.</p>
+          <p><strong>Étape 2 — Importation des supports (Documents) :</strong> Importez plusieurs PDF, fichiers TXT ou Markdown. Les textes extraits restent disponibles hors ligne et les PDF privés sont conservés dans IndexedDB sur votre appareil ; seuls leurs titres et extraits limités sont synchronisés avec Supabase si vous êtes connecté. Vous pouvez aussi partager un PDF dans la Bibliothèque R2 après certification de vos droits.</p>
           <p><strong>Étape 3 — Analyse des annales (Annales) :</strong> Identifiez les thèmes les plus fréquents aux examens et entraînez-vous sur des sujets blancs corrigés.</p>
-          <p><strong>Étape 4 — Planning intelligent (Planning) :</strong> Suivez un calendrier basé sur la répétition espacée SM-2 (mode Cours classique ou Stage/Gardes) et exportez-le vers votre agenda (.ics).</p>
-          <p><strong>Étape 5 — Révision active & Tuteur IA :</strong> Utilisez les fiches multi-vues, flashcards 3D, quiz QCM et le Tuteur socratique strictement cadré sur votre filière.</p>
+          <p><strong>Étape 4 — Planning intelligent (Planning) :</strong> Indiquez vos jours disponibles et votre date d’examen dans le profil. Le calendrier pondère les thèmes repérés dans les annales, tient compte du rythme Cours classique ou Stage/Gardes, puis s’exporte en .ics.</p>
+          <p><strong>Étape 5 — Révision active & Tuteur IA :</strong> Utilisez les fiches multi-vues, flashcards filtrables, quiz QCM et le Tuteur socratique strictement cadré sur votre filière. La PWA peut être installée et son interface déjà chargée reste accessible hors ligne.</p>
         `;
       } else if (type === 'privacy') {
         titleEl.textContent = 'Confidentialité & Synchronisation Cloud';
         bodyEl.innerHTML = `
-          <p><strong>Mode local par défaut :</strong> Sans connexion à un compte, vos données restent enregistrées sur cet appareil dans la mémoire locale (<code>localStorage</code>).</p>
+          <p><strong>Mode local par défaut :</strong> Sans connexion à un compte, vos données restent sur cet appareil. Les textes extraits et réglages sont conservés dans <code>localStorage</code> et les fichiers originaux dans <code>IndexedDB</code>.</p>
           <p><strong>Synchronisation facultative :</strong> Quand vous êtes connecté, le profil académique, les titres et extraits textuels (limités à 1 000 caractères) des supports, ainsi que le planning et les résultats de quiz/examen sont transmis à votre projet Supabase. Les PDF privés ne sont pas envoyés à Supabase.</p>
+          <p><strong>Clés locales :</strong> La clé Gemini et la clé publishable Supabase configurées sont conservées sur cet appareil ; ne saisissez jamais de clé secrète de serveur.</p>
           <p><strong>Partage dans la bibliothèque :</strong> Si vous choisissez de publier un support et certifiez que vous avez le droit de le partager, le PDF sélectionné et ses métadonnées sont envoyés à l'API Cloudflare R2 pour être ajouté au catalogue partagé.</p>
           <p><strong>Contrôle du compte :</strong> Vous pouvez vous déconnecter à tout moment depuis le menu ; cela arrête les futures synchronisations sans supprimer vos données locales.</p>
           <div class="pt-3">
@@ -5388,7 +6020,7 @@
         titleEl.textContent = 'Stockage local & Cookies';
         bodyEl.innerHTML = `
           <p><strong>Absence de cookies publicitaires :</strong> Reviso n'utilise aucun cookie de pistage ou de publicité.</p>
-          <p><strong>Stockage technique local :</strong> Le stockage local du navigateur conserve votre thème (Clair ou Sombre), votre profil académique, vos supports importés et votre code PIN de sécurité.</p>
+          <p><strong>Stockage technique local :</strong> <code>localStorage</code> conserve votre thème, votre profil, les textes extraits, vos réglages et votre code PIN. <code>IndexedDB</code> conserve les PDF importés pour un usage hors ligne.</p>
           <p><strong>Volume actuellement utilisé :</strong> <code>${sizeKB} Ko</code>.</p>
         `;
       } else {
@@ -5405,7 +6037,14 @@
       openConfirmModal(
         'Réinitialisation complète',
         'Toutes vos données locales (profil, cours, planning, statistiques et code PIN) seront définitivement supprimées.',
-        () => {
+        async () => {
+          try {
+            await clearLocalDocumentAssets();
+          } catch (err) {
+            console.error('Réinitialisation du stockage local :', err);
+            showToast(`Réinitialisation impossible : IndexedDB n’a pas pu être vidé (${err.message}).`);
+            return;
+          }
           localStorage.removeItem(STORAGE_KEY);
           location.reload();
         }
@@ -5467,34 +6106,23 @@
     // ------------------------------------------------------------------------
     // 9. INITIALISATION AU CHARGEMENT
     // ------------------------------------------------------------------------
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
       loadState();
+      await restoreLocalDocumentsFromIndexedDB();
+      window.addEventListener('reviso:theme', event => applyTheme(event.detail));
       window.addEventListener('reviso:enter', initR2Library, { once: true });
-      renderCloudAccount();
-      if (supabaseClient) {
-        supabaseClient.auth.onAuthStateChange((_event, session) => {
-          currentCloudUser = session ? session.user : null;
-          renderCloudAccount();
-          if (currentCloudUser) setTimeout(() => { void syncProfileToCloud(); }, 0);
-        });
-        supabaseClient.auth.getSession().then(({ data, error }) => {
-          if (error) {
-            console.error('Lecture de la session Supabase :', error);
-            showToast('Session cloud indisponible. Reviso continue en mode local.');
-            return;
-          }
-          currentCloudUser = data.session ? data.session.user : null;
-          renderCloudAccount();
-        }).catch(err => {
-          console.error('Lecture de la session Supabase :', err);
-          showToast('Session cloud indisponible. Reviso continue en mode local.');
-        });
-      }
+      connectSupabaseClient();
       applyTheme(appState.theme);
       initBottomNavSlideGesture();
       switchTab(appState.activeTabIndex, { force: true, fromDrag: true });
       refreshAllUI();
+      startActiveStudyTimer();
       checkPinLockOnBoot();
+      if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.error('Enregistrement du service worker Reviso :', err);
+        });
+      }
 
       // Démarrage vierge : ouverture de la configuration académique si aucun profil n'est enregistré
       if (!appState.profile) {
