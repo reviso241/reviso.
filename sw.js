@@ -1,5 +1,5 @@
-const SHELL_CACHE = 'reviso-shell-v4';
-const CDN_CACHE = 'reviso-cdn-v4';
+const SHELL_CACHE = 'reviso-shell-v5';
+const CDN_CACHE = 'reviso-cdn-v5';
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './reviso-icon.svg'];
 const CDN_HOSTS = new Set([
   'fonts.googleapis.com',
@@ -30,9 +30,14 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   const request = event.request;
+  const url = new URL(request.url);
+  if (url.hostname === 'supabase.co' || url.hostname.endsWith('.supabase.co')) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   if (request.method !== 'GET') return;
 
-  const url = new URL(request.url);
   if (url.origin === self.location.origin) {
     if (request.mode === 'navigate') {
       event.respondWith(

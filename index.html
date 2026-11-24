@@ -2816,9 +2816,12 @@
 
     const SUPABASE_URL = 'https://kfdetwgmfpdvislnjzphi.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_gHfUWOTNsBRHgs7rFHPMLQ_krpywbEN';
-    const supabaseClient = window.supabase && typeof window.supabase.createClient === 'function'
+    const SUPABASE_SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    let supabaseClient = window.supabase && typeof window.supabase.createClient === 'function'
       ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
       : null;
+    let supabaseSdkLoadPromise = null;
+    let cloudAuthLoading = false;
     let currentCloudUser = null;
     const R2_API_URL = 'https://reviso-pink.vercel.app/api/r2';
     const R2_ROOT_PREFIX = 'reviso-tiroirs/';
@@ -2919,10 +2922,13 @@
     let photoCaptureProcessing = false;
 
     function loadState() {
+      let removedLegacySupabaseKey = false;
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
+          removedLegacySupabaseKey = !!parsed && typeof parsed === 'object'
+            && Object.prototype.hasOwnProperty.call(parsed, 'supabasePublishableKey');
           appState = { ...appState, ...parsed };
         }
       } catch (err) {
@@ -2961,6 +2967,7 @@
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         appState.theme = prefersDark ? 'dark' : 'light';
       }
+      if (removedLegacySupabaseKey) saveState();
     }
 
     function saveState() {
@@ -3157,15 +3164,74 @@
         authForm.classList.remove('hidden');
         signOutButton.classList.add('hidden');
         authForm.querySelectorAll('input, button').forEach(control => {
-          control.disabled = !supabaseClient;
+          control.disabled = cloudAuthLoading;
         });
       }
     }
 
     let supabaseAuthSubscription = null;
+    function loadSupabaseSdk() {
+      if (window.supabase && typeof window.supabase.createClient === 'function') {
+        return Promise.resolve(window.supabase);
+      }
+      if (supabaseSdkLoadPromise) return supabaseSdkLoadPromise;
+
+      supabaseSdkLoadPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        let settled = false;
+        const timeoutId = setTimeout(() => {
+          finish(new Error(`Échec réseau lors du chargement du SDK Supabase : ${SUPABASE_SDK_URL} (délai dépassé).`));
+        }, 15000);
+        const finish = error => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeoutId);
+          if (error) {
+            script.remove();
+            reject(error);
+            return;
+          }
+          resolve(window.supabase);
+        };
+
+        script.src = SUPABASE_SDK_URL;
+        script.async = true;
+        script.onload = () => {
+          if (window.supabase && typeof window.supabase.createClient === 'function') {
+            finish();
+          } else {
+            finish(new Error(`Le SDK Supabase a été chargé depuis ${SUPABASE_SDK_URL}, mais createClient est indisponible.`));
+          }
+        };
+        script.onerror = () => {
+          finish(new Error(`Échec réseau lors du chargement du SDK Supabase : ${SUPABASE_SDK_URL}.`));
+        };
+        document.head.appendChild(script);
+      }).catch(error => {
+        supabaseSdkLoadPromise = null;
+        throw error;
+      });
+
+      return supabaseSdkLoadPromise;
+    }
+
+    async function ensureSupabaseClient() {
+      if (!supabaseClient) {
+        await loadSupabaseSdk();
+        connectSupabaseClient();
+      }
+      if (!supabaseClient) {
+        throw new Error(`Impossible d'initialiser le client Supabase pour ${SUPABASE_URL}.`);
+      }
+      return supabaseClient;
+    }
+
     function connectSupabaseClient() {
+      if (!supabaseClient && window.supabase && typeof window.supabase.createClient === 'function') {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
       renderCloudAccount();
-      if (!supabaseClient) return;
+      if (!supabaseClient || supabaseAuthSubscription) return;
 
       const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => {
         currentCloudUser = session ? session.user : null;
@@ -3190,8 +3256,9 @@
     function setCloudAuthLoading(button, isLoading) {
       const form = document.getElementById('cloud-auth-form');
       if (!form) return;
+      cloudAuthLoading = isLoading;
       form.querySelectorAll('input, button').forEach(control => {
-        control.disabled = isLoading || !supabaseClient;
+        control.disabled = isLoading;
       });
       if (!button) return;
       if (isLoading) {
@@ -3207,7 +3274,7 @@
       const message = String(error && error.message || error || '');
       const normalized = message.toLowerCase();
       if (/failed to fetch|network|fetch failed/.test(normalized)) {
-        return `Connexion au service impossible. Vérifiez votre connexion Internet et réessayez. Détail reçu : ${message || 'échec réseau'}`;
+        return `Échec réseau Supabase : ${message || 'détail non fourni'}`;
       }
       if (normalized.includes('invalid email') || normalized.includes('email address is invalid')) return 'L’adresse e-mail saisie est invalide.';
       if (normalized.includes('invalid login credentials')) return 'Adresse e-mail ou mot de passe incorrect.';
@@ -3219,20 +3286,91 @@
       return `Le service Supabase a refusé la demande : ${message || 'erreur inconnue'}`;
     }
 
-    async function signInToCloud(event, button) {
-      event.preventDefault();
-      if (!supabaseClient) {
-        showToast('Connexion cloud indisponible. Reviso reste utilisable en mode local.');
+    function isSupabaseNetworkError(error) {
+      const details = `${error && error.name || ''} ${error && error.message || error || ''} ${error && error.code || ''}`.toLowerCase();
+      return /failed to fetch|network|réseau|fetch failed|load failed|authretryablefetcherror|timeout|aborterror|sdk.*supabase/.test(details);
+    }
+
+    function describeSupabaseErrorCause(error) {
+      const cause = error && error.cause;
+      if (cause instanceof Error) return `${cause.name}: ${cause.message}`;
+      if (cause !== undefined && cause !== null) {
+        try {
+          return typeof cause === 'string' ? cause : JSON.stringify(cause);
+        } catch (_error) {
+          return String(cause);
+        }
+      }
+      return 'Le navigateur ne fournit pas de cause détaillée pour cette erreur réseau.';
+    }
+
+    async function checkSupabaseHealth() {
+      const url = `${SUPABASE_URL}/auth/v1/health`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          cache: 'no-store',
+          signal: controller.signal
+        });
+        const body = await response.text();
+        return {
+          url,
+          result: `HTTP ${response.status}${body ? ` — ${body.slice(0, 300)}` : ''}`
+        };
+      } catch (error) {
+        return {
+          url,
+          result: `${error && error.name || 'Erreur'}: ${error && error.message || error}`
+        };
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    }
+
+    function getSupabaseAuthTarget(operation) {
+      if (operation === 'inscription') return `${SUPABASE_URL}/auth/v1/signup`;
+      return `${SUPABASE_URL}/auth/v1/token?grant_type=password`;
+    }
+
+    async function reportSupabaseAuthError(error, operation) {
+      if (!isSupabaseNetworkError(error)) {
+        showToast(getSupabaseAuthErrorMessage(error));
         return;
       }
-      const email = document.getElementById('cloud-auth-email').value.trim();
+
+      const target = getSupabaseAuthTarget(operation);
+      const health = await checkSupabaseHealth();
+      const onlineState = typeof navigator !== 'undefined' && navigator.onLine ? 'oui' : 'non';
+      const exactError = `${error && error.name || 'Erreur'}: ${error && error.message || error}`;
+      const diagnostic = `Échec réseau Supabase. URL cible : ${target}. navigator.onLine : ${onlineState}. Erreur : ${exactError}. Cause : ${describeSupabaseErrorCause(error)}. Test ${health.url} : ${health.result}`;
+      const status = document.getElementById('cloud-account-status');
+      if (status) {
+        status.textContent = diagnostic;
+        status.title = diagnostic;
+        status.classList.add('break-words');
+      }
+      console.error(`Diagnostic réseau Supabase (${operation}) :`, {
+        target,
+        navigatorOnLine: typeof navigator !== 'undefined' ? navigator.onLine : 'indisponible',
+        error,
+        health
+      });
+      showToast(diagnostic);
+    }
+
+    async function signInToCloud(event, button) {
+      event.preventDefault();
+      const email = document.getElementById('cloud-auth-email').value.trim().toLowerCase();
       const password = document.getElementById('cloud-auth-password').value;
       setCloudAuthLoading(button, true);
       try {
-        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        const client = await ensureSupabaseClient();
+        const { data, error } = await client.auth.signInWithPassword({ email, password });
         if (error) {
           console.error('Connexion Supabase :', error);
-          showToast(getSupabaseAuthErrorMessage(error));
+          await reportSupabaseAuthError(error, 'connexion');
           return;
         }
         currentCloudUser = data.user || (data.session && data.session.user) || null;
@@ -3243,7 +3381,7 @@
           : 'Connexion au compte cloud réussie.');
       } catch (err) {
         console.error('Réseau Supabase (connexion) :', err);
-        showToast(getSupabaseAuthErrorMessage(err));
+        await reportSupabaseAuthError(err, 'connexion');
         return;
       } finally {
         setCloudAuthLoading(button, false);
@@ -3251,23 +3389,21 @@
     }
 
     async function signUpToCloud(button) {
-      if (!supabaseClient) {
-        showToast('Inscription cloud indisponible. Reviso reste utilisable en mode local.');
-        return;
-      }
-      const email = document.getElementById('cloud-auth-email').value.trim();
+      const email = document.getElementById('cloud-auth-email').value.trim().toLowerCase();
       const password = document.getElementById('cloud-auth-password').value;
-      if (!document.getElementById('cloud-auth-form').reportValidity()) return;
+      const form = document.getElementById('cloud-auth-form');
+      if (!form.reportValidity()) return;
       if (!email || !password) {
         showToast('Saisissez votre e-mail et votre mot de passe pour créer un compte.');
         return;
       }
       setCloudAuthLoading(button, true);
       try {
-        const { data, error } = await supabaseClient.auth.signUp({ email, password });
+        const client = await ensureSupabaseClient();
+        const { data, error } = await client.auth.signUp({ email, password });
         if (error) {
           console.error('Inscription Supabase :', error);
-          showToast(getSupabaseAuthErrorMessage(error));
+          await reportSupabaseAuthError(error, 'inscription');
           return;
         }
         currentCloudUser = data.session ? data.user : null;
@@ -3281,7 +3417,7 @@
           : successMessage);
       } catch (err) {
         console.error('Réseau Supabase (inscription) :', err);
-        showToast(getSupabaseAuthErrorMessage(err));
+        await reportSupabaseAuthError(err, 'inscription');
         return;
       } finally {
         setCloudAuthLoading(button, false);
