@@ -19,8 +19,13 @@
   <!-- Supabase pour la synchronisation cloud facultative -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
+  <!-- Extraction locale des fichiers bureautiques -->
+  <script src="https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+
   <!-- PDF.js pour l'extraction locale gratuite des fichiers PDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 
   <style>
     /* ==========================================================================
@@ -1623,74 +1628,46 @@
        ======================================================================== -->
   <main class="mx-auto max-w-4xl px-4 pt-4 pb-32">
 
-    <!-- BANNIÈRE ARCHITECTURALE DYNAMIQUE + MÉDAILLON DE FILIÈRE RECOLORÉ -->
-    <section class="surface-card relative mb-5 overflow-hidden">
-      <div class="grid grid-cols-1 md:grid-cols-12">
-        <!-- Colonne gauche : Médaillon circulaire flat-design de la filière + Infos -->
-        <div class="flex flex-col justify-between p-5 md:col-span-7">
-          <div class="flex items-start gap-3.5">
-            <!-- Médaillon circulaire spécifique à la filière/série -->
-            <div id="hero-domain-badge" class="flat-icon-badge shrink-0">
-              <!-- Injecté par getDomainBadgeSVG(profile) -->
-            </div>
-
-            <div class="min-w-0 flex-1">
-              <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
-                <span id="hero-cycle-tag" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wider text-white transition-colors duration-300" style="background-color: var(--active-color);">
-                  Profil à configurer
-                </span>
-                <span id="hero-subject-tag" class="rounded-full px-2.5 py-0.5 text-[10.5px] font-semibold" style="background-color: var(--bg-surface-alt); color: var(--text-secondary); border: 1px solid var(--border-subtle);">
-                  Matière prioritaire
-                </span>
-              </div>
-              <h1 id="hero-greeting" class="font-display text-lg font-extrabold tracking-tight sm:text-xl">
-                Bienvenue sur Reviso
-              </h1>
-              <p id="hero-description" class="mt-1 text-xs leading-relaxed" style="color: var(--text-secondary);">
-                Configurez votre parcours scolaire (Gabon) ou universitaire pour adapter les illustrations, le planning de révision et le tuteur IA.
-              </p>
-            </div>
-          </div>
-
-          <div class="mt-4 flex flex-wrap items-center gap-2.5">
-            <button type="button" onclick="openProfileModal()" class="btn-active-accent inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
-              <span id="hero-profile-btn-text">Configurer mon profil</span>
-            </button>
-
-            <div class="flex items-center gap-3 rounded-xl px-3 py-2 text-xs" style="background-color: var(--bg-surface-alt); border: 1px solid var(--border-subtle);">
-              <div>
-                <span class="font-bold" id="stat-docs-count">0</span>
-                <span style="color: var(--text-muted);"> docs</span>
-              </div>
-              <span style="color: var(--border-strong);">|</span>
-              <div>
-                <span class="font-bold" id="stat-annales-count">0</span>
-                <span style="color: var(--text-muted);"> annales</span>
-              </div>
-              <span style="color: var(--border-strong);">|</span>
-              <div>
-                <span class="font-bold" id="stat-mastery-pct">0%</span>
-                <span style="color: var(--text-muted);"> maîtrise</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Colonne droite : Illustration Architecturale SVG Dynamique Jour / Nuit -->
-        <div id="hero-building-container" class="relative min-h-[160px] md:col-span-5 flex items-end justify-center overflow-hidden">
-          <!-- Injecté dynamiquement par getBuildingIllustration(profile) -->
-        </div>
-      </div>
-    </section>
-
     <!-- ======================================================================
          ONGLET 0 : DOCUMENTS (CAHIER À SPIRALES + MULTI-PDF)
          ====================================================================== -->
     <section id="view-documents" class="page-view active space-y-5">
+      <!-- BANNIÈRE ARCHITECTURALE DYNAMIQUE + MÉDAILLON DE FILIÈRE RECOLORÉ -->
+      <section class="surface-card relative overflow-hidden">
+        <div class="grid grid-cols-1 md:grid-cols-12">
+          <div class="flex flex-col justify-between p-5 md:col-span-7">
+            <div class="flex items-start gap-3.5">
+              <div id="hero-domain-badge" class="flat-icon-badge shrink-0"></div>
+              <div class="min-w-0 flex-1">
+                <div class="mb-1.5 flex flex-wrap items-center gap-1.5">
+                  <span id="hero-cycle-tag" class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10.5px] font-bold uppercase tracking-wider text-white transition-colors duration-300" style="background-color: var(--active-color);">Profil à configurer</span>
+                  <span id="hero-subject-tag" class="rounded-full px-2.5 py-0.5 text-[10.5px] font-semibold" style="background-color: var(--bg-surface-alt); color: var(--text-secondary); border: 1px solid var(--border-subtle);">Matière prioritaire</span>
+                </div>
+                <h1 id="hero-greeting" class="font-display text-lg font-extrabold tracking-tight sm:text-xl">Bienvenue sur Reviso</h1>
+                <p id="hero-description" class="mt-1 text-xs leading-relaxed" style="color: var(--text-secondary);">Configurez votre parcours scolaire (Gabon) ou universitaire pour adapter les illustrations, le planning de révision et le tuteur IA.</p>
+              </div>
+            </div>
+            <div class="mt-4 flex flex-wrap items-center gap-2.5">
+              <button type="button" onclick="openProfileModal()" class="btn-active-accent inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                <span id="hero-profile-btn-text">Configurer mon profil</span>
+              </button>
+              <div class="flex items-center gap-3 rounded-xl px-3 py-2 text-xs" style="background-color: var(--bg-surface-alt); border: 1px solid var(--border-subtle);">
+                <div><span class="font-bold" id="stat-docs-count">0</span><span style="color: var(--text-muted);"> docs</span></div>
+                <span style="color: var(--border-strong);">|</span>
+                <div><span class="font-bold" id="stat-annales-count">0</span><span style="color: var(--text-muted);"> annales</span></div>
+                <span style="color: var(--border-strong);">|</span>
+                <div><span class="font-bold" id="stat-mastery-pct">0%</span><span style="color: var(--text-muted);"> maîtrise</span></div>
+              </div>
+            </div>
+          </div>
+          <div id="hero-building-container" class="relative min-h-[160px] md:col-span-5 flex items-end justify-center overflow-hidden"></div>
+        </div>
+      </section>
+
       <div class="surface-card flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
         <div class="flex items-center gap-3.5">
           <div id="badge-section-docs" class="flat-icon-badge shrink-0"></div>
@@ -1702,6 +1679,14 @@
           </div>
         </div>
         <div class="flex flex-wrap items-center gap-2">
+          <button type="button" onclick="openPhotoCaptureInput()" class="btn-active-accent inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M14 4h-4L8 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-4z"></path>
+              <circle cx="12" cy="14" r="3"></circle>
+            </svg>
+            Prendre en photo un cours / cahier
+          </button>
+          <input id="photo-page-input" type="file" accept="image/*" capture="environment" multiple class="hidden" onchange="handlePhotoCaptureSelection(event)" />
           <button type="button" onclick="openPasteModal()" class="surface-alt inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold hover:opacity-90">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
@@ -1728,7 +1713,7 @@
       <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
         <!-- Zone 1 : Cours -->
         <label class="surface-card group flex cursor-pointer flex-col items-center justify-center p-5 text-center transition-all hover:border-blue-500/50">
-          <input type="file" multiple accept=".pdf,.txt,.md" class="hidden" onchange="handleMultiFileUpload(event, 'cours')" />
+          <input type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md" class="hidden" onchange="handleMultiFileUpload(event, 'cours')" />
           <div class="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl transition-transform group-hover:scale-105" style="background-color: color-mix(in srgb, var(--tab-0-color) 14%, transparent); color: var(--tab-0-color);">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
@@ -1736,13 +1721,13 @@
             </svg>
           </div>
           <span class="text-sm font-bold">Cours & Chapitres</span>
-          <span class="mt-1 text-[11px]" style="color: var(--text-muted);">Multi-PDF, polycopiés, notes (.pdf, .txt, .md)</span>
+          <span class="mt-1 text-[11px]" style="color: var(--text-muted);">PDF, Word, PowerPoint et notes (.pdf, .docx, .pptx, .txt, .md)</span>
           <span class="mt-3 rounded-lg px-2.5 py-1 text-[11px] font-semibold" style="background-color: var(--bg-surface-alt); color: var(--tab-0-color);">Importer les cours</span>
         </label>
 
         <!-- Zone 2 : Programme Officiel -->
         <label class="surface-card group flex cursor-pointer flex-col items-center justify-center p-5 text-center transition-all hover:border-emerald-500/50">
-          <input type="file" multiple accept=".pdf,.txt,.md" class="hidden" onchange="handleMultiFileUpload(event, 'programme')" />
+          <input type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md" class="hidden" onchange="handleMultiFileUpload(event, 'programme')" />
           <div class="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl transition-transform group-hover:scale-105" style="background-color: color-mix(in srgb, var(--tab-2-color) 14%, transparent); color: var(--tab-2-color);">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="8" y1="6" x2="21" y2="6"></line>
@@ -1760,7 +1745,7 @@
 
         <!-- Zone 3 : Sujets d'Examen & Annales -->
         <label class="surface-card group flex cursor-pointer flex-col items-center justify-center p-5 text-center transition-all hover:border-sky-500/50">
-          <input type="file" multiple accept=".pdf,.txt,.md" class="hidden" onchange="handleMultiFileUpload(event, 'annales')" />
+          <input type="file" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md" class="hidden" onchange="handleMultiFileUpload(event, 'annales')" />
           <div class="mb-3 flex h-11 w-11 items-center justify-center rounded-2xl transition-transform group-hover:scale-105" style="background-color: color-mix(in srgb, var(--tab-1-color) 14%, transparent); color: var(--tab-1-color);">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -1930,8 +1915,8 @@
                 <p id="r2-share-folder-path" class="rounded-lg px-3 py-2 text-[11px] font-mono" style="background-color: var(--bg-surface); color: var(--text-secondary);">reviso-tiroirs/college/cours/</p>
               </div>
               <div class="sm:col-span-2">
-                <label for="r2-share-file" class="mb-1 block text-[11px] font-semibold">Fichier PDF *</label>
-                <input id="r2-share-file" type="file" class="input-field" accept="application/pdf,.pdf" required />
+                <label for="r2-share-file" class="mb-1 block text-[11px] font-semibold">Fichier(s) à partager *</label>
+                <input id="r2-share-file" type="file" class="input-field" accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md" multiple required />
               </div>
             </div>
             <label class="flex items-start gap-2 text-[11px] leading-relaxed">
@@ -2459,26 +2444,64 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div>
-            <label class="mb-1 block text-xs font-semibold">Matière ou UE prioritaire *</label>
-            <input type="text" id="prof-priority-subject" class="input-field" required placeholder="Ex : Obstétrique, Mathématiques, Droit civil..." />
+        <div>
+          <label for="prof-priority-subject" class="mb-1 block text-xs font-semibold">Matières ou UE prioritaires *</label>
+          <div class="flex gap-2">
+            <input type="text" id="prof-priority-subject" class="input-field" placeholder="Ex. Obstétrique, Mathématiques, Droit civil" onkeydown="if(event.key==='Enter'){event.preventDefault();addPrioritySubject();}" />
+            <button type="button" onclick="addPrioritySubject()" class="surface-alt shrink-0 px-4 text-xs font-bold">Ajouter</button>
           </div>
-          <div>
-            <label class="mb-1 block text-xs font-semibold">Date des prochains examens</label>
-            <input type="date" id="prof-exam-date" class="input-field" />
-          </div>
+          <div id="prof-priority-subjects" class="mt-2 flex flex-wrap gap-2" aria-live="polite"></div>
+          <p class="mt-1 text-[10px]" style="color: var(--text-muted);">Ajoutez une ou plusieurs matières. Entrée valide le champ.</p>
         </div>
 
-        <div>
-          <label class="mb-1 block text-xs font-semibold">Méthode d'apprentissage préférée</label>
-          <select id="prof-cognitive-style" class="input-field">
-            <option value="Cas pratiques & Exercices guidés pas-à-pas">Cas pratiques & Exercices guidés pas-à-pas</option>
-            <option value="Synthèses structurées & Schémas logiques">Synthèses structurées & Schémas logiques</option>
-            <option value="Questionnement socratique & Auto-évaluation">Questionnement socratique & Auto-évaluation</option>
-            <option value="Flashcards actives & Répétition espacée">Flashcards actives & Répétition espacée</option>
-          </select>
-        </div>
+        <section id="prof-superior-exams" class="hidden space-y-3 rounded-xl border p-3" style="border-color: var(--border-subtle);">
+          <p class="text-xs font-bold">Échéances universitaires</p>
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div>
+              <label for="prof-semester-1-date" class="mb-1 block text-[11px] font-semibold">Examens Semestre 1</label>
+              <input type="date" id="prof-semester-1-date" class="input-field" />
+            </div>
+            <div>
+              <label for="prof-semester-2-date" class="mb-1 block text-[11px] font-semibold">Examens Semestre 2</label>
+              <input type="date" id="prof-semester-2-date" class="input-field" />
+            </div>
+            <div>
+              <label for="prof-retake-session-date" class="mb-1 block text-[11px] font-semibold">Session de rattrapage</label>
+              <input type="date" id="prof-retake-session-date" class="input-field" />
+            </div>
+          </div>
+          <div>
+            <p class="mb-2 text-[11px] font-semibold">Rattrapages (Matières / UE concernées)</p>
+            <div id="prof-retake-subjects" class="space-y-2"></div>
+            <button type="button" onclick="addRetakeSubject()" class="surface-alt mt-2 rounded-lg px-3 py-2 text-[11px] font-bold">Ajouter une UE à rattraper</button>
+          </div>
+        </section>
+
+        <section id="prof-school-exams" class="hidden space-y-3 rounded-xl border p-3" style="border-color: var(--border-subtle);">
+          <p class="text-xs font-bold">Échéances de classe d'examen</p>
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label for="prof-mock-exam-date" class="mb-1 block text-[11px] font-semibold">Date des examens blancs</label>
+              <input type="date" id="prof-mock-exam-date" class="input-field" />
+            </div>
+            <div>
+              <label id="prof-official-exam-label" for="prof-official-exam-date" class="mb-1 block text-[11px] font-semibold">Date de l'examen officiel</label>
+              <input type="date" id="prof-official-exam-date" class="input-field" />
+            </div>
+          </div>
+        </section>
+
+        <fieldset>
+          <legend class="mb-2 block text-xs font-semibold">Méthodes d'apprentissage préférées</legend>
+          <div id="prof-learning-methods" class="flex flex-wrap gap-2">
+            <button type="button" data-learning-method="Fiches de synthèse structurées" aria-pressed="false" onclick="toggleLearningMethod(this)" class="surface-alt rounded-full px-3 py-2 text-[11px] font-semibold">Fiches de synthèse structurées</button>
+            <button type="button" data-learning-method="Quiz & QCM actifs" aria-pressed="false" onclick="toggleLearningMethod(this)" class="surface-alt rounded-full px-3 py-2 text-[11px] font-semibold">Quiz & QCM actifs</button>
+            <button type="button" data-learning-method="Flashcards mémoire espacée" aria-pressed="false" onclick="toggleLearningMethod(this)" class="surface-alt rounded-full px-3 py-2 text-[11px] font-semibold">Flashcards mémoire espacée</button>
+            <button type="button" data-learning-method="Cas pratiques & études de cas" aria-pressed="false" onclick="toggleLearningMethod(this)" class="surface-alt rounded-full px-3 py-2 text-[11px] font-semibold">Cas pratiques & études de cas</button>
+            <button type="button" data-learning-method="Schémas logiques cause-conséquence" aria-pressed="false" onclick="toggleLearningMethod(this)" class="surface-alt rounded-full px-3 py-2 text-[11px] font-semibold">Schémas logiques cause-conséquence</button>
+            <button type="button" data-learning-method="Tutorat socratique pas-à-pas" aria-pressed="false" onclick="toggleLearningMethod(this)" class="surface-alt rounded-full px-3 py-2 text-[11px] font-semibold">Tutorat socratique pas-à-pas</button>
+          </div>
+        </fieldset>
 
         <div class="flex items-center justify-end gap-2.5 pt-2">
           <button type="button" onclick="closeModal('modal-profile')" class="surface-alt px-4 py-2.5 text-xs font-semibold">Plus tard</button>
@@ -2526,6 +2549,45 @@
     </div>
   </div>
 
+  <div id="modal-photo-capture" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm">
+    <div class="modal-panel surface-card max-h-[90vh] w-full max-w-2xl overflow-y-auto p-5 sm:p-6">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h2 class="font-display text-base font-extrabold">Photographier un cours ou un cahier</h2>
+          <p class="mt-1 text-xs" style="color: var(--text-muted);">Ajoutez les pages dans l'ordre, prévisualisez-les, puis enregistrez-les comme un document privé.</p>
+        </div>
+        <button type="button" id="photo-close-button" onclick="closePhotoCapture()" class="surface-alt flex h-8 w-8 shrink-0 items-center justify-center rounded-lg" aria-label="Fermer">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <form onsubmit="savePhotoCourse(event)" class="mt-4 space-y-4">
+        <div>
+          <label for="photo-course-title" class="mb-1 block text-xs font-semibold">Nom du cours *</label>
+          <input id="photo-course-title" type="text" class="input-field" maxlength="160" required placeholder="Ex. Anatomie — chapitre 2" />
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p id="photo-page-count" class="text-[11px] font-semibold" style="color: var(--text-secondary);">Aucune page sélectionnée</p>
+          <button type="button" id="photo-add-pages-button" onclick="openPhotoCaptureInput(photoCaptureDocumentId)" class="surface-alt rounded-lg px-3 py-2 text-[11px] font-bold">Ajouter des pages</button>
+        </div>
+        <div id="photo-page-previews" class="grid grid-cols-2 gap-3 sm:grid-cols-3"></div>
+        <p class="text-[10px] leading-relaxed" style="color: var(--text-muted);">Les photos compressées et les transcriptions sont conservées dans IndexedDB sur cet appareil, sans partage avec la bibliothèque. Si une clé Gemini est active, une page difficile à lire peut être envoyée à Google pour une transcription complémentaire.</p>
+        <div id="photo-ocr-progress" class="surface-alt hidden p-3">
+          <div class="flex items-center justify-between gap-2 text-[11px] font-semibold">
+            <span id="photo-ocr-label">Lecture des pages...</span>
+            <span id="photo-ocr-percent">0%</span>
+          </div>
+          <div class="mt-2 h-2 overflow-hidden rounded-full" style="background-color: var(--bg-surface);">
+            <div id="photo-ocr-bar" class="h-full rounded-full transition-all duration-200" style="width: 0%; background-color: var(--active-color);"></div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2">
+          <button type="button" id="photo-cancel-button" onclick="closePhotoCapture()" class="surface-alt rounded-lg px-4 py-2.5 text-xs font-semibold">Annuler</button>
+          <button id="photo-save-button" type="submit" class="btn-active-accent rounded-xl px-4 py-2.5 text-xs font-bold">Enregistrer dans Documents</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ========================================================================
        TIROIR LATÉRAL (THÈME ANIMÉ, PIN 4 CHIFFRES, API GEMINI, GUIDE & LÉGAL)
        ======================================================================== -->
@@ -2563,23 +2625,16 @@
               <p id="cloud-account-status" class="mt-1 text-[11px]" style="color: var(--text-muted);">Mode local hors ligne — aucun compte requis.</p>
               <p id="cloud-account-email" class="mt-1 hidden break-all text-[11px] font-semibold" style="color: var(--text-secondary);"></p>
             </div>
-            <form id="cloud-auth-form" onsubmit="signInToCloud(event)" class="space-y-2">
+            <form id="cloud-auth-form" onsubmit="signInToCloud(event, this.querySelector('[type=submit]'))" class="space-y-2">
               <input type="email" id="cloud-auth-email" class="input-field" autocomplete="email" placeholder="Adresse e-mail" aria-label="Adresse e-mail du compte cloud" required />
               <input type="password" id="cloud-auth-password" class="input-field" autocomplete="current-password" placeholder="Mot de passe" aria-label="Mot de passe du compte cloud" required />
               <div class="flex gap-2">
                 <button type="submit" class="btn-active-accent flex-1 rounded-lg px-3 py-2 text-[11px] font-bold">Se connecter</button>
-                <button type="button" onclick="signUpToCloud()" class="surface-card flex-1 px-3 py-2 text-[11px] font-bold">Créer un compte</button>
+                <button type="button" onclick="signUpToCloud(this)" class="surface-card flex-1 px-3 py-2 text-[11px] font-bold">Créer un compte</button>
               </div>
             </form>
             <button type="button" id="cloud-signout-button" onclick="signOutFromCloud()" class="surface-card hidden w-full px-3 py-2 text-[11px] font-bold">Se déconnecter</button>
             <p class="text-[10px] leading-relaxed" style="color: var(--text-muted);">Sans connexion, Reviso continue de fonctionner et conserve vos données sur cet appareil.</p>
-            <details class="border-t pt-2" style="border-color: var(--border-subtle);">
-              <summary class="cursor-pointer text-[10px] font-semibold">Paramètres de connexion Supabase</summary>
-              <label for="cloud-supabase-key" class="mb-1 mt-2 block text-[10px] font-medium">Clé publishable</label>
-              <input id="cloud-supabase-key" type="password" class="input-field" autocomplete="off" spellcheck="false" aria-label="Clé publishable Supabase" />
-              <button type="button" onclick="saveSupabasePublishableKey()" class="surface-card mt-2 w-full px-3 py-2 text-[10px] font-bold">Enregistrer la clé Supabase</button>
-              <p class="mt-1 text-[10px] leading-relaxed" style="color: var(--text-muted);">La clé est enregistrée uniquement sur cet appareil. La clé publishable n’est pas un secret serveur.</p>
-            </details>
           </section>
 
           <!-- Interrupteur animé Mode Clair / Mode Sombre -->
@@ -2607,20 +2662,6 @@
               <div>
                 <p class="text-xs font-bold">Code PIN de sécurité (4 chiffres)</p>
                 <p id="drawer-pin-status" class="text-[11px]" style="color: var(--text-muted);">Désactivé</p>
-              </div>
-            </div>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
-          </button>
-
-          <!-- Clé API Google AI Studio -->
-          <button type="button" onclick="closeDrawer(); openApiKeyModal();" class="surface-alt flex w-full items-center justify-between p-3.5 text-left transition-opacity hover:opacity-90">
-            <div class="flex items-center gap-3">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--active-color);">
-                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
-              </svg>
-              <div>
-                <p class="text-xs font-bold">Clé API Gemini (Google AI Studio)</p>
-                <p id="drawer-api-status" class="text-[11px]" style="color: var(--text-muted);">Moteur local autonome actif</p>
               </div>
             </div>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -2660,6 +2701,7 @@
         </div>
         <p class="mt-2 break-all text-[9px]">Bibliothèque : reviso-bibliotheque · API : https://reviso-pink.vercel.app/api/r2</p>
         <p class="mt-1 break-all text-[9px]">S3 R2 : https://f7e5cd54a87349d05caa39ea3e891a26.r2.cloudflarestorage.com</p>
+        <button type="button" id="app-version" onclick="handleVersionTap()" class="mt-2 text-[9px] underline-offset-2 hover:underline" aria-label="Version Reviso">Version 1.0</button>
       </div>
     </aside>
   </div>
@@ -2773,8 +2815,10 @@
     }
 
     const SUPABASE_URL = 'https://kfdetwgmfpdvislnjzphi.supabase.co';
-    const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_gHfUWOTNsB8NgsTrFKPMLQ_krpyw';
-    let supabaseClient = null;
+    const SUPABASE_ANON_KEY = 'sb_publishable_gHfUWOTNsB8NgsTrFKPMLQ_krpyw';
+    const supabaseClient = window.supabase && typeof window.supabase.createClient === 'function'
+      ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+      : null;
     let currentCloudUser = null;
     const R2_API_URL = 'https://reviso-pink.vercel.app/api/r2';
     const R2_ROOT_PREFIX = 'reviso-tiroirs/';
@@ -2840,7 +2884,6 @@
       activeTabIndex: 0,
       pinCode: null,
       geminiApiKey: '',
-      supabasePublishableKey: DEFAULT_SUPABASE_PUBLISHABLE_KEY,
       profile: null,
       documents: [],
       scheduleRhythm: 'standard',
@@ -2867,6 +2910,13 @@
     let pinInputBuffer = '';
     let pendingConfirmAction = null;
     let r2CatalogDocuments = [];
+    let prioritySubjectsDraft = [];
+    let retakeSubjectsDraft = [];
+    let versionTapCount = 0;
+    let versionTapTimer = null;
+    let photoCaptureDraftPages = [];
+    let photoCaptureDocumentId = null;
+    let photoCaptureProcessing = false;
 
     function loadState() {
       try {
@@ -2878,9 +2928,17 @@
       } catch (err) {
         console.warn('Lecture stockage local :', err);
       }
-      if (!appState.supabasePublishableKey ||
-          appState.supabasePublishableKey === 'sb_publishable_gHfUWOTNsBRHgs7rFHPMLQ_krpywbEN') {
-        appState.supabasePublishableKey = DEFAULT_SUPABASE_PUBLISHABLE_KEY;
+      delete appState.supabasePublishableKey;
+      if (appState.profile) {
+        const profile = appState.profile;
+        if (!Array.isArray(profile.prioritySubjects)) {
+          profile.prioritySubjects = [profile.prioritySubject].filter(Boolean);
+        }
+        if (!Array.isArray(profile.learningMethods)) {
+          profile.learningMethods = [profile.cognitiveStyle].filter(Boolean);
+        }
+        if (!Array.isArray(profile.retakeSubjects)) profile.retakeSubjects = [];
+        if (!profile.examDates && profile.examDate) profile.examDates = { legacy: profile.examDate };
       }
       if (!Array.isArray(appState.documents)) appState.documents = [];
       appState.studyMinutes = Math.max(0, Number(appState.studyMinutes) || 0);
@@ -2907,7 +2965,19 @@
 
     function saveState() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+        const photoDocumentIds = new Set(
+          appState.documents.filter(document => document.photoCapture).map(document => document.id)
+        );
+        const stateForStorage = {
+          ...appState,
+          documents: appState.documents.map(document => document.photoCapture
+            ? { ...document, content: '' }
+            : document),
+          flashcards: appState.flashcards.filter(card => !photoDocumentIds.has(card.sourceDocumentId)),
+          qcmList: appState.qcmList.filter(question => !photoDocumentIds.has(question.sourceDocumentId)),
+          tutorHistory: photoDocumentIds.size ? [] : appState.tutorHistory
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stateForStorage));
       } catch (err) {
         showToast('Espace local presque saturé : pensez à alléger certains fichiers.');
       }
@@ -2982,7 +3052,7 @@
       return localFilesDatabasePromise;
     }
 
-    async function saveLocalDocumentAsset(document, rawFile = null) {
+    async function saveLocalDocumentAsset(document, rawFile = null, pages = []) {
       const database = await openLocalFilesDatabase();
       await new Promise((resolve, reject) => {
         const transaction = database.transaction(LOCAL_FILES_STORE, 'readwrite');
@@ -2990,12 +3060,23 @@
           id: document.id,
           document,
           rawFile,
+          pages,
           fileName: rawFile ? rawFile.name : document.fileName || '',
           updatedAt: new Date().toISOString()
         });
         transaction.oncomplete = resolve;
         transaction.onerror = () => reject(transaction.error || new Error('Écriture IndexedDB impossible.'));
         transaction.onabort = () => reject(transaction.error || new Error('Écriture IndexedDB annulée.'));
+      });
+    }
+
+    async function getLocalDocumentAsset(id) {
+      const database = await openLocalFilesDatabase();
+      return new Promise((resolve, reject) => {
+        const transaction = database.transaction(LOCAL_FILES_STORE, 'readonly');
+        const request = transaction.objectStore(LOCAL_FILES_STORE).get(id);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error || new Error('Lecture IndexedDB impossible.'));
       });
     }
 
@@ -3030,12 +3111,23 @@
           request.onsuccess = () => resolve(request.result);
           request.onerror = () => reject(request.error || new Error('Lecture IndexedDB impossible.'));
         });
+        const recordsById = new Map(savedRecords.map(record => [record.id, record]));
+        let hydrated = false;
+        appState.documents = appState.documents.map(document => {
+          const record = recordsById.get(document.id);
+          if (document.photoCapture && record && record.document) {
+            hydrated = true;
+            return record.document;
+          }
+          return document;
+        });
         const knownIds = new Set(appState.documents.map(document => document.id));
         const restored = savedRecords
           .map(record => record.document)
           .filter(document => document && document.id && !knownIds.has(document.id));
-        if (restored.length) {
+        if (restored.length || hydrated) {
           appState.documents.push(...restored);
+          rebuildStudyArtifactsFromDocuments();
           saveState();
         }
       } catch (err) {
@@ -3050,11 +3142,6 @@
       const authForm = document.getElementById('cloud-auth-form');
       const signOutButton = document.getElementById('cloud-signout-button');
       if (!status || !email || !authForm || !signOutButton) return;
-      const keyInput = document.getElementById('cloud-supabase-key');
-      if (keyInput && document.activeElement !== keyInput) {
-        keyInput.value = appState.supabasePublishableKey || DEFAULT_SUPABASE_PUBLISHABLE_KEY;
-      }
-
       if (currentCloudUser) {
         status.textContent = 'Compte connecté — synchronisation active.';
         email.textContent = currentCloudUser.email || 'Compte Supabase connecté';
@@ -3077,30 +3164,12 @@
 
     let supabaseAuthSubscription = null;
     function connectSupabaseClient() {
-      if (supabaseAuthSubscription) {
-        supabaseAuthSubscription.unsubscribe();
-        supabaseAuthSubscription = null;
-      }
-      currentCloudUser = null;
-      try {
-        supabaseClient = window.supabase
-          ? window.supabase.createClient(
-            SUPABASE_URL,
-            appState.supabasePublishableKey || DEFAULT_SUPABASE_PUBLISHABLE_KEY
-          )
-          : null;
-      } catch (err) {
-        console.error('Initialisation du client Supabase :', err);
-        supabaseClient = null;
-        showToast(`Connexion Supabase indisponible : ${err.message}`);
-      }
       renderCloudAccount();
       if (!supabaseClient) return;
 
       const { data } = supabaseClient.auth.onAuthStateChange((_event, session) => {
         currentCloudUser = session ? session.user : null;
         renderCloudAccount();
-        if (currentCloudUser) setTimeout(() => { void syncProfileToCloud(); }, 0);
       });
       supabaseAuthSubscription = data.subscription;
       supabaseClient.auth.getSession().then(({ data: sessionData, error }) => {
@@ -3111,21 +3180,46 @@
         }
         currentCloudUser = sessionData.session ? sessionData.session.user : null;
         renderCloudAccount();
+        if (currentCloudUser) void syncProfileToCloud(currentCloudUser);
       }).catch(err => {
         console.error('Lecture de la session Supabase :', err);
         showToast('Session cloud indisponible. Reviso continue en mode local.');
       });
     }
 
-    function saveSupabasePublishableKey() {
-      const enteredKey = document.getElementById('cloud-supabase-key').value.trim();
-      appState.supabasePublishableKey = enteredKey || DEFAULT_SUPABASE_PUBLISHABLE_KEY;
-      saveState();
-      connectSupabaseClient();
-      showToast('Paramètres Supabase enregistrés sur cet appareil.');
+    function setCloudAuthLoading(button, isLoading) {
+      const form = document.getElementById('cloud-auth-form');
+      if (!form) return;
+      form.querySelectorAll('input, button').forEach(control => {
+        control.disabled = isLoading || !supabaseClient;
+      });
+      if (!button) return;
+      if (isLoading) {
+        button.dataset.defaultLabel = button.textContent;
+        button.textContent = button.type === 'submit' ? 'Connexion...' : 'Création...';
+      } else if (button.dataset.defaultLabel) {
+        button.textContent = button.dataset.defaultLabel;
+        delete button.dataset.defaultLabel;
+      }
     }
 
-    async function signInToCloud(event) {
+    function getSupabaseAuthErrorMessage(error) {
+      const message = String(error && error.message || error || '');
+      const normalized = message.toLowerCase();
+      if (/failed to fetch|network|fetch failed/.test(normalized)) {
+        return `Connexion au service impossible. Vérifiez votre connexion Internet et réessayez. Détail reçu : ${message || 'échec réseau'}`;
+      }
+      if (normalized.includes('invalid email') || normalized.includes('email address is invalid')) return 'L’adresse e-mail saisie est invalide.';
+      if (normalized.includes('invalid login credentials')) return 'Adresse e-mail ou mot de passe incorrect.';
+      if (normalized.includes('email not confirmed')) return 'Confirmez votre adresse e-mail avant de vous connecter.';
+      if (normalized.includes('user already registered')) return 'Un compte existe déjà pour cette adresse e-mail.';
+      if (normalized.includes('password should be at least') || normalized.includes('weak password')) return 'Le mot de passe ne respecte pas les exigences de sécurité.';
+      if (normalized.includes('email rate limit exceeded')) return 'Trop de tentatives d’inscription. Réessayez plus tard.';
+      if (normalized.includes('signup is disabled')) return 'La création de comptes est désactivée pour ce service.';
+      return `Le service Supabase a refusé la demande : ${message || 'erreur inconnue'}`;
+    }
+
+    async function signInToCloud(event, button) {
       event.preventDefault();
       if (!supabaseClient) {
         showToast('Connexion cloud indisponible. Reviso reste utilisable en mode local.');
@@ -3133,46 +3227,64 @@
       }
       const email = document.getElementById('cloud-auth-email').value.trim();
       const password = document.getElementById('cloud-auth-password').value;
+      setCloudAuthLoading(button, true);
       try {
-        const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+        const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
         if (error) {
           console.error('Connexion Supabase :', error);
-          showToast(`Connexion impossible : ${error.message}`);
+          showToast(getSupabaseAuthErrorMessage(error));
           return;
         }
-        showToast('Connexion au compte cloud réussie.');
+        currentCloudUser = data.user || (data.session && data.session.user) || null;
+        renderCloudAccount();
+        const syncError = await syncProfileToCloud(currentCloudUser, false);
+        showToast(syncError
+          ? `Connexion réussie, mais le profil n’a pas été synchronisé : ${syncError}`
+          : 'Connexion au compte cloud réussie.');
       } catch (err) {
         console.error('Réseau Supabase (connexion) :', err);
-        showToast('Connexion impossible : service cloud indisponible.');
+        showToast(getSupabaseAuthErrorMessage(err));
         return;
+      } finally {
+        setCloudAuthLoading(button, false);
       }
     }
 
-    async function signUpToCloud() {
+    async function signUpToCloud(button) {
       if (!supabaseClient) {
         showToast('Inscription cloud indisponible. Reviso reste utilisable en mode local.');
         return;
       }
       const email = document.getElementById('cloud-auth-email').value.trim();
       const password = document.getElementById('cloud-auth-password').value;
+      if (!document.getElementById('cloud-auth-form').reportValidity()) return;
       if (!email || !password) {
         showToast('Saisissez votre e-mail et votre mot de passe pour créer un compte.');
         return;
       }
+      setCloudAuthLoading(button, true);
       try {
         const { data, error } = await supabaseClient.auth.signUp({ email, password });
         if (error) {
           console.error('Inscription Supabase :', error);
-          showToast(`Inscription impossible : ${error.message}`);
+          showToast(getSupabaseAuthErrorMessage(error));
           return;
         }
-        showToast(data.session
+        currentCloudUser = data.session ? data.user : null;
+        renderCloudAccount();
+        const syncError = data.user ? await syncProfileToCloud(data.user, false) : '';
+        const successMessage = data.session
           ? 'Compte créé et connecté.'
-          : 'Compte créé. Vérifiez votre e-mail pour confirmer l’inscription.');
+          : 'Compte créé. Vérifiez votre e-mail pour confirmer l’inscription.';
+        showToast(syncError
+          ? `${successMessage} Profil non synchronisé : ${syncError}`
+          : successMessage);
       } catch (err) {
         console.error('Réseau Supabase (inscription) :', err);
-        showToast('Inscription impossible : service cloud indisponible.');
+        showToast(getSupabaseAuthErrorMessage(err));
         return;
+      } finally {
+        setCloudAuthLoading(button, false);
       }
     }
 
@@ -3207,29 +3319,41 @@
       }
     }
 
-    async function syncProfileToCloud() {
-      if (!supabaseClient || !currentCloudUser || !appState.profile) return;
-      const profile = appState.profile;
+    async function syncProfileToCloud(user = currentCloudUser, notify = true) {
+      if (!supabaseClient || !user) return '';
+      const profile = appState.profile || {};
+      const prioritySubjects = profile.prioritySubjects || [profile.prioritySubject].filter(Boolean);
       try {
         const { error } = await supabaseClient.from('profiles').upsert({
-          id: currentCloudUser.id,
-          academic_level: profile.level,
-          academic_track: profile.track,
-          academic_detail: profile.prioritySubject,
-          cognitive_style: profile.cognitiveStyle,
+          id: user.id,
+          academic_level: profile.level || '',
+          academic_track: profile.track || '',
+          academic_detail: prioritySubjects.join(', '),
+          cognitive_style: JSON.stringify({
+            style: profile.cognitiveStyle || '',
+            prioritySubjects,
+            learningMethods: profile.learningMethods || [],
+            examDeadlines: getProfileExamDeadlines(profile),
+            retakeSubjects: profile.retakeSubjects || []
+          }),
           updated_at: new Date().toISOString()
         }, { onConflict: 'id' });
         if (error) {
           console.error('Synchronisation du profil Supabase :', error);
-          showToast(`Profil non synchronisé : ${error.message}`);
+          if (notify) showToast(`Profil non synchronisé : ${error.message}`);
+          return error.message || 'erreur inconnue';
         }
+        return '';
       } catch (err) {
         console.error('Réseau Supabase (profiles) :', err);
-        showToast('Profil non synchronisé : connexion cloud indisponible.');
+        const message = err && err.message || 'connexion cloud indisponible';
+        if (notify) showToast(`Profil non synchronisé : ${message}`);
+        return message;
       }
     }
 
     function syncStudyItemToCloud(document) {
+      if (document.photoCapture) return;
       const summary = String(document.content || '').slice(0, 1000);
       void writeCloudRows('study_items', [{
         user_id: currentCloudUser && currentCloudUser.id,
@@ -3242,7 +3366,12 @@
 
     function syncPlanningToCloud(schedule) {
       const now = new Date();
-      const rows = schedule.map((item, index) => {
+      const privatePhotoIds = new Set(
+        appState.documents.filter(document => document.photoCapture).map(document => document.id)
+      );
+      const rows = schedule
+        .filter(item => !privatePhotoIds.has(item.sourceDocumentId))
+        .map((item, index) => {
         const scheduledFor = item.scheduledFor
           ? new Date(item.scheduledFor)
           : new Date(now.getTime() + (index + 1) * 86400000);
@@ -3257,7 +3386,8 @@
       void writeCloudRows('study_sessions', rows, 'Planning non synchronisé');
     }
 
-    function syncCompletedStudySession(topic, score) {
+    function syncCompletedStudySession(topic, score, sourceDocumentId = '') {
+      if (appState.documents.some(document => document.photoCapture && document.id === sourceDocumentId)) return;
       void writeCloudRows('study_sessions', [{
         user_id: currentCloudUser && currentCloudUser.id,
         topic,
@@ -3607,16 +3737,7 @@
     }
 
     async function extractR2PdfPreview(file) {
-      if (!window.pdfjsLib) throw new Error('PDF.js est indisponible pour extraire l’aperçu.');
-      const buffer = await file.arrayBuffer();
-      const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
-      let excerpt = '';
-      for (let pageNumber = 1; pageNumber <= Math.min(pdf.numPages, 40) && excerpt.length < 1000; pageNumber++) {
-        const page = await pdf.getPage(pageNumber);
-        const content = await page.getTextContent();
-        excerpt += content.items.map(item => item.str || '').join(' ') + ' ';
-      }
-      return excerpt.trim().slice(0, 1000);
+      return (await extractPdfText(file)).slice(0, 1000);
     }
 
     async function shareR2Document(event) {
@@ -3624,11 +3745,11 @@
       const form = document.getElementById('r2-share-form');
       const submit = document.getElementById('r2-share-submit');
       const status = document.getElementById('r2-share-status');
-      const file = document.getElementById('r2-share-file').files[0];
-      if (!form.reportValidity() || !file) return;
-      if (!file.name.toLowerCase().endsWith('.pdf') ||
-          (file.type && !['application/pdf', 'application/x-pdf', 'application/octet-stream'].includes(file.type))) {
-        showToast('Seuls les fichiers PDF peuvent être partagés.');
+      const files = Array.from(document.getElementById('r2-share-file').files || []);
+      if (!form.reportValidity() || !files.length) return;
+      if (files.some(file => !file.name.toLowerCase().endsWith('.pdf') ||
+          (file.type && !['application/pdf', 'application/x-pdf', 'application/octet-stream'].includes(file.type)))) {
+        showToast('La bibliothèque partagée accepte uniquement les PDF. Importez les fichiers Word ou PowerPoint dans vos révisions privées.');
         return;
       }
 
@@ -3662,46 +3783,59 @@
       }
 
       submit.disabled = true;
-      status.textContent = 'Extraction du texte et préparation du téléversement...';
-      let uploadKey = '';
-      let uploaded = false;
+      let completed = 0;
+      let currentUploadKey = '';
+      let currentUploaded = false;
       try {
-        const summary = await extractR2PdfPreview(file);
-        const contentType = 'application/pdf';
-        const presignResponse = await postR2Action({
-          action: 'presign-upload',
-          fileName: file.name,
-          contentType,
-          folderPath,
-          category: metadata.category
-        });
-        const presign = presignResponse.data || presignResponse;
-        const uploadUrl = presign.uploadUrl || presign.signedUrl;
-        uploadKey = presign.key || presign.objectKey || presign.fileKey || '';
-        if (!uploadUrl || !uploadKey) throw new Error('L’API R2 n’a pas fourni l’URL signée et la clé du fichier.');
-        if (new URL(uploadUrl).protocol !== 'https:') throw new Error('L’URL de téléversement signée doit utiliser HTTPS.');
+        for (const [index, file] of files.entries()) {
+          currentUploadKey = '';
+          currentUploaded = false;
+          status.textContent = `Préparation du document ${index + 1} sur ${files.length}...`;
+          const summary = await extractR2PdfPreview(file);
+          const contentType = 'application/pdf';
+          const presignResponse = await postR2Action({
+            action: 'presign-upload',
+            fileName: file.name,
+            contentType,
+            folderPath,
+            category: metadata.category
+          });
+          const presign = presignResponse.data || presignResponse;
+          const uploadUrl = presign.uploadUrl || presign.signedUrl;
+          currentUploadKey = presign.key || presign.objectKey || presign.fileKey || '';
+          if (!uploadUrl || !currentUploadKey) throw new Error('L’API R2 n’a pas fourni l’URL signée et la clé du fichier.');
+          if (new URL(uploadUrl).protocol !== 'https:') throw new Error('L’URL de téléversement signée doit utiliser HTTPS.');
 
-        status.textContent = 'Téléversement du PDF vers R2...';
-        const uploadResponse = await fetch(uploadUrl, {
-          method: 'PUT',
-          headers: { 'Content-Type': contentType },
-          body: file
-        });
-        if (!uploadResponse.ok) throw new Error(`Le téléversement R2 a répondu ${uploadResponse.status}.`);
-        uploaded = true;
+          status.textContent = `Téléversement du document ${index + 1} sur ${files.length}...`;
+          const uploadResponse = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': contentType },
+            body: file
+          });
+          if (!uploadResponse.ok) throw new Error(`Le téléversement R2 a répondu ${uploadResponse.status}.`);
+          currentUploaded = true;
 
-        status.textContent = 'Enregistrement des métadonnées dans le catalogue...';
-        await postR2Action({
-          action: 'register-document',
-          key: uploadKey,
-          fileName: file.name,
-          contentType,
-          folderPath,
-          ...metadata,
-          excerpt: summary
-        });
-        status.textContent = 'Document ajouté à la bibliothèque partagée.';
-        showToast('Document partagé dans la bibliothèque R2.');
+          const documentMetadata = {
+            ...metadata,
+            title: files.length > 1
+              ? `${metadata.title} — ${file.name.replace(/\.[^/.]+$/, '')}`
+              : metadata.title
+          };
+          status.textContent = `Enregistrement du document ${index + 1} sur ${files.length}...`;
+          await postR2Action({
+            action: 'register-document',
+            key: currentUploadKey,
+            fileName: file.name,
+            contentType,
+            folderPath,
+            ...documentMetadata,
+            excerpt: summary
+          });
+          completed++;
+        }
+
+        status.textContent = `${completed} document(s) ajouté(s) à la bibliothèque partagée.`;
+        showToast(`${completed} document(s) partagé(s) dans la bibliothèque R2.`);
         form.reset();
         document.getElementById('r2-share-rayon').value = 'college';
         populateR2Branches('share');
@@ -3709,9 +3843,14 @@
         await refreshR2Library();
       } catch (err) {
         console.error('Partage du document dans R2 :', err);
-        const prefix = uploaded ? `PDF téléversé (${uploadKey}), mais` : 'Partage impossible :';
+        const prefix = currentUploaded
+          ? `PDF téléversé (${currentUploadKey}), mais non enregistré`
+          : completed
+            ? `${completed} document(s) partagé(s) ; partage suivant impossible`
+            : 'Partage impossible';
         status.textContent = `${prefix} ${err.message}`;
         showToast(`${prefix} ${err.message}`);
+        if (completed) await refreshR2Library();
       } finally {
         submit.disabled = false;
       }
@@ -4556,6 +4695,9 @@
         return 'Profil non encore configuré. Demande à l\'étudiant de renseigner son cycle et sa filière avant toute explication.';
       }
       const p = appState.profile;
+      const prioritySubjects = p.prioritySubjects || [p.prioritySubject].filter(Boolean);
+      const learningMethods = p.learningMethods || [p.cognitiveStyle].filter(Boolean);
+      const examDeadlines = getProfileExamDeadlines(p);
       const docsSummary = appState.documents.length
         ? appState.documents.map(d => `[${d.category.toUpperCase()}] ${d.title}`).join(' ; ')
         : 'Aucun document importé';
@@ -4565,31 +4707,185 @@
         `- Cycle : ${p.cycleLabel}`,
         `- Niveau : ${p.level}`,
         `- Série / Filière exacte : ${p.track}`,
-        `- Matière / UE prioritaire : ${p.prioritySubject}`,
+        `- Matières / UE prioritaires : ${prioritySubjects.join(', ') || 'Non renseignées'}`,
         p.school ? `- Établissement : ${p.school}` : '',
-        `- Style pédagogique optimal : ${p.cognitiveStyle}`,
+        `- Méthodes d'apprentissage préférées : ${learningMethods.join(', ') || 'Non renseignées'}`,
+        examDeadlines.length
+          ? `- Échéances d'examen : ${examDeadlines.map(deadline => `${deadline.label} le ${deadline.date}`).join(' ; ')}`
+          : '- Échéances d’examen : aucune échéance applicable ou renseignée',
+        p.retakeSubjects && p.retakeSubjects.length
+          ? `- UE / matières à rattraper : ${p.retakeSubjects.map(item => `${item.subject}${item.date ? ` (${item.date})` : ''}`).join(', ')}`
+          : '',
         `- Supports importés : ${docsSummary}`,
         `CONSIGNE IMPÉRATIVE : Utilise exclusivement le vocabulaire technique, la rigueur et les références conformes à "${p.track}" (${p.level}), sans jamais glisser vers une autre discipline et sans aucun emoji.`
       ].filter(Boolean).join('\n');
     }
 
+    function renderPrioritySubjects() {
+      const container = document.getElementById('prof-priority-subjects');
+      if (!container) return;
+      container.innerHTML = prioritySubjectsDraft.map((subject, index) => `
+        <span class="surface-alt inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold">
+          ${escapeHtml(subject)}
+          <button type="button" onclick="removePrioritySubject(${index})" class="ml-1 font-bold" aria-label="Supprimer ${escapeHtml(subject)}">&times;</button>
+        </span>
+      `).join('');
+    }
+
+    function addPrioritySubject() {
+      const input = document.getElementById('prof-priority-subject');
+      const subject = input.value.trim();
+      if (!subject) return;
+      if (prioritySubjectsDraft.some(existing => existing.toLocaleLowerCase() === subject.toLocaleLowerCase())) {
+        showToast('Cette matière ou UE est déjà dans la liste.');
+        return;
+      }
+      prioritySubjectsDraft.push(subject);
+      input.value = '';
+      renderPrioritySubjects();
+      input.focus();
+    }
+
+    function removePrioritySubject(index) {
+      prioritySubjectsDraft.splice(index, 1);
+      renderPrioritySubjects();
+    }
+
+    function toggleLearningMethod(button) {
+      const selected = button.getAttribute('aria-pressed') === 'true';
+      button.setAttribute('aria-pressed', String(!selected));
+      button.classList.toggle('btn-active-accent', !selected);
+      button.classList.toggle('surface-alt', selected);
+    }
+
+    function renderLearningMethods(selectedMethods) {
+      const selected = new Set(selectedMethods || []);
+      document.querySelectorAll('#prof-learning-methods [data-learning-method]').forEach(button => {
+        const isSelected = selected.has(button.dataset.learningMethod);
+        button.setAttribute('aria-pressed', String(isSelected));
+        button.classList.toggle('btn-active-accent', isSelected);
+        button.classList.toggle('surface-alt', !isSelected);
+      });
+    }
+
+    function renderRetakeSubjects() {
+      const container = document.getElementById('prof-retake-subjects');
+      if (!container) return;
+      container.innerHTML = retakeSubjectsDraft.map((item, index) => `
+        <div class="grid grid-cols-1 items-end gap-2 sm:grid-cols-[1fr_170px_auto]" data-retake-row>
+          <div>
+            <label class="mb-1 block text-[10px] font-semibold">Matière / UE</label>
+            <input type="text" data-retake-subject class="input-field" maxlength="120" value="${escapeHtml(item.subject || '')}" placeholder="Nom de la matière ou UE" />
+          </div>
+          <div>
+            <label class="mb-1 block text-[10px] font-semibold">Date</label>
+            <input type="date" data-retake-date class="input-field" value="${escapeHtml(item.date || '')}" />
+          </div>
+          <button type="button" onclick="removeRetakeSubject(${index})" class="surface-alt mb-0.5 h-10 rounded-lg px-3 text-xs font-semibold">Supprimer</button>
+        </div>
+      `).join('');
+    }
+
+    function addRetakeSubject(item = { subject: '', date: '' }) {
+      retakeSubjectsDraft.push(item);
+      renderRetakeSubjects();
+    }
+
+    function removeRetakeSubject(index) {
+      retakeSubjectsDraft.splice(index, 1);
+      renderRetakeSubjects();
+    }
+
+    function collectRetakeSubjects() {
+      return Array.from(document.querySelectorAll('#prof-retake-subjects [data-retake-row]'))
+        .map(row => ({
+          subject: row.querySelector('[data-retake-subject]').value.trim(),
+          date: row.querySelector('[data-retake-date]').value
+        }))
+        .filter(item => item.subject || item.date);
+    }
+
+    function isSchoolExamClass(cycle, level) {
+      if (cycle === 'college_gabon') return /^3[eè]me/i.test(level);
+      return cycle === 'lycee_general_gabon' || cycle === 'lycee_technique_gabon'
+        ? /^terminale/i.test(level)
+        : false;
+    }
+
+    function updateProfileExamFields() {
+      const cycle = document.getElementById('prof-cycle').value;
+      const level = document.getElementById('prof-level').value;
+      const isSuperior = cycle === 'superieur';
+      const isExamClass = isSchoolExamClass(cycle, level);
+      document.getElementById('prof-superior-exams').classList.toggle('hidden', !isSuperior);
+      document.getElementById('prof-school-exams').classList.toggle('hidden', !isExamClass);
+      const officialLabel = document.getElementById('prof-official-exam-label');
+      if (officialLabel) {
+        officialLabel.textContent = cycle === 'college_gabon'
+          ? 'Date de l’examen officiel (BEPC)'
+          : 'Date de l’examen officiel (Baccalauréat)';
+      }
+    }
+
+    function getProfileExamDeadlines(profile) {
+      if (!profile) return [];
+      const dates = profile.examDates || {};
+      const deadlines = [];
+      const add = (label, date) => {
+        if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) deadlines.push({ label, date });
+      };
+      if (profile.cycle === 'superieur') {
+        add('Examens Semestre 1', dates.semester1);
+        add('Examens Semestre 2', dates.semester2);
+        add('Session de rattrapage', dates.retakeSession);
+        (profile.retakeSubjects || []).forEach(item => add(`Rattrapage ${item.subject}`, item.date));
+      } else if (isSchoolExamClass(profile.cycle, profile.level)) {
+        add('Examens blancs', dates.mock);
+        add(profile.cycle === 'college_gabon' ? 'Examen officiel BEPC' : 'Examen officiel Baccalauréat', dates.official);
+      }
+      if ((profile.cycle === 'superieur' || isSchoolExamClass(profile.cycle, profile.level)) &&
+          dates.legacy && !deadlines.length) add('Prochains examens', dates.legacy);
+      return deadlines;
+    }
+
+    function getProfilePlanningExamDate(profile) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const futureDates = getProfileExamDeadlines(profile)
+        .map(deadline => new Date(`${deadline.date}T12:00:00`))
+        .filter(date => !Number.isNaN(date.getTime()) && date >= today)
+        .sort((left, right) => left - right);
+      return futureDates[0] || null;
+    }
+
     function openProfileModal() {
+      const profile = appState.profile || {};
+      prioritySubjectsDraft = profile.prioritySubjects || [profile.prioritySubject].filter(Boolean);
+      retakeSubjectsDraft = (profile.retakeSubjects || []).map(item => ({ ...item }));
+      document.getElementById('prof-priority-subject').value = '';
+      renderPrioritySubjects();
+      renderRetakeSubjects();
+      renderLearningMethods(profile.learningMethods || [profile.cognitiveStyle].filter(Boolean));
+      const dates = profile.examDates || {};
+      document.getElementById('prof-semester-1-date').value = dates.semester1 || '';
+      document.getElementById('prof-semester-2-date').value = dates.semester2 || '';
+      document.getElementById('prof-retake-session-date').value = dates.retakeSession || '';
+      document.getElementById('prof-mock-exam-date').value = dates.mock || '';
+      document.getElementById('prof-official-exam-date').value = dates.official || '';
       if (appState.profile) {
-        document.getElementById('prof-name').value = appState.profile.name || '';
-        document.getElementById('prof-school').value = appState.profile.school || '';
-        document.getElementById('prof-cycle').value = appState.profile.cycle || '';
+        document.getElementById('prof-name').value = profile.name || '';
+        document.getElementById('prof-school').value = profile.school || '';
+        document.getElementById('prof-cycle').value = profile.cycle || '';
         updateProfileFormOptions();
-        if (appState.profile.domain) {
-          document.getElementById('prof-domain').value = appState.profile.domain;
+        if (profile.domain) {
+          document.getElementById('prof-domain').value = profile.domain;
           updateProfileDomainTracks();
         }
-        document.getElementById('prof-level').value = appState.profile.level || '';
+        document.getElementById('prof-level').value = profile.level || '';
         updateProfileSeriesByLevel();
-        document.getElementById('prof-track').value = appState.profile.track || '';
-        document.getElementById('prof-priority-subject').value = appState.profile.prioritySubject || '';
-        document.getElementById('prof-exam-date').value = appState.profile.examDate || '';
-        document.getElementById('prof-cognitive-style').value = appState.profile.cognitiveStyle || 'Cas pratiques & Exercices guidés pas-à-pas';
+        document.getElementById('prof-track').value = profile.track || '';
       }
+      updateProfileExamFields();
       openModal('modal-profile');
     }
 
@@ -4606,6 +4902,7 @@
         domainGroup.classList.add('hidden');
         levelSelect.innerHTML = '<option value="">-- Sélectionner le cycle d\'abord --</option>';
         trackSelect.innerHTML = '<option value="">-- Sélectionner --</option>';
+        updateProfileExamFields();
         return;
       }
 
@@ -4623,6 +4920,7 @@
         domainGroup.classList.add('hidden');
         updateProfileSeriesByLevel();
       }
+      updateProfileExamFields();
     }
 
     function updateProfileDomainTracks() {
@@ -4650,6 +4948,7 @@
         opt.textContent = tr;
         trackSelect.appendChild(opt);
       });
+      updateProfileExamFields();
     }
 
     function saveAcademicProfile(e) {
@@ -4658,13 +4957,44 @@
       const cycle = document.getElementById('prof-cycle').value;
       const level = document.getElementById('prof-level').value;
       const track = document.getElementById('prof-track').value;
-      const prioritySubject = document.getElementById('prof-priority-subject').value.trim();
+      const pendingSubject = document.getElementById('prof-priority-subject').value.trim();
+      if (pendingSubject && !prioritySubjectsDraft.some(subject => subject.toLocaleLowerCase() === pendingSubject.toLocaleLowerCase())) {
+        prioritySubjectsDraft.push(pendingSubject);
+      }
+      const prioritySubjects = prioritySubjectsDraft.slice();
+      const learningMethods = Array.from(document.querySelectorAll('#prof-learning-methods [aria-pressed="true"]'))
+        .map(button => button.dataset.learningMethod);
 
-      if (!name || !cycle || !level || !track || !prioritySubject) {
-        showToast('Veuillez remplir tous les champs obligatoires.');
+      if (!name || !cycle || !level || !track || !prioritySubjects.length) {
+        showToast('Renseignez le prénom, le cycle, le niveau, la filière et au moins une matière ou UE prioritaire.');
         return;
       }
 
+      const isSuperior = cycle === 'superieur';
+      const isExamClass = isSchoolExamClass(cycle, level);
+      const examDates = isSuperior
+        ? {
+            semester1: document.getElementById('prof-semester-1-date').value,
+            semester2: document.getElementById('prof-semester-2-date').value,
+            retakeSession: document.getElementById('prof-retake-session-date').value
+          }
+        : isExamClass
+          ? {
+              mock: document.getElementById('prof-mock-exam-date').value,
+              official: document.getElementById('prof-official-exam-date').value
+            }
+          : {};
+      const retakeSubjects = isSuperior ? collectRetakeSubjects() : [];
+      if (isSuperior && retakeSubjects.some(item => !item.subject || !item.date)) {
+        showToast('Pour chaque rattrapage, renseignez la matière ou l’UE ainsi que sa date.');
+        return;
+      }
+      const examDatesForProfile = { ...examDates };
+      const profileForDeadlines = { cycle, level, examDates: examDatesForProfile, retakeSubjects };
+      const examDate = getProfileExamDeadlines(profileForDeadlines)
+        .map(deadline => deadline.date)
+        .sort()[0] || '';
+      const cognitiveStyle = learningMethods.join(' ; ') || 'Aucune méthode préférée renseignée';
       appState.profile = {
         name,
         school: document.getElementById('prof-school').value.trim(),
@@ -4673,9 +5003,13 @@
         domain: cycle === 'superieur' ? document.getElementById('prof-domain').value : '',
         level,
         track,
-        prioritySubject,
-        examDate: document.getElementById('prof-exam-date').value,
-        cognitiveStyle: document.getElementById('prof-cognitive-style').value
+        prioritySubjects,
+        prioritySubject: prioritySubjects.join(', '),
+        learningMethods,
+        examDates: examDatesForProfile,
+        retakeSubjects,
+        examDate,
+        cognitiveStyle
       };
 
       saveState();
@@ -4688,23 +5022,74 @@
     // ------------------------------------------------------------------------
     // 5. GESTION DES DOCUMENTS & EXTRACTION PDF LOCALE
     // ------------------------------------------------------------------------
+    async function extractPdfText(file) {
+      if (!window.pdfjsLib) throw new Error('PDF.js est indisponible : vérifiez la connexion puis réessayez.');
+      const buffer = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+      let fullText = '';
+      const maxPages = Math.min(pdf.numPages, 40);
+      for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
+        const page = await pdf.getPage(pageNumber);
+        const content = await page.getTextContent();
+        fullText += content.items.map(item => item.str || '').join(' ') + '\n\n';
+      }
+      if (fullText.trim().length >= 20) return fullText.trim();
+      if (!window.Tesseract || typeof window.Tesseract.createWorker !== 'function') {
+        throw new Error('Le PDF semble numérisé. Le module OCR est indisponible ; vérifiez la connexion puis réessayez.');
+      }
+
+      const worker = await window.Tesseract.createWorker('fra');
+      try {
+        const recognizedPages = [];
+        for (let pageNumber = 1; pageNumber <= Math.min(pdf.numPages, 10); pageNumber++) {
+          const page = await pdf.getPage(pageNumber);
+          const viewport = page.getViewport({ scale: 1.5 });
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          const context = canvas.getContext('2d');
+          await page.render({ canvasContext: context, viewport }).promise;
+          const result = await worker.recognize(canvas);
+          if (result.data.text) recognizedPages.push(result.data.text);
+          canvas.width = 0;
+          canvas.height = 0;
+        }
+        return recognizedPages.join('\n\n').trim() || `Support PDF importé : ${file.name}`;
+      } finally {
+        await worker.terminate();
+      }
+    }
+
     async function extractTextFromFile(file) {
       const ext = file.name.split('.').pop().toLowerCase();
-      if (ext === 'pdf') {
-        if (!window.pdfjsLib) throw new Error('PDF.js est indisponible : vérifiez la connexion puis réessayez.');
-        const buffer = await file.arrayBuffer();
-        const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
-        let fullText = '';
-        const maxPages = Math.min(pdf.numPages, 40);
-        for (let p = 1; p <= maxPages; p++) {
-          const page = await pdf.getPage(p);
-          const content = await page.getTextContent();
-          fullText += content.items.map(it => it.str).join(' ') + '\n\n';
-        }
-        return fullText.trim() || `Support PDF importé : ${file.name}`;
-      }
+      if (ext === 'pdf') return extractPdfText(file);
       if (ext === 'txt' || ext === 'md') return await file.text();
-      throw new Error('Format non pris en charge. Importez un PDF, un fichier TXT ou un fichier Markdown.');
+      if (ext === 'docx') {
+        if (!window.mammoth) throw new Error('Mammoth est indisponible pour lire le fichier Word.');
+        const result = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+        return result.value.trim();
+      }
+      if (ext === 'pptx') {
+        if (!window.JSZip) throw new Error('JSZip est indisponible pour lire le fichier PowerPoint.');
+        const archive = await window.JSZip.loadAsync(await file.arrayBuffer());
+        const slidePaths = Object.keys(archive.files)
+          .filter(path => /^ppt\/slides\/slide\d+\.xml$/i.test(path))
+          .sort((left, right) => Number(left.match(/slide(\d+)/i)[1]) - Number(right.match(/slide(\d+)/i)[1]));
+        const slideTexts = [];
+        for (const path of slidePaths) {
+          const xml = new DOMParser().parseFromString(await archive.file(path).async('string'), 'application/xml');
+          const slideText = Array.from(xml.getElementsByTagNameNS('*', 't'))
+            .map(node => node.textContent.trim())
+            .filter(Boolean)
+            .join(' ');
+          if (slideText) slideTexts.push(slideText);
+        }
+        return slideTexts.join('\n\n');
+      }
+      if (ext === 'doc' || ext === 'ppt') {
+        throw new Error('Les anciens formats .doc et .ppt ne sont pas pris en charge. Enregistrez le fichier au format .docx ou .pptx.');
+      }
+      throw new Error('Format non pris en charge. Importez un PDF, Word .docx, PowerPoint .pptx, TXT ou Markdown.');
     }
 
     async function handleMultiFileUpload(event, category) {
@@ -4721,6 +5106,7 @@
       let imported = 0;
       let failed = 0;
       let storageWarnings = 0;
+      const failureDetails = [];
 
       for (const file of files) {
         label.textContent = `Extraction locale : ${file.name}`;
@@ -4748,8 +5134,9 @@
           syncStudyItemToCloud(document);
           imported++;
         } catch (err) {
-          console.error('Erreur lecture PDF :', err);
+          console.error(`Erreur de lecture du fichier ${file.name} :`, err);
           failed++;
+          failureDetails.push(`${file.name} : ${err.message}`);
         }
         done++;
         const pct = Math.round((done / files.length) * 100);
@@ -4768,8 +5155,275 @@
       refreshAllUI();
       const notices = [`${imported} fichier(s) importé(s)`];
       if (failed) notices.push(`${failed} échec(s) de lecture`);
-      if (storageWarnings) notices.push(`${storageWarnings} PDF brut(s) non archivé(s)`);
+      if (storageWarnings) notices.push(`${storageWarnings} fichier(s) brut(s) non archivé(s)`);
+      if (failureDetails.length) notices.push(failureDetails.join(' ; '));
       showToast(notices.join(' — ') + '.');
+    }
+
+    function openPhotoCaptureInput(documentId = null) {
+      const captureModalOpen = document.getElementById('modal-photo-capture').classList.contains('open');
+      if (!documentId && !captureModalOpen) {
+        photoCaptureDocumentId = null;
+        photoCaptureDraftPages.forEach(page => URL.revokeObjectURL(page.previewUrl));
+        photoCaptureDraftPages = [];
+        document.getElementById('photo-course-title').value = '';
+        renderPhotoPagePreviews();
+      } else {
+        photoCaptureDocumentId = documentId;
+      }
+      document.getElementById('photo-page-input').click();
+    }
+
+    async function decodePhotoFile(file) {
+      if (typeof createImageBitmap === 'function') return createImageBitmap(file);
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(image);
+        };
+        image.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error('Le navigateur ne peut pas ouvrir cette photo.'));
+        };
+        image.src = url;
+      });
+    }
+
+    async function compressPhotoPage(file) {
+      if (!file.type.startsWith('image/')) throw new Error('Le fichier sélectionné n’est pas une image.');
+      const bitmap = await decodePhotoFile(file);
+      const maxDimension = 1800;
+      const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      const context = canvas.getContext('2d', { alpha: false });
+      context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      if (typeof bitmap.close === 'function') bitmap.close();
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(result => result
+          ? resolve(result)
+          : reject(new Error('La compression JPEG de la photo a échoué.')), 'image/jpeg', 0.75);
+      });
+      canvas.width = 0;
+      canvas.height = 0;
+      return blob;
+    }
+
+    async function handlePhotoCaptureSelection(event) {
+      const files = Array.from(event.target.files || []);
+      event.target.value = '';
+      if (!files.length) return;
+
+      try {
+        if (photoCaptureDocumentId && !photoCaptureDraftPages.length) {
+          const record = await getLocalDocumentAsset(photoCaptureDocumentId);
+          if (!record || !record.document || !record.document.photoCapture) {
+            throw new Error('Le cours photo est introuvable dans IndexedDB.');
+          }
+          document.getElementById('photo-course-title').value = record.document.title;
+          photoCaptureDraftPages = (record.pages || []).map(page => ({
+            ...page,
+            previewUrl: URL.createObjectURL(page.blob)
+          }));
+        }
+
+        const failures = [];
+        for (const file of files) {
+          try {
+            const blob = await compressPhotoPage(file);
+            photoCaptureDraftPages.push({
+              blob,
+              fileName: file.name,
+              text: '',
+              previewUrl: URL.createObjectURL(blob)
+            });
+          } catch (err) {
+            failures.push(`${file.name} : ${err.message}`);
+          }
+        }
+        renderPhotoPagePreviews();
+        openModal('modal-photo-capture');
+        if (failures.length) showToast(`Certaines images n’ont pas pu être ajoutées : ${failures.join(' ; ')}`);
+      } catch (err) {
+        console.error('Préparation des photos de cours :', err);
+        showToast(`Préparation des photos impossible : ${err.message}`);
+      }
+    }
+
+    function renderPhotoPagePreviews() {
+      const container = document.getElementById('photo-page-previews');
+      const count = document.getElementById('photo-page-count');
+      if (!container || !count) return;
+      count.textContent = photoCaptureDraftPages.length
+        ? `${photoCaptureDraftPages.length} page(s) prête(s)`
+        : 'Aucune page sélectionnée';
+      container.innerHTML = photoCaptureDraftPages.map((page, index) => `
+        <figure class="surface-alt relative overflow-hidden rounded-xl p-2">
+          <img src="${page.previewUrl}" alt="Aperçu de la page ${index + 1}" class="h-40 w-full rounded-lg object-contain" />
+          <figcaption class="mt-1 truncate text-[10px]" style="color: var(--text-muted);">Page ${index + 1} — ${escapeHtml(page.fileName || 'Photo du cours')}</figcaption>
+          <button type="button" onclick="removePhotoCapturePage(${index})" class="absolute right-3 top-3 rounded-md bg-slate-950/75 px-2 py-1 text-[10px] font-semibold text-white" aria-label="Retirer la page ${index + 1}">Retirer</button>
+        </figure>
+      `).join('');
+    }
+
+    function removePhotoCapturePage(index) {
+      const [removed] = photoCaptureDraftPages.splice(index, 1);
+      if (removed) URL.revokeObjectURL(removed.previewUrl);
+      renderPhotoPagePreviews();
+    }
+
+    function closePhotoCapture() {
+      if (photoCaptureProcessing) return;
+      closeModal('modal-photo-capture');
+      photoCaptureDraftPages.forEach(page => URL.revokeObjectURL(page.previewUrl));
+      photoCaptureDraftPages = [];
+      photoCaptureDocumentId = null;
+      document.getElementById('photo-page-input').value = '';
+      document.getElementById('photo-ocr-progress').classList.add('hidden');
+      document.getElementById('photo-ocr-bar').style.width = '0%';
+      document.getElementById('photo-ocr-percent').textContent = '0%';
+      document.getElementById('photo-course-title').value = '';
+      renderPhotoPagePreviews();
+    }
+
+    async function photoBlobToBase64(blob) {
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      let binary = '';
+      const chunkSize = 0x8000;
+      for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+      }
+      return btoa(binary);
+    }
+
+    async function extractPhotoTextWithGemini(blob) {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(appState.geminiApiKey)}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: 'Transcris fidèlement en français le texte manuscrit visible sur cette page de cours. Respecte l’ordre des lignes, garde les titres et n’ajoute aucune explication.' },
+                { inline_data: { mime_type: 'image/jpeg', data: await photoBlobToBase64(blob) } }
+              ]
+            }]
+          })
+        }
+      );
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error && result.error.message || `Gemini a répondu ${response.status}.`);
+      return result.candidates && result.candidates[0] && result.candidates[0].content
+        ? result.candidates[0].content.parts.map(part => part.text || '').join('\n').trim()
+        : '';
+    }
+
+    async function recognizePhotoPage(blob) {
+      if (!window.Tesseract || typeof window.Tesseract.recognize !== 'function') {
+        throw new Error('Le module OCR est indisponible. Vérifiez la connexion puis réessayez.');
+      }
+      const result = await window.Tesseract.recognize(blob, 'fra');
+      let text = result.data && result.data.text ? result.data.text.trim() : '';
+      const confidence = Number(result.data && result.data.confidence) || 0;
+      let warning = '';
+      if (appState.geminiApiKey && (confidence < 45 || text.length < 20)) {
+        try {
+          const visionText = await extractPhotoTextWithGemini(blob);
+          if (visionText.length > text.length) text = visionText;
+        } catch (err) {
+          console.error('Transcription complémentaire Gemini Vision :', err);
+          warning = `Gemini Vision indisponible : ${err.message}`;
+        }
+      }
+      return { text, warning };
+    }
+
+    async function savePhotoCourse(event) {
+      event.preventDefault();
+      const title = document.getElementById('photo-course-title').value.trim();
+      if (!title || !photoCaptureDraftPages.length) {
+        showToast('Donnez un nom au cours et ajoutez au moins une photo.');
+        return;
+      }
+
+      const saveButton = document.getElementById('photo-save-button');
+      const addButton = document.getElementById('photo-add-pages-button');
+      const closeButton = document.getElementById('photo-close-button');
+      const cancelButton = document.getElementById('photo-cancel-button');
+      const progress = document.getElementById('photo-ocr-progress');
+      const bar = document.getElementById('photo-ocr-bar');
+      const label = document.getElementById('photo-ocr-label');
+      const percent = document.getElementById('photo-ocr-percent');
+      const warnings = [];
+      photoCaptureProcessing = true;
+      saveButton.disabled = true;
+      addButton.disabled = true;
+      closeButton.disabled = true;
+      cancelButton.disabled = true;
+      progress.classList.remove('hidden');
+      try {
+        for (let index = 0; index < photoCaptureDraftPages.length; index++) {
+          const page = photoCaptureDraftPages[index];
+          if (!page.text) {
+            label.textContent = `Lecture de la page ${index + 1}/${photoCaptureDraftPages.length}...`;
+            const result = await recognizePhotoPage(page.blob);
+            page.text = result.text;
+            if (result.warning) warnings.push(result.warning);
+          } else {
+            label.textContent = `Page ${index + 1}/${photoCaptureDraftPages.length} déjà transcrite...`;
+          }
+          const currentPercent = Math.round(((index + 1) / photoCaptureDraftPages.length) * 100);
+          bar.style.width = `${currentPercent}%`;
+          percent.textContent = `${currentPercent}%`;
+        }
+
+        const documentId = photoCaptureDocumentId || `photo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        const courseText = photoCaptureDraftPages
+          .map((page, index) => `Page ${index + 1}\n${page.text || 'Aucun texte lisible détecté.'}`)
+          .join('\n\n');
+        const photoDocument = {
+          id: documentId,
+          category: 'cours',
+          title,
+          content: courseText,
+          words: courseText.split(/\s+/).filter(Boolean).length,
+          addedAt: new Date().toLocaleDateString('fr-FR'),
+          rawFileStored: false,
+          photoCapture: true,
+          photoPageCount: photoCaptureDraftPages.length
+        };
+        const storedPages = photoCaptureDraftPages.map(page => ({
+          blob: page.blob,
+          fileName: page.fileName || '',
+          text: page.text || ''
+        }));
+        await saveLocalDocumentAsset(photoDocument, null, storedPages);
+
+        const existingIndex = appState.documents.findIndex(document => document.id === documentId);
+        if (existingIndex >= 0) appState.documents[existingIndex] = photoDocument;
+        else appState.documents.unshift(photoDocument);
+        rebuildStudyArtifactsFromDocuments();
+        saveState();
+        refreshAllUI();
+        photoCaptureProcessing = false;
+        closePhotoCapture();
+        showToast(warnings.length
+          ? `Cours photo enregistré localement. ${warnings.join(' ; ')}`
+          : `${photoDocument.photoPageCount} page(s) enregistrée(s) localement et ajoutée(s) à vos révisions.`);
+      } catch (err) {
+        console.error('Enregistrement du cours photo :', err);
+        showToast(`Enregistrement du cours photo impossible : ${err.message}`);
+      } finally {
+        photoCaptureProcessing = false;
+        saveButton.disabled = false;
+        addButton.disabled = false;
+        closeButton.disabled = false;
+        cancelButton.disabled = false;
+      }
     }
 
     function openPasteModal() {
@@ -4964,12 +5618,7 @@
     function getNextAvailableStudyDate(dayOffset, afterDate = null) {
       const today = new Date();
       today.setHours(12, 0, 0, 0);
-      const examDate = appState.profile && appState.profile.examDate
-        ? new Date(`${appState.profile.examDate}T12:00:00`)
-        : null;
-      const validExamDate = examDate && !Number.isNaN(examDate.getTime()) && examDate >= today
-        ? examDate
-        : null;
+      const validExamDate = getProfilePlanningExamDate(appState.profile);
       const availableDays = appState.availableStudyDays.length
         ? appState.availableStudyDays
         : [1, 2, 3, 4, 5, 6];
@@ -5040,10 +5689,23 @@
         const s1 = sentences[0] || doc.content.slice(0, 180);
         const s2 = sentences[1] || 'Vérifier la chronologie et les critères du barème officiel.';
 
-        cards.push({ id: `fc_${idx}_1`, front: `Notion essentielle — ${doc.title}`, back: s1, status: 'learning' });
-        cards.push({ id: `fc_${idx}_2`, front: `Point méthodologique — ${doc.title}`, back: s2, status: 'review' });
+        cards.push({
+          id: `fc_${idx}_1`,
+          sourceDocumentId: doc.id,
+          front: `Notion essentielle — ${doc.title}`,
+          back: s1,
+          status: 'learning'
+        });
+        cards.push({
+          id: `fc_${idx}_2`,
+          sourceDocumentId: doc.id,
+          front: `Point méthodologique — ${doc.title}`,
+          back: s2,
+          status: 'review'
+        });
 
         qcms.push({
+          sourceDocumentId: doc.id,
           question: `D'après votre support « ${doc.title} », quelle proposition est exacte ?`,
           options: [
             s1,
@@ -5058,6 +5720,7 @@
         previousScheduledDate = scheduledDate;
         sched.push({
           id: `sch_${idx}`,
+          sourceDocumentId: doc.id,
           day: weekdayNames[scheduledDate.getDay()],
           scheduledFor: scheduledDate.toISOString(),
           interval: idx === 0 ? 'J+1 (Priorité haute)' : `J+${spacedIntervals[idx]} (Répétition espacée)`,
@@ -5137,7 +5800,7 @@
           <div class="surface-alt p-6 text-center">
             <p class="text-xs font-semibold">Aucun document importé pour le moment.</p>
             <p class="mt-1 text-[11px]" style="color: var(--text-muted);">
-              Sélectionnez vos fichiers PDF ci-dessus ou utilisez « Jeu d'entraînement selon mon profil ».
+              Importez un fichier, photographiez les pages d'un cours ou utilisez « Jeu d'entraînement selon mon profil ».
             </p>
           </div>
         `;
@@ -5153,6 +5816,9 @@
 
       container.innerHTML = appState.documents.map(doc => {
         const meta = labels[doc.category] || labels.cours;
+        const storageDescription = doc.photoCapture
+          ? `${doc.photoPageCount || 0} page(s) photographiée(s) conservée(s) dans IndexedDB`
+          : doc.rawFileStored ? 'PDF original conservé localement' : 'Texte disponible hors ligne';
         return `
           <div class="surface-alt flex items-center justify-between gap-3 p-3.5">
             <div class="min-w-0 flex-1">
@@ -5160,14 +5826,17 @@
                 <span class="rounded-md px-2 py-0.5 text-[10px] font-bold uppercase text-white" style="background-color: ${meta.color};">${meta.text}</span>
                 <span class="truncate text-xs font-bold sm:text-sm">${escapeHtml(doc.title)}</span>
               </div>
-              <p class="mt-1 text-[11px]" style="color: var(--text-muted);">${doc.words} mots extraits • ${doc.rawFileStored ? 'PDF original conservé localement' : 'Texte disponible hors ligne'} • Ajouté le ${doc.addedAt}</p>
+              <p class="mt-1 text-[11px]" style="color: var(--text-muted);">${doc.words} mots extraits • ${storageDescription} • Ajouté le ${doc.addedAt}</p>
             </div>
-            <button type="button" onclick="deleteDocument('${doc.id}')" class="rounded-lg p-2 text-rose-500 hover:bg-rose-500/10" title="Supprimer" aria-label="Supprimer">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-            </button>
+            <div class="flex shrink-0 items-center gap-1">
+              ${doc.photoCapture ? `<button type="button" onclick="openPhotoCaptureInput('${doc.id}')" class="surface-card rounded-lg px-2.5 py-2 text-[10px] font-semibold">Ajouter des pages</button>` : ''}
+              <button type="button" onclick="deleteDocument('${doc.id}')" class="rounded-lg p-2 text-rose-500 hover:bg-rose-500/10" title="Supprimer" aria-label="Supprimer">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
           </div>
         `;
       }).join('');
@@ -5305,7 +5974,11 @@
       appState.cognitive.method = Math.min(99, appState.cognitive.method + 3);
       saveState();
       void syncProfileToCloud();
-      syncCompletedStudySession(`Examen blanc — ${currentMockQuestion.title}`, note);
+      syncCompletedStudySession(
+        `Examen blanc — ${currentMockQuestion.title}`,
+        note,
+        currentMockQuestion.photoCapture ? currentMockQuestion.id : ''
+      );
 
       box.classList.remove('hidden');
       box.innerHTML = `
@@ -5664,10 +6337,17 @@
       saveState();
       if (qcmAnsweredCount > 0 && qcmAnsweredCount % appState.qcmList.length === 0) {
         const subject = appState.profile ? appState.profile.prioritySubject : 'Révision';
-        syncCompletedStudySession(
-          `Quiz QCM — ${subject}`,
-          Math.round((qcmScore / qcmAnsweredCount) * 100)
+        const includesPrivatePhoto = appState.qcmList.some(question =>
+          appState.documents.some(document =>
+            document.photoCapture && document.id === question.sourceDocumentId
+          )
         );
+        if (!includesPrivatePhoto) {
+          syncCompletedStudySession(
+            `Quiz QCM — ${subject}`,
+            Math.round((qcmScore / qcmAnsweredCount) * 100)
+          );
+        }
       }
     }
 
@@ -5955,6 +6635,22 @@
       checkPinLockOnBoot();
     }
 
+    function handleVersionTap() {
+      versionTapCount++;
+      if (versionTapTimer) clearTimeout(versionTapTimer);
+      if (versionTapCount >= 5) {
+        versionTapCount = 0;
+        versionTapTimer = null;
+        closeDrawer();
+        openApiKeyModal();
+        return;
+      }
+      versionTapTimer = setTimeout(() => {
+        versionTapCount = 0;
+        versionTapTimer = null;
+      }, 1500);
+    }
+
     function openApiKeyModal() {
       document.getElementById('input-gemini-key').value = appState.geminiApiKey || '';
       openModal('modal-api-key');
@@ -6006,7 +6702,7 @@
         bodyEl.innerHTML = `
           <p><strong>Mode local par défaut :</strong> Sans connexion à un compte, vos données restent sur cet appareil. Les textes extraits et réglages sont conservés dans <code>localStorage</code> et les fichiers originaux dans <code>IndexedDB</code>.</p>
           <p><strong>Synchronisation facultative :</strong> Quand vous êtes connecté, le profil académique, les titres et extraits textuels (limités à 1 000 caractères) des supports, ainsi que le planning et les résultats de quiz/examen sont transmis à votre projet Supabase. Les PDF privés ne sont pas envoyés à Supabase.</p>
-          <p><strong>Clés locales :</strong> La clé Gemini et la clé publishable Supabase configurées sont conservées sur cet appareil ; ne saisissez jamais de clé secrète de serveur.</p>
+          <p><strong>Réglages facultatifs :</strong> Les réglages du moteur IA sont conservés uniquement sur cet appareil. Le mode local fonctionne sans configuration supplémentaire.</p>
           <p><strong>Partage dans la bibliothèque :</strong> Si vous choisissez de publier un support et certifiez que vous avez le droit de le partager, le PDF sélectionné et ses métadonnées sont envoyés à l'API Cloudflare R2 pour être ajouté au catalogue partagé.</p>
           <p><strong>Contrôle du compte :</strong> Vous pouvez vous déconnecter à tout moment depuis le menu ; cela arrête les futures synchronisations sans supprimer vos données locales.</p>
           <div class="pt-3">

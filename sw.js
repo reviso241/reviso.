@@ -1,12 +1,13 @@
-const SHELL_CACHE = 'reviso-shell-v2';
-const CDN_CACHE = 'reviso-cdn-v2';
+const SHELL_CACHE = 'reviso-shell-v4';
+const CDN_CACHE = 'reviso-cdn-v4';
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './reviso-icon.svg'];
 const CDN_HOSTS = new Set([
   'fonts.googleapis.com',
   'fonts.gstatic.com',
   'cdn.tailwindcss.com',
   'cdn.jsdelivr.net',
-  'cdnjs.cloudflare.com'
+  'cdnjs.cloudflare.com',
+  'tessdata.projectnaptha.com'
 ]);
 
 self.addEventListener('install', event => {
