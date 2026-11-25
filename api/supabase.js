@@ -11,25 +11,21 @@ export default async function handler(req, res) {
   }
 
   const targetBase = "https://kfdetwgmfpdvislnjzphi.supabase.co";
-  const rawPath = Array.isArray(req.query.path)
-    ? req.query.path.join("/")
-    : String(req.query.path || "");
+  const incomingUrl = new URL(req.url, `https://${req.headers.host || "reviso-pink.vercel.app"}`);
+  const queryPath = incomingUrl.searchParams.get("path");
+  incomingUrl.searchParams.delete("path");
 
-  const forwardParams = new URLSearchParams();
-  for (const [key, value] of Object.entries(req.query || {})) {
-    if (key === "path") continue;
-    if (Array.isArray(value)) {
-      value.forEach((v) => forwardParams.append(key, String(v)));
-    } else if (value !== undefined) {
-      forwardParams.append(key, String(value));
-    }
-  }
+  const subPath = queryPath
+    ? queryPath.replace(/^\/+/, "")
+    : incomingUrl.pathname.replace(/^\/api\/supabase\/?/, "");
 
-  const qs = forwardParams.toString();
-  const targetUrl = `${targetBase}/${rawPath.replace(/^\/+/, "")}${qs ? `?${qs}` : ""}`;
+  const qs = incomingUrl.searchParams.toString();
+  const targetUrl = `${targetBase}/${subPath}${qs ? `?${qs}` : ""}`;
 
   try {
-    const headers = {};
+    const headers = {
+      "User-Agent": "Reviso-Vercel-Relay/1.0"
+    };
     for (const h of ["content-type", "authorization", "apikey", "x-client-info", "prefer"]) {
       if (req.headers[h]) {
         headers[h] = req.headers[h];
@@ -41,9 +37,14 @@ export default async function handler(req, res) {
       headers
     };
 
-    if (!["GET", "HEAD"].includes(req.method) && req.body !== undefined) {
-      fetchOptions.body =
-        typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+    if (!["GET", "HEAD"].includes(req.method) && req.body !== undefined && req.body !== null) {
+      if (Buffer.isBuffer(req.body)) {
+        fetchOptions.body = req.body.toString("utf-8");
+      } else if (typeof req.body === "string") {
+        fetchOptions.body = req.body;
+      } else {
+        fetchOptions.body = JSON.stringify(req.body);
+      }
     }
 
     const upstream = await fetch(targetUrl, fetchOptions);
@@ -57,7 +58,9 @@ export default async function handler(req, res) {
   } catch (err) {
     return res.status(502).json({
       error: "Relais Supabase indisponible",
-      details: err.message
+      targetUrl,
+      details: err.cause?.message || err.message,
+      code: err.cause?.code || null
     });
   }
 }
