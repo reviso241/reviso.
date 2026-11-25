@@ -124,6 +124,22 @@ function matchesFilters(item, query) {
     normalizeText(item.key)
   ].some(value => value.includes(fieldFilter))) return false;
 
+  const domainFilter = normalizeText(query.domain);
+  if (domainFilter) {
+    const domainFolders = {
+      sante: ["sante/", "maieutique", "medecine", "pharmacie", "soins-infirmiers", "biologie-imagerie"],
+      gestion: ["gestion-management", "economie"],
+      genie: ["genie-ingenierie", "sti-industriel", "scientifique-c-d"],
+      droit: ["droit-juridique"],
+      lettres: ["lettres-sciences", "litteraire-a1-a2"]
+    };
+    const aliases = domainFolders[domainFilter] || [domainFilter];
+    const searchable = normalizeText([
+      item.domain, item.field, item.filiere, item.key
+    ].join(" "));
+    if (!aliases.some(alias => searchable.includes(normalizeText(alias)))) return false;
+  }
+
   const prefix = String(query.prefix || query.folderPath || "");
   if (prefix && !String(item.key || "").startsWith(prefix)) return false;
 
@@ -175,7 +191,7 @@ export default async function handler(req, res) {
       if (action === "list") {
         const items = await readCatalog();
         const filtered = items.filter(item => matchesFilters(item, req.query));
-        return res.status(200).json({ ok: true, items: filtered });
+        return res.status(200).json({ ok: true, items: filtered, totalCount: items.length });
       }
 
       if (action === "browse") {
