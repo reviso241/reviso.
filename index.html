@@ -2625,13 +2625,14 @@
               <p id="cloud-account-status" class="mt-1 text-[11px]" style="color: var(--text-muted);">Mode local hors ligne — aucun compte requis.</p>
               <p id="cloud-account-email" class="mt-1 hidden break-all text-[11px] font-semibold" style="color: var(--text-secondary);"></p>
             </div>
-            <form id="cloud-auth-form" onsubmit="signInToCloud(event, this.querySelector('[type=submit]'))" class="space-y-2">
-              <input type="email" id="cloud-auth-email" class="input-field" autocomplete="email" placeholder="Adresse e-mail" aria-label="Adresse e-mail du compte cloud" required />
-              <input type="password" id="cloud-auth-password" class="input-field" autocomplete="current-password" placeholder="Mot de passe" aria-label="Mot de passe du compte cloud" required />
+            <form id="cloud-auth-form" novalidate onsubmit="signInToCloud(event, this.querySelector('[type=submit]'))" class="space-y-2">
+              <input type="email" id="cloud-auth-email" class="input-field" autocomplete="email" placeholder="Adresse e-mail" aria-label="Adresse e-mail du compte cloud" aria-describedby="cloud-auth-error" oninput="clearCloudAuthError()" required />
+              <input type="password" id="cloud-auth-password" class="input-field" autocomplete="current-password" placeholder="Mot de passe" aria-label="Mot de passe du compte cloud" aria-describedby="cloud-auth-error" oninput="clearCloudAuthError()" minlength="6" required />
               <div class="flex gap-2">
                 <button type="submit" class="btn-active-accent flex-1 rounded-lg px-3 py-2 text-[11px] font-bold">Se connecter</button>
                 <button type="button" onclick="signUpToCloud(this)" class="surface-card flex-1 px-3 py-2 text-[11px] font-bold">Créer un compte</button>
               </div>
+              <p id="cloud-auth-error" class="hidden break-words text-[11px] leading-relaxed text-rose-500" role="alert" aria-live="polite"></p>
             </form>
             <button type="button" id="cloud-signout-button" onclick="signOutFromCloud()" class="surface-card hidden w-full px-3 py-2 text-[11px] font-bold">Se déconnecter</button>
             <p class="text-[10px] leading-relaxed" style="color: var(--text-muted);">Sans connexion, Reviso continue de fonctionner et conserve vos données sur cet appareil.</p>
@@ -3257,6 +3258,7 @@
       const form = document.getElementById('cloud-auth-form');
       if (!form) return;
       cloudAuthLoading = isLoading;
+      if (isLoading) setCloudAuthError('');
       form.querySelectorAll('input, button').forEach(control => {
         control.disabled = isLoading;
       });
@@ -3268,6 +3270,37 @@
         button.textContent = button.dataset.defaultLabel;
         delete button.dataset.defaultLabel;
       }
+    }
+
+    function setCloudAuthError(message) {
+      const error = document.getElementById('cloud-auth-error');
+      if (!error) return;
+      error.textContent = message || '';
+      error.classList.toggle('hidden', !message);
+    }
+
+    function clearCloudAuthError() {
+      setCloudAuthError('');
+    }
+
+    function getCloudAuthCredentials() {
+      const emailInput = document.getElementById('cloud-auth-email');
+      const passwordInput = document.getElementById('cloud-auth-password');
+      setCloudAuthError('');
+
+      const email = emailInput.value.trim().toLowerCase();
+      emailInput.value = email;
+      if (!email || !emailInput.checkValidity()) {
+        setCloudAuthError('Saisissez une adresse e-mail valide.');
+        emailInput.focus();
+        return null;
+      }
+      if (passwordInput.value.length < 6) {
+        setCloudAuthError('Le mot de passe doit contenir au moins 6 caractères.');
+        passwordInput.focus();
+        return null;
+      }
+      return { email, password: passwordInput.value };
     }
 
     function getSupabaseAuthErrorMessage(error) {
@@ -3336,7 +3369,9 @@
 
     async function reportSupabaseAuthError(error, operation) {
       if (!isSupabaseNetworkError(error)) {
-        showToast(getSupabaseAuthErrorMessage(error));
+        const message = getSupabaseAuthErrorMessage(error);
+        setCloudAuthError(message);
+        showToast(message);
         return;
       }
 
@@ -3345,6 +3380,7 @@
       const onlineState = typeof navigator !== 'undefined' && navigator.onLine ? 'oui' : 'non';
       const exactError = `${error && error.name || 'Erreur'}: ${error && error.message || error}`;
       const diagnostic = `Échec réseau Supabase. URL cible : ${target}. navigator.onLine : ${onlineState}. Erreur : ${exactError}. Cause : ${describeSupabaseErrorCause(error)}. Test ${health.url} : ${health.result}`;
+      setCloudAuthError(diagnostic);
       const status = document.getElementById('cloud-account-status');
       if (status) {
         status.textContent = diagnostic;
@@ -3362,12 +3398,12 @@
 
     async function signInToCloud(event, button) {
       event.preventDefault();
-      const email = document.getElementById('cloud-auth-email').value.trim().toLowerCase();
-      const password = document.getElementById('cloud-auth-password').value;
+      const credentials = getCloudAuthCredentials();
+      if (!credentials) return;
       setCloudAuthLoading(button, true);
       try {
         const client = await ensureSupabaseClient();
-        const { data, error } = await client.auth.signInWithPassword({ email, password });
+        const { data, error } = await client.auth.signInWithPassword(credentials);
         if (error) {
           console.error('Connexion Supabase :', error);
           await reportSupabaseAuthError(error, 'connexion');
@@ -3389,18 +3425,12 @@
     }
 
     async function signUpToCloud(button) {
-      const email = document.getElementById('cloud-auth-email').value.trim().toLowerCase();
-      const password = document.getElementById('cloud-auth-password').value;
-      const form = document.getElementById('cloud-auth-form');
-      if (!form.reportValidity()) return;
-      if (!email || !password) {
-        showToast('Saisissez votre e-mail et votre mot de passe pour créer un compte.');
-        return;
-      }
+      const credentials = getCloudAuthCredentials();
+      if (!credentials) return;
       setCloudAuthLoading(button, true);
       try {
         const client = await ensureSupabaseClient();
-        const { data, error } = await client.auth.signUp({ email, password });
+        const { data, error } = await client.auth.signUp(credentials);
         if (error) {
           console.error('Inscription Supabase :', error);
           await reportSupabaseAuthError(error, 'inscription');
@@ -3408,7 +3438,7 @@
         }
         currentCloudUser = data.session ? data.user : null;
         renderCloudAccount();
-        const syncError = data.user ? await syncProfileToCloud(data.user, false) : '';
+        const syncError = data.session && data.user ? await syncProfileToCloud(data.user, false) : '';
         const successMessage = data.session
           ? 'Compte créé et connecté.'
           : 'Compte créé. Vérifiez votre e-mail pour confirmer l’inscription.';
