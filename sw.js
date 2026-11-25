@@ -1,5 +1,5 @@
-const SHELL_CACHE = 'reviso-shell-v7';
-const CDN_CACHE = 'reviso-cdn-v7';
+const SHELL_CACHE = 'reviso-shell-v8';
+const CDN_CACHE = 'reviso-cdn-v8';
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './reviso-icon.svg'];
 const CDN_HOSTS = new Set([
   'fonts.googleapis.com',
