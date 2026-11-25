@@ -124,6 +124,9 @@ function matchesFilters(item, query) {
     normalizeText(item.key)
   ].some(value => value.includes(fieldFilter))) return false;
 
+  const subjectFilter = normalizeText(query.subject);
+  if (subjectFilter && normalizeText(item.subject || item.matiere) !== subjectFilter) return false;
+
   const domainFilter = normalizeText(query.domain);
   if (domainFilter) {
     const domainFolders = {
