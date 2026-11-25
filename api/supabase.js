@@ -10,7 +10,7 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const targetBase = "https://kfdetwgmpdvlsinjzphi.supabase.co";";
+  const targetBase = "https://kfdetwgmpdvlsinjzphi.supabase.co";
   const incomingUrl = new URL(req.url, `https://${req.headers.host || "reviso-pink.vercel.app"}`);
   const queryPath = incomingUrl.searchParams.get("path");
   incomingUrl.searchParams.delete("path");
