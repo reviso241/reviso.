@@ -2815,7 +2815,9 @@
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     }
 
-    const SUPABASE_URL = 'https://kfdetwgmfpdvislnjzphi.supabase.co';
+    const SUPABASE_URL = window.location.protocol === 'file:'
+      ? 'https://reviso-pink.vercel.app/api/supabase'
+      : window.location.origin + '/api/supabase';
     const SUPABASE_ANON_KEY = 'sb_publishable_gHfUWOTNsBRHgs7rFHPMLQ_krpywbEN';
     const SUPABASE_SDK_URL = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
     let supabaseClient = window.supabase && typeof window.supabase.createClient === 'function'
