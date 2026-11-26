@@ -1,4 +1,5 @@
-const SHELL_CACHE = 'reviso-shell-v20';
+const CACHE_NAME = 'reviso-cache-v15';
+const SHELL_CACHE = CACHE_NAME;
 const CDN_CACHE = 'reviso-cdn-v20';
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './reviso-icon.svg'];
 const CDN_HOSTS = new Set([
@@ -11,7 +12,6 @@ const CDN_HOSTS = new Set([
 ]);
 
 self.addEventListener('install', event => {
-  self.skipWaiting();
   event.waitUntil(
     caches.open(SHELL_CACHE)
       .then(cache => cache.addAll(SHELL_FILES))
@@ -21,73 +21,52 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(keys
-        .filter(key => key.startsWith('reviso-') && ![SHELL_CACHE, CDN_CACHE].includes(key))
-        .map(key => caches.delete(key))))
-      .then(() => self.clients.claim())
+    Promise.all([
+      caches.keys().then(keys => Promise.all(
+        keys.filter(key => key.startsWith('reviso-') && key !== SHELL_CACHE && key !== CDN_CACHE)
+            .map(key => caches.delete(key))
+      )),
+      self.clients.claim()
+    ])
   );
 });
 
 self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
-  if (url.origin === self.location.origin
-    && (url.pathname === '/api/supabase' || url.pathname.startsWith('/api/supabase/'))) {
-    event.respondWith(fetch(event.request));
-    return;
-  }
 
-  if (url.hostname === 'supabase.co' || url.hostname.endsWith('.supabase.co')) {
-    event.respondWith(fetch(event.request));
-    return;
-  }
-
-  if (request.method !== 'GET') return;
-
-  if (url.origin === self.location.origin) {
-    if (request.mode === 'navigate') {
-      event.respondWith(
-        fetch(request).catch(() => caches.match('./index.html'))
-      );
-      return;
-    }
+  if (url.origin === self.location.origin && request.mode === 'navigate') {
     event.respondWith(
-      caches.match(request).then(cached => {
-        if (cached) return cached;
-        return fetch(request).then(response => {
-          if (response.ok) {
-            const copy = response.clone();
-            caches.open(SHELL_CACHE).then(cache => cache.put(request, copy));
-          }
+      fetch(request)
+        .then(response => {
+          const copy = response.clone();
+          caches.open(SHELL_CACHE).then(cache => cache.put(request, copy));
           return response;
-        });
-      })
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }
 
-  if (!CDN_HOSTS.has(url.hostname)) return;
-  event.respondWith(
-    caches.open(CDN_CACHE).then(async cache => {
-      try {
+  if (url.origin === self.location.origin) {
+    event.respondWith(
+      caches.match(request).then(cached => cached || fetch(request))
+    );
+    return;
+  }
+
+  if (CDN_HOSTS.has(url.hostname)) {
+    event.respondWith(
+      caches.open(CDN_CACHE).then(async cache => {
+        const cached = await cache.match(request);
+        if (cached) return cached;
         const response = await fetch(request);
         if (response.ok || response.type === 'opaque') {
           await cache.put(request, response.clone());
         }
         return response;
-      } catch (error) {
-        const cached = await cache.match(request);
-        if (cached) return cached;
-        throw error;
-      }
-    })
-  );
-});
-
-
-self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
+      })
+    );
   }
 });
+

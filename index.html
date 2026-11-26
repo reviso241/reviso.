@@ -1573,6 +1573,7 @@
     const centerEmblem = document.getElementById('centerEmblem');
 
     function enterReviso() {
+      sessionStorage.setItem('reviso_entered', '1');
       htmlEl.hidden = true;
       document.getElementById('portalScreen').hidden = true;
       document.getElementById('reviso-app').hidden = false;
@@ -1770,7 +1771,7 @@
               </div>
             </div>
           </div>
-          <div id="hero-building-container" class="relative min-h-[160px] md:col-span-5 flex items-end justify-center overflow-hidden"></div>
+          <div id="hero-building-container" class="relative md:col-span-5 flex items-end justify-center overflow-hidden" style="display: none;"></div>
         </div>
       </section>
 
@@ -5727,7 +5728,11 @@
     function renderAllVisualIllustrations() {
       const buildingBox = document.getElementById('hero-building-container');
       const domainBadgeBox = document.getElementById('hero-domain-badge');
-      if (buildingBox) buildingBox.innerHTML = getBuildingIllustration(appState.profile);
+      if (buildingBox) {
+        const svg = getBuildingIllustration(appState.profile);
+        buildingBox.innerHTML = svg;
+        buildingBox.style.display = svg ? 'flex' : 'none';
+      }
       if (domainBadgeBox) domainBadgeBox.innerHTML = getDomainBadgeSVG(appState.profile);
 
       const sectionMap = {
@@ -9296,6 +9301,12 @@
     // ------------------------------------------------------------------------
     // 9. INITIALISATION AU CHARGEMENT
     // ------------------------------------------------------------------------
+       if (sessionStorage.getItem('reviso_entered') === '1') {
+         document.getElementById('portalScreen').hidden = true;
+         document.getElementById('welcome-portal').hidden = true;
+         document.getElementById('reviso-app').hidden = false;
+       }
+
    window.addEventListener('DOMContentLoaded', async () => {
       window.addEventListener('reviso:theme', event => applyTheme(event.detail));
       window.addEventListener('reviso:enter', initR2Library, { once: true });
