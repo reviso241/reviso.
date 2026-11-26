@@ -4359,12 +4359,8 @@
       }
       return baseTitle || cleaned || 'Document sans titre';
     }
-        .map(line => line.trim().replace(/^#{1,6}\s*/, ''))
-        .find(line => /^(?:chapitre\s+(?:[ivxlcdm]+|\d+)\s*[:—-]?\s*)?.{3,90}$/i.test(line) &&
-          (/^(?:chapitre|introduction)\b/i.test(line) || /^[A-ZÀ-ÖØ-Þ][^.!?]{2,90}$/.test(line)) &&
-          !/^(?:I|II|III|IV)\.\s+/i.test(line));
-      return firstHeading ? firstHeading.slice(0, 120) : 'Cours sans titre';
-    }
+    // Les lignes de 4362 à 4367 semblent être des fragments orphelins restés d'une ancienne fonction ou mal fusionnés.
+    // Suppression des fragments de code syntaxiquement incorrects.
 
     function sanitizeCourseBodyText(rawText) {
       if (!rawText) return "";
