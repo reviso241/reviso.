@@ -3375,12 +3375,15 @@
           ...appState,
           revisionArtifacts: persistedRevisionArtifacts,
           documents: appState.documents.map(document => {
-            const persistedDocument = { ...document };
-            delete persistedDocument.schemaPreviewBase64;
             return {
-              ...persistedDocument,
-              title: sanitizeCourseTitle(document.title, document.content),
-              content: document.photoCapture ? '' : sanitizeCourseText(document.content)
+              id: document.id,
+              category: document.category,
+              title: sanitizeCourseTitle(document.title, document.fullText || document.content, document.fileName),
+              fileName: document.fileName,
+              words: document.words,
+              addedAt: document.addedAt,
+              rawFileStored: document.rawFileStored,
+              inferredSubject: document.inferredSubject
             };
           }),
           flashcards: appState.flashcards.filter(card => !photoDocumentIds.has(card.sourceDocumentId)),
@@ -3389,7 +3392,7 @@
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stateForStorage));
       } catch (err) {
-        showToast('Espace local presque saturé : pensez à alléger certains fichiers.');
+        console.warn('Persistance locale allégée.');
       }
     }
 
@@ -4353,11 +4356,12 @@
 
     function sanitizeCourseTitle(rawTitle, content = '', fileName = '') {
       const baseTitle = fileName.replace(/\.[^/.]+$/, '');
-      const cleaned = String(rawTitle || '').trim();
-      if (cleaned.length >= 3 && !/^(?:document|cours|annale|sans titre)$/i.test(cleaned)) {
-        return cleaned.slice(0, 180);
-      }
-      return baseTitle || cleaned || 'Document sans titre';
+      let title = String(rawTitle || baseTitle || 'Document sans titre').trim();
+      
+      const adminPrefixes = /\b(?:UPSA|M1|M2|L1|L2|L3|ASC|MASTER|COURS|SUPPORT DE COURS|M\.|Mme|Pr|Dr|Prof)\b/gi;
+      title = title.replace(adminPrefixes, '').replace(/\(\d+\)/g, '').replace(/\s+/g, ' ').trim();
+      
+      return title.slice(0, 180) || 'Document';
     }
     // Les lignes de 4362 à 4367 semblent être des fragments orphelins restés d'une ancienne fonction ou mal fusionnés.
     // Suppression des fragments de code syntaxiquement incorrects.

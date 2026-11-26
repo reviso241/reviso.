@@ -1,5 +1,5 @@
-const SHELL_CACHE = 'reviso-shell-v16';
-const CDN_CACHE = 'reviso-cdn-v16';
+const SHELL_CACHE = 'reviso-shell-v17';
+const CDN_CACHE = 'reviso-cdn-v17';
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './reviso-icon.svg'];
 const CDN_HOSTS = new Set([
   'fonts.googleapis.com',
@@ -11,6 +11,7 @@ const CDN_HOSTS = new Set([
 ]);
 
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(SHELL_CACHE)
       .then(cache => cache.addAll(SHELL_FILES))
