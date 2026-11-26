@@ -3596,7 +3596,7 @@
       }
     }
 
-    function resetUserScopedViewState() {
+    async function resetUserScopedViewState() {
       currentSheetFormat = 'synthese';
       currentFlashcardIndex = 0;
       currentQcmIndex = 0;
@@ -3629,6 +3629,12 @@
       const mockPrompt = document.getElementById('mock-exam-prompt');
       const mockFeedback = document.getElementById('mock-exam-feedback');
       if (mockPrompt) mockPrompt.textContent = 'Sélectionnez un document pour préparer une mise en situation d’examen.';
+      const doc = appState.documents[0]; // Assume premier doc si dispo
+      const fullText = doc ? await getCourseText(doc) : '';
+      if (doc && fullText.trim().length > 20) {
+        // Lancer gen examen
+      } else {
+
       if (mockFeedback) {
         mockFeedback.innerHTML = '';
         mockFeedback.classList.add('hidden');
@@ -3637,7 +3643,7 @@
         if (modal.id !== 'side-drawer-backdrop') modal.classList.remove('open');
       });
     }
-
+}
     let activeStoreSwitchId = null;
     let activeStoreSwitchPromise = null;
     function activateUserStore(user, fallbackUserId = 'guest') {
@@ -3997,6 +4003,30 @@
         }
         const signedUpUser = data.session ? data.user : null;
         if (signedUpUser) await activateUserStore(signedUpUser);
+
+    async function getCourseText(doc) {
+      if (!doc) return '';
+      const text = doc.cleanedText || doc.text || doc.content || doc.extractedText || doc.rawText || '';
+      if (text && text.length > 50) return text;
+
+      // Sinon, tenter de charger depuis IndexedDB
+      try {
+        const db = await openLocalFilesDatabase();
+        const storedDoc = await new Promise((resolve, reject) => {
+          const transaction = db.transaction(LOCAL_FILES_STORE, 'readonly');
+          const request = transaction.objectStore(LOCAL_FILES_STORE).get(doc.id);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        if (storedDoc) {
+          return storedDoc.cleanedText || storedDoc.text || storedDoc.content || storedDoc.extractedText || storedDoc.rawText || '';
+        }
+      } catch (e) {
+        console.error('Erreur lors du chargement du texte depuis IndexedDB', e);
+      }
+      return text;
+    }
+
         renderCloudAccount();
         if (data.session && data.user) await syncProfileToCloud(data.user);
         const successMessage = data.session
@@ -8156,7 +8186,7 @@
       renderRevisionView();
     }
 
-    function renderRevisionView() {
+    async function renderRevisionView() {
       const firstSub = document.getElementById('subtab-btn-fiches');
       if (firstSub && !firstSub.style.backgroundColor) switchRevisionSubTab('fiches');
 
@@ -8179,7 +8209,12 @@
       if (!doc || !chapter) {
         box.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Importez vos cours dans l'onglet Documents pour générer vos fiches multi-vues, flashcards 3D et QCM.</p>`;
       } else {
-        const content = sanitizeCourseBodyText(doc.documentPack?.fullText || doc.fullText || doc.content || '');
+        const fullTextLocal = doc ? await getCourseText(doc) : '';
+
+        if (fullTextLocal.trim().length < 20) {
+          box.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Importez vos cours dans l'onglet Documents pour générer vos fiches multi-vues, flashcards 3D et QCM.</p>`;
+        } else {
+        const content = sanitizeCourseBodyText(fullTextLocal);
         const artifactContext = getRevisionArtifactKeyContext();
         if (!artifactContext?.artifact?.sheet) {
            void generateActiveRevision('revision-sheet');
@@ -8248,10 +8283,16 @@
           `;
         }
       }
+    }
 
-      const fcCounter = document.getElementById('flashcard-counter');
+    const fcCounter = document.getElementById('flashcard-counter');
       const fcFront = document.getElementById('flashcard-front-text');
       const fcBack = document.getElementById('flashcard-back-text');
+      const fullTextFlashcard = doc ? await getCourseText(doc) : '';
+      if (doc && fullTextFlashcard.trim().length > 20 && !visibleFlashcards.length) {
+        void generateActiveRevision('flashcards');
+      }
+
       const visibleFlashcards = getVisibleFlashcards();
       if (visibleFlashcards.length) {
         const fc = visibleFlashcards[currentFlashcardIndex % visibleFlashcards.length];
@@ -8654,7 +8695,7 @@
       renderRevisionView();
     }
 
-    function renderQcmQuestion() {
+    async function renderQcmQuestion() {
       const qText = document.getElementById('qcm-question-text');
       const optsBox = document.getElementById('qcm-options-container');
       const expBox = document.getElementById('qcm-explanation-box');
@@ -8670,6 +8711,12 @@
         progLabel.textContent = 'Quiz en attente';
         scoreLabel.textContent = 'Score : 0 / 0';
         qText.textContent = 'Sélectionnez un cours et un chapitre contenant du texte pour générer un quiz ciblé.';
+      const doc = revisionContext.document;
+      const fullText = doc ? await getCourseText(doc) : '';
+      if (doc && fullText.trim().length > 20) {
+        void generateActiveRevision('qcm');
+      }
+
         optsBox.innerHTML = '';
         return;
       }
@@ -9252,7 +9299,7 @@
     // ------------------------------------------------------------------------
     // 9. INITIALISATION AU CHARGEMENT
     // ------------------------------------------------------------------------
-    window.addEventListener('DOMContentLoaded', async () => {
+   window.addEventListener('DOMContentLoaded', async () => {
       window.addEventListener('reviso:theme', event => applyTheme(event.detail));
       window.addEventListener('reviso:enter', initR2Library, { once: true });
       let sessionTimeoutId;
@@ -9311,7 +9358,6 @@
             reg.waiting.postMessage({ type: 'SKIP_WAITING' });
           };
         }
-
       }
 
       // Démarrage vierge : ouverture de la configuration académique si aucun profil n'est enregistré
@@ -9324,4 +9370,3 @@
   </script>
 </body>
 </html>
-
