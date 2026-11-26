@@ -4363,8 +4363,6 @@
       
       return title.slice(0, 180) || 'Document';
     }
-    // Les lignes de 4362 à 4367 semblent être des fragments orphelins restés d'une ancienne fonction ou mal fusionnés.
-    // Suppression des fragments de code syntaxiquement incorrects.
 
     function sanitizeCourseBodyText(rawText) {
       if (!rawText) return "";
@@ -6433,48 +6431,85 @@
     // ------------------------------------------------------------------------
     // 5. GESTION DES DOCUMENTS & EXTRACTION PDF LOCALE
     // ------------------------------------------------------------------------
-    async function extractPdfText(file, extractionMetadata = {}) {
-      if (!window.pdfjsLib) throw new Error('PDF.js est indisponible : vérifiez la connexion puis réessayez.');
+        async function extractPdfText(file, extractionMetadata = {}) {
+      if (!window.pdfjsLib) throw new Error('PDF.js est indisponible.');
       const buffer = await file.arrayBuffer();
       const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
-      const maxPages = pdf.numPages;
       const allPreviews = [];
       const pageTexts = [];
+      let totalText = "";
 
-      for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
-        const page = await pdf.getPage(pageNumber);
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
         const items = textContent.items.sort((a, b) => b.transform[5] - a.transform[5] || a.transform[4] - b.transform[4]);
-        
-        let pageText = items.map(item => item.str).join(' ');
-        pageText = pageText.replace(/^(?:universit[ée]|facult[ée]|[ée]cole|institut|page\s*\d+)/gi, '');
+        const pageText = items.map(item => item.str).join(' ');
+        pageTexts.push('--- PAGE ' + i + ' / ' + pdf.numPages + '---\\n' + pageText);
+        totalText += pageText;
+      }
 
-        const operatorList = await page.getOperatorList();
-        const hasImage = operatorList.fnArray && Array.from(operatorList.fnArray).some(op => [window.pdfjsLib.OPS.paintImageXObject, window.pdfjsLib.OPS.paintInlineImageXObject].includes(op));
-
-        if (hasImage && window.Tesseract) {
-          const viewport = page.getViewport({ scale: 2 });
+      if (totalText.length < 80 && window.Tesseract) {
+        for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 1.5 });
           const canvas = document.createElement('canvas');
           canvas.width = viewport.width; canvas.height = viewport.height;
-          const context = canvas.getContext('2d');
-          await page.render({ canvasContext: context, viewport }).promise;
-
+          await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
           const res = await window.Tesseract.recognize(canvas, 'fra');
-          if (res.data.text) pageText += `\n[Texte extrait de l'image/schema page ${pageNumber}]\n${res.data.text}`;
-
+          pageTexts[i - 1] = '--- PAGE ' + i + ' / ' + pdf.numPages + '---\\n' + res.data.text;
+          
           const pCanvas = document.createElement('canvas');
-          const scale = Math.min(1, 1024 / canvas.width);
+          const scale = Math.min(1, 800 / canvas.width);
           pCanvas.width = canvas.width * scale; pCanvas.height = canvas.height * scale;
           pCanvas.getContext('2d').drawImage(canvas, 0, 0, pCanvas.width, pCanvas.height);
           allPreviews.push(pCanvas.toDataURL('image/jpeg', 0.72).split(',')[1]);
-          
           canvas.width = 0; canvas.height = 0;
         }
-        pageTexts.push(`--- PAGE ${pageNumber} / ${maxPages} ---\n${pageText}`);
       }
       extractionMetadata.allPreviews = allPreviews;
-      return pageTexts.join('\n\n');
-    }
+      return pageTexts.join('\\n\\n');
+ // Deleted duplicated/malformed function block 
+
+    };
+
+    async function extractPdfTextFromFile(file) {
+      if (!window.pdfjsLib) throw new Error('PDF.js est indisponible.');
+      const buffer = await file.arrayBuffer();
+      const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+      const allPreviews = [];
+      const pageTexts = [];
+      let totalText = "";
+
+ for (let i = 1; i <= pdf.numPages; i++) {
+ const page = await pdf.getPage(i);
+ const textContent = await page.getTextContent();
+ const items = textContent.items.sort((a, b) => b.transform[5] - a.transform[5] || a.transform[4] - b.transform[4]);
+ const pageText = items.map(item => item.str).join(' ');
+        pageTexts.push('--- PAGE ' + i + ' / ' + pdf.numPages + ' ---\n' + pageText);
+ totalText += pageText;
+ }
+
+ if (totalText.length < 80 && window.Tesseract) {
+ for (let i = 1; i <= Math.min(pdf.numPages, 3); i++) {
+ const page = await pdf.getPage(i);
+ const viewport = page.getViewport({ scale: 1.5 });
+ const canvas = document.createElement('canvas');
+ canvas.width = viewport.width; canvas.height = viewport.height;
+ await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+ const res = await window.Tesseract.recognize(canvas, 'fra');
+          pageTexts[i - 1] = '--- PAGE ' + i + ' ---\n' + res.data.text;
+ 
+ const pCanvas = document.createElement('canvas');
+ const scale = Math.min(1, 800 / canvas.width);
+ pCanvas.width = canvas.width * scale; pCanvas.height = canvas.height * scale;
+ pCanvas.getContext('2d').drawImage(canvas, 0, 0, pCanvas.width, pCanvas.height);
+ allPreviews.push(pCanvas.toDataURL('image/jpeg', 0.72).split(',')[1]);
+ canvas.width = 0; canvas.height = 0;
+ }
+ }
+ extractionMetadata.allPreviews = allPreviews;
+ return pageTexts.join('\n\n');
+      }
 
     async function extractTextFromFile(file, extractionMetadata = {}) {
       const ext = file.name.split('.').pop().toLowerCase();
@@ -9291,3 +9326,4 @@
   </script>
 </body>
 </html>
+
