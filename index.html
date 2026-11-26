@@ -4351,18 +4351,14 @@
         .trim();
     }
 
-    function sanitizeCourseTitle(rawTitle, content = '') {
-      const titleParts = String(rawTitle || '').split(/\s*(?:\||—|–|;)\s*|\s+-\s+/)
-        .map(part => sanitizeCourseText(part).trim())
-        .filter(part => part &&
-          !/\b(?:UPSA|IPEA|L[123]|M[12])\b/i.test(part) &&
-          !/\b(?:formateur(?:trice)?|enseignant(?:e)?|professeur(?:e)?|charg[ée]e?s? de cours)\b/i.test(part) &&
-          !/(?:^|\s)(?:M(?:ME)?\.?|DR\.?|PR\.?)\s+[A-ZÀ-Þ][A-ZÀ-Þ'’-]+(?:\s+[A-ZÀ-Þ][A-ZÀ-Þ'’-]+){0,2}\b/i.test(part));
-      const cleanedTitle = titleParts.join(' — ');
-      if (cleanedTitle && !/^(?:document complet|document|cours|annale|sans titre)$/i.test(cleanedTitle)) {
-        return cleanedTitle.slice(0, 180);
+    function sanitizeCourseTitle(rawTitle, content = '', fileName = '') {
+      const baseTitle = fileName.replace(/\.[^/.]+$/, '');
+      const cleaned = String(rawTitle || '').trim();
+      if (cleaned.length >= 3 && !/^(?:document|cours|annale|sans titre)$/i.test(cleaned)) {
+        return cleaned.slice(0, 180);
       }
-      const firstHeading = sanitizeCourseText(content).split(/\r?\n/)
+      return baseTitle || cleaned || 'Document sans titre';
+    }
         .map(line => line.trim().replace(/^#{1,6}\s*/, ''))
         .find(line => /^(?:chapitre\s+(?:[ivxlcdm]+|\d+)\s*[:—-]?\s*)?.{3,90}$/i.test(line) &&
           (/^(?:chapitre|introduction)\b/i.test(line) || /^[A-ZÀ-ÖØ-Þ][^.!?]{2,90}$/.test(line)) &&
@@ -4371,7 +4367,11 @@
     }
 
     function sanitizeCourseBodyText(rawText) {
-      return sanitizeCourseText(rawText);
+      if (!rawText) return "";
+      let text = String(rawText);
+      // Supprimer uniquement les coordonnées/en-têtes administratifs sans détruire le corps
+      const adminPattern = /\b(?:t[ée]l(?:[ée]phone)?|e-?mail|adresse|courriel|page\s*\d+\s*(?:\/|sur)\s*\d+)\b/gi;
+      return text.replace(adminPattern, "").trim();
     }
 
     function formatStructuredSheetHtml(text) {
@@ -6490,6 +6490,7 @@
       if (ext === 'docx') {
         if (!window.mammoth) throw new Error('Mammoth est indisponible pour lire le fichier Word.');
         const result = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+        // OCR supplementaire sur images media si necessaire (repli)
         return result.value.trim();
       }
       if (ext === 'pptx') {
@@ -6506,6 +6507,13 @@
             .filter(Boolean)
             .join(' ');
           if (slideText) slideTexts.push(slideText);
+        }
+        // Ajouter notes de presentation si presentes
+        const notesPaths = Object.keys(archive.files).filter(path => /^ppt\/notesSlides\/notesSlide\d+\.xml$/i.test(path));
+        for (const path of notesPaths) {
+          const xml = new DOMParser().parseFromString(await archive.file(path).async('string'), 'application/xml');
+          const notesText = Array.from(xml.getElementsByTagNameNS('*', 't')).map(node => node.textContent.trim()).filter(Boolean).join(' ');
+          if (notesText) slideTexts.push(notesText);
         }
         return slideTexts.join('\n\n');
       }
@@ -7469,7 +7477,7 @@
         const safeDocumentId = encodeURIComponent(doc.id).replace(/'/g, '%27');
         const storageDescription = doc.photoCapture
           ? `${doc.photoPageCount || 0} page(s) photographiée(s) conservée(s) dans IndexedDB`
-          : doc.rawFileStored ? 'PDF original conservé localement' : 'Texte disponible hors ligne';
+          : doc.rawFileStored ? `Fichier ${doc.fileName.split('.').pop().toUpperCase()} conservé localement` : 'Texte disponible hors ligne';
         const folders = Array.from(new Set([...subjectOptions, subject].filter(Boolean)));
         const currentSubject = doc.cartableSubject || getDocumentSubject(doc);
         return `
@@ -8026,7 +8034,7 @@
       documents.forEach(doc => {
         const option = document.createElement('option');
         option.value = doc.id;
-        option.textContent = sanitizeCourseTitle(doc.title, doc.content);
+        option.textContent = sanitizeCourseTitle(doc.title, doc.fullText || doc.content, doc.fileName);
         documentSelect.appendChild(option);
       });
       documentSelect.disabled = !documents.length;
@@ -8138,9 +8146,11 @@
       if (!doc || !chapter) {
         box.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Importez vos cours dans l'onglet Documents pour générer vos fiches multi-vues, flashcards 3D et QCM.</p>`;
       } else {
-        const content = sanitizeCourseText(chapter.content);
+        const content = sanitizeCourseBodyText(doc.documentPack?.fullText || doc.fullText || doc.content || '');
         const artifactContext = getRevisionArtifactKeyContext();
-        const storedSheet = artifactContext ? artifactContext.artifact.sheet : '';
+        if (!artifactContext?.artifact?.sheet) {
+           void generateActiveRevision('revision-sheet');
+        }
         const concepts = extractCourseConcepts(content);
         const essentials = concepts.slice(0, 2).map(item => item.label).join(' ; ')
           || 'Aucune définition explicite détectée automatiquement.';
