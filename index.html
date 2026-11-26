@@ -8056,14 +8056,27 @@
       ];
     }
 
+    async function getSelectedRevisionDocumentAndText() {
+      const selection = appState.revisionSelection;
+      const doc = appState.documents.find(d => d.id === selection.documentId) || appState.documents[0];
+      if (!doc) return { doc: null, text: '' };
+      let text = doc.content || doc.text || '';
+      if (!text && typeof getCourseText === 'function') {
+        text = await getCourseText(doc.id);
+      }
+      return { doc, text };
+    }
+
     function renderRevisionSelectors() {
       const subjectSelect = document.getElementById('revision-subject-select');
       const documentSelect = document.getElementById('revision-document-select');
       const documentLabel = document.getElementById('revision-document-label');
       const chapterSelect = document.getElementById('revision-chapter-select');
+      
       const selection = appState.revisionSelection;
       const subjects = getRevisionSubjects();
       const previousSubject = selection.subject;
+      
       subjectSelect.replaceChildren();
       subjects.forEach(subject => {
         const option = document.createElement('option');
@@ -8071,65 +8084,73 @@
         option.textContent = subject;
         subjectSelect.appendChild(option);
       });
+      
       if (!subjects.length) {
         const option = document.createElement('option');
         option.value = '';
         option.textContent = 'Aucune matière disponible';
         subjectSelect.appendChild(option);
       }
-      selection.subject = subjects.includes(previousSubject)
-        ? previousSubject
-        : subjects[0] || '';
+      
+      selection.subject = subjects.includes(previousSubject) ? previousSubject : (subjects[0] || '');
       if (subjects.length && !previousSubject) selection.subject = subjects[0];
       subjectSelect.value = selection.subject;
 
       const normalizedSubject = normalizeR2Text(selection.subject);
       const documents = appState.documents.filter(doc =>
         normalizedSubject && normalizeR2Text(getDocumentSubject(doc)) === normalizedSubject);
+        
       documentSelect.replaceChildren();
       if (documentLabel) {
         documentLabel.textContent = `Cours / Document (${documents.length} disponible${documents.length === 1 ? '' : 's'})`;
       }
+      
       if (!documents.length) {
         const option = document.createElement('option');
         option.value = '';
         option.textContent = 'Aucun document lié à cette matière';
         documentSelect.appendChild(option);
       }
+      
       documents.forEach(doc => {
         const option = document.createElement('option');
         option.value = doc.id;
-        option.textContent = sanitizeCourseTitle(doc.title, doc.fullText || doc.content, doc.fileName);
+        option.textContent = sanitizeCourseTitle(doc.title, doc.fullText || doc.content || '', doc.fileName);
         documentSelect.appendChild(option);
       });
+      
       documentSelect.disabled = !documents.length;
+      
       const selectedDoc = documents.find(doc => doc.id === selection.documentId) || documents[0] || null;
       selection.documentId = selectedDoc ? selectedDoc.id : '';
       documentSelect.value = selection.documentId;
 
       const chapters = getDocumentChapters(selectedDoc);
       chapterSelect.replaceChildren();
-      chapters.forEach((chapter, index) => {
-        if (index === 0) return;
-        const option = document.createElement('option');
-        option.value = String(index);
-        option.textContent = sanitizeCourseTitle(chapter.title, chapter.content);
-        chapterSelect.appendChild(option);
-      });
+      
       const allCourseOption = document.createElement('option');
       allCourseOption.value = '0';
       allCourseOption.textContent = 'Tout le cours (ensemble des chapitres)';
-      chapterSelect.insertBefore(allCourseOption, chapterSelect.firstChild);
+      chapterSelect.appendChild(allCourseOption);
+      
+      chapters.forEach((chapter, index) => {
+        const option = document.createElement('option');
+        option.value = String(index + 1);
+        option.textContent = sanitizeCourseTitle(chapter.title, chapter.content || '');
+        chapterSelect.appendChild(option);
+      });
+      
       chapterSelect.disabled = !selectedDoc;
       const validChapterIndex = Number(selection.chapterIndex);
-      selection.chapterIndex = Number.isInteger(validChapterIndex) && validChapterIndex >= 0 && validChapterIndex < chapters.length
+      selection.chapterIndex = Number.isInteger(validChapterIndex) && validChapterIndex >= 0 && validChapterIndex <= chapters.length
         ? String(validChapterIndex)
         : '0';
       chapterSelect.value = selection.chapterIndex;
+      
       return {
         subject: selection.subject,
         document: selectedDoc,
-        chapter: selectedDoc ? chapters[Number(selection.chapterIndex)] : null
+        chapter: selectedDoc ? (Number(selection.chapterIndex) === 0 ? { title: 'Document complet', content: selectedDoc.content } : chapters[Number(selection.chapterIndex) - 1]) : null
       };
     }
 
@@ -8150,6 +8171,7 @@
       qcmScore = 0;
       qcmAnsweredCount = 0;
       saveState();
+      renderRevisionSelectors();
       renderRevisionView();
       // Auto-trigger for all tabs
       void generateActiveRevision('revision-sheet');
@@ -8187,101 +8209,40 @@
     }
 
     async function renderRevisionView() {
-      const firstSub = document.getElementById('subtab-btn-fiches');
-      if (firstSub && !firstSub.style.backgroundColor) switchRevisionSubTab('fiches');
-
-      ['synthese', 'schema', 'pieges'].forEach(fmt => {
-        const btn = document.getElementById(`fmt-${fmt}`);
-        if (!btn) return;
-        if (fmt === currentSheetFormat) {
-          btn.style.backgroundColor = 'var(--active-color)';
-          btn.style.color = '#FFFFFF';
-        } else {
-          btn.style.backgroundColor = 'var(--bg-surface-alt)';
-          btn.style.color = 'var(--text-secondary)';
-        }
-      });
-
       const box = document.getElementById('revision-sheet-content');
-      const revisionContext = renderRevisionSelectors();
-      const doc = revisionContext.document;
-      const chapter = revisionContext.chapter;
-      if (!doc || !chapter) {
-        box.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Importez vos cours dans l'onglet Documents pour générer vos fiches multi-vues, flashcards 3D et QCM.</p>`;
-      } else {
-        const fullTextLocal = doc ? await getCourseText(doc) : '';
+      const { doc, text } = await getSelectedRevisionDocumentAndText();
 
-        if (fullTextLocal.trim().length < 20) {
-          box.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Importez vos cours dans l'onglet Documents pour générer vos fiches multi-vues, flashcards 3D et QCM.</p>`;
-        } else {
-        const content = sanitizeCourseBodyText(fullTextLocal);
-        const artifactContext = getRevisionArtifactKeyContext();
-        if (!artifactContext?.artifact?.sheet) {
-           void generateActiveRevision('revision-sheet');
-        }
-        const concepts = extractCourseConcepts(content);
-        const essentials = concepts.slice(0, 2).map(item => item.label).join(' ; ')
-          || 'Aucune définition explicite détectée automatiquement.';
-        const keyPoints = concepts.slice(0, 4).map(item => `${item.label} : ${item.statement}`);
-        const evaluationHtml = formatStructuredSheetHtml(buildRevisionAssessmentText(content));
-        if (currentSheetFormat === 'synthese') {
-          if (storedSheet) {
-            box.innerHTML = `
-              <h3 class="font-display text-base font-bold" style="color: var(--active-color);">${escapeHtml(chapter.title)}</h3>
-              <section class="surface-alt rounded-xl p-3.5">${formatStructuredSheetHtml(storedSheet)}</section>
-            `;
-          } else {
-          box.innerHTML = `
-            <h3 class="font-display text-base font-bold" style="color: var(--active-color);">${escapeHtml(chapter.title === 'Document complet' ? doc.title : chapter.title)}</h3>
-            <section class="surface-alt rounded-xl p-3.5">
-              <h5 class="text-xs font-bold">Notions essentielles</h5>
-              <div class="mt-2">${formatStructuredSheetHtml(`Notions essentielles\n* ${essentials}`)}</div>
-            </section>
-            <section class="surface-alt rounded-xl p-3.5">
-              <h5 class="text-xs font-bold">Explication structurée</h5>
-              <div class="mt-2">${formatStructuredSheetHtml(buildStructuredRevisionText(content, doc.title, chapter.title))}</div>
-            </section>
-            <section class="surface-alt rounded-xl p-3.5">
-              <h5 class="text-xs font-bold">Points clés à retenir</h5>
-              <div class="mt-2">${formatStructuredSheetHtml(`Points clés à retenir\n${keyPoints.map(point => `* ${point}`).join('\n')}`)}</div>
-            </section>
-            <section class="surface-alt rounded-xl p-3.5">
-              <h5 class="text-xs font-bold">Pièges fréquents</h5>
-              <div class="mt-2">${formatStructuredSheetHtml(`Pièges fréquents\n* Ne confondez pas les notions du passage sélectionné.\n* Vérifiez les conditions et les liens de cause à effet avant de conclure.`)}</div>
-            </section>
-            <section class="surface-alt rounded-xl p-3.5">
-              <h5 class="text-xs font-bold">Évaluation</h5>
-              <div class="mt-2">${evaluationHtml}</div>
-            </section>
-          `;
-          }
-        } else if (currentSheetFormat === 'schema') {
-          box.innerHTML = `
-            <h4 class="font-display text-base font-bold" style="color: var(--active-color);">Schéma Cause → Conséquence — ${escapeHtml(chapter.title)}</h4>
-            <div class="space-y-2">
-              <div class="surface-alt p-3 text-xs"><strong>1. Notions essentielles :</strong> ${escapeHtml(essentials)}</div>
-              <div class="text-center text-xs font-bold" style="color: var(--active-color);">↓</div>
-              <div class="surface-alt p-3 text-xs"><strong>2. Explication structurée :</strong> ${escapeHtml(concepts.slice(0, 3).map(item => item.statement).join(' '))}</div>
-              <div class="text-center text-xs font-bold" style="color: var(--active-color);">↓</div>
-              <div class="surface-alt p-3 text-xs"><strong>3. Points clés à retenir :</strong> ${escapeHtml(keyPoints.slice(-2).join(' '))}</div>
-            </div>
-            <section class="surface-alt mt-4 rounded-xl p-3.5">
-              <div>${evaluationHtml}</div>
-            </section>
-          `;
-        } else {
-          box.innerHTML = `
-            <h4 class="font-display text-base font-bold" style="color: var(--active-color);">Points clés & Pièges fréquents — ${escapeHtml(chapter.title)}</h4>
-            <ul class="list-disc space-y-1.5 pl-5 text-xs sm:text-sm">
-              ${keyPoints.map(point => `<li>${escapeHtml(point)}</li>`).join('')}
-              <li>Ne pas tirer une conclusion plus large que ce que permettent les éléments de ce chapitre.</li>
-              <li>Vérifier les définitions et les conditions d’application avant de répondre.</li>
-            </ul>
-            <section class="surface-alt mt-4 rounded-xl p-3.5">
-              <div>${evaluationHtml}</div>
-            </section>
-          `;
-        }
+      if (!doc || !text || !text.trim()) {
+        box.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Veuillez sélectionner un cours ou importer un nouveau document dans l'onglet Documents pour commencer la révision.</p>`;
+        return;
+      }
+
+      box.innerHTML = `<p class="text-xs italic" style="color: var(--text-muted);">Génération de la fiche en cours...</p>`;
+
+      const chapter = renderRevisionSelectors().chapter;
+      let processedText = sanitizeCourseBodyText(text);
+      if (chapter && chapter.title !== "Tout le cours") {
+        processedText = sanitizeCourseBodyText(chapter.content);
+      }
+
+      try {
+        const response = await requestRevisoAI({
+          task: 'generate-sheet',
+          format: currentSheetFormat,
+          courseText: processedText,
+          system: buildStrictAcademicContext()
+        });
+
+        box.innerHTML = `<div class="prose prose-sm">${response}</div>`;
+      } catch (err) {
+        console.error("AI Generation failed, falling back to local:", err);
+        const concepts = extractCourseConcepts(processedText);
+        const essentials = concepts.slice(0, 2).map(item => item.label).join(' ; ') || 'Notions non détectées.';
+        box.innerHTML = `
+          <h4 class="font-bold mb-2">Fiche (Local)</h4>
+          <p><strong>Notions :</strong> ${escapeHtml(essentials)}</p>
+          <div class="mt-2 text-xs">${formatStructuredSheetHtml(processedText.slice(0, 500))}</div>
+        `;
       }
     }
 
@@ -8308,37 +8269,73 @@
       }
 
       renderQcmQuestion();
+    
+
+
+
+    async function updateRevisionTab() {
+      const { doc, text } = await getSelectedRevisionDocumentAndText();
+      const sanitizedText = sanitizeCourseBodyText(text);
+
+      const fcFront = document.getElementById('flashcard-front-text');
+      const fcBack = document.getElementById('flashcard-back-text');
+      const fcCounter = document.getElementById('flashcard-counter');
+      
+      const visibleFlashcards = getVisibleFlashcards();
+      if (visibleFlashcards.length) {
+        const fc = visibleFlashcards[currentFlashcardIndex % visibleFlashcards.length];
+        fcCounter.textContent = `Carte ${(currentFlashcardIndex % visibleFlashcards.length) + 1} / ${visibleFlashcards.length}`;
+        fcFront.textContent = fc.front;
+        fcBack.textContent = fc.back;
+      } else {
+        fcCounter.textContent = 'Carte 0 / 0';
+        fcFront.textContent = doc ? 'Aucune carte dans ce filtre.' : 'Aucune flashcard disponible. Ajoutez un cours dans l\'onglet Documents.';
+        fcBack.textContent = '---';
+      }
+
+      await renderQcmQuestion();
     }
 
-    function createEvaluationQuestions(doc, chapter) {
-      const body = sanitizeCourseBodyText(chapter.content);
-      const statements = Array.from(new Set(body
+    async function createEvaluationQuestions(doc, chapter) {
+      const { doc: selectedDoc, text } = await getSelectedRevisionDocumentAndText();
+      const rawBody = sanitizeCourseBodyText(text);
+      
+      const targetContent = (appState.revisionSelection.chapterIndex !== 'Tout le cours' && chapter)
+        ? sanitizeCourseBodyText(chapter.content)
+        : rawBody;
+
+      const statements = Array.from(new Set(targetContent
         .split(/(?<=[.!?])\s+|\n+/)
         .map(statement => statement.replace(/^[*-]\s*/, '').trim())
         .filter(statement => statement.length >= 24)));
-      const fallbackStatements = body.split(/\n{1,}/).map(item => item.trim()).filter(item => item.length >= 18);
-      const sourceStatements = (statements.length ? statements : fallbackStatements).slice(0, 5);
+        
+      const sourceStatements = statements.slice(0, 5);
+      
       return sourceStatements.map((statement, index) => {
         const alternatives = [
-          'Aucune explication de cette notion ne figure dans le passage sélectionné.',
-          `Le support présente l’affirmation inverse : ${statement.slice(0, 150)}`
+          'La notion n\'est pas abordée dans ce passage.',
+          'L\'affirmation est contradictoire avec le cours.',
+          'Cette proposition est hors-sujet par rapport au chapitre.'
         ];
-        const correctIndex = index % 3;
+        const correctIndex = index % 4;
         const options = alternatives.slice();
         options.splice(correctIndex, 0, statement);
         return {
-          prompt: `Quel énoncé figure dans le support « ${doc.title} » ?`,
+          prompt: `Quelle est l'affirmation correcte concernant le support « ${selectedDoc?.title || 'Cours'} » ?`,
           options,
           correctIndex,
-          explanation: `Le passage sélectionné indique : ${statement}`,
+          explanation: `Le passage indique : ${statement}`,
           sourceText: statement
         };
       });
     }
 
+    // Fonctions de révision
+
     async function generateSurpriseEvaluationQuestions(doc, chapter) {
-      const localQuestions = createEvaluationQuestions(doc, chapter);
-      const body = sanitizeCourseBodyText(chapter.content).slice(0, 7000);
+      const { text } = await getSelectedRevisionDocumentAndText();
+      const localQuestions = await createEvaluationQuestions(doc, chapter);
+      const body = sanitizeCourseBodyText(text).slice(0, 7000);
       const raw = await requestRevisoAI({
         task: 'evaluation',
         jsonMode: true,
