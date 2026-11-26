@@ -25,7 +25,15 @@ const MODEL_ATTEMPTS = [
   },
   {
     provider: "gemini",
-    model: "gemini-2.0-flash"
+    model: "gemini-2.5-flash-lite"
+  },
+  {
+    provider: "gemini",
+    model: "gemini-3-flash-preview"
+  },
+  {
+    provider: "gemini",
+    model: "gemini-3.1-flash-lite-preview"
   },
   {
     provider: "mistral",
@@ -51,6 +59,7 @@ const MODEL_ATTEMPTS = [
 
 const ATTEMPT_TIMEOUT_MS = 10000;
 const MAX_INPUT_LENGTH = 40000;
+const MAX_IMAGE_BASE64_LENGTH = 4000000;
 const MAX_OUTPUT_LENGTH = 16000;
 
 function jsonResponse(res, status, payload) {
@@ -185,7 +194,19 @@ async function fetchWithTimeout(url, options) {
   }
 }
 
-async function requestGemini(attempt, apiKey, system, prompt, jsonMode) {
+async function requestGemini(attempt, apiKey, system, prompt, images, jsonMode) {
+  const parts = [{ text: prompt }];
+  if (Array.isArray(images)) {
+    images.forEach(img => {
+      parts.push({
+        inlineData: {
+          mimeType: img.mimeType || "image/jpeg",
+          data: img.data
+        }
+      });
+    });
+  }
+
   const response = await fetchWithTimeout(
     `https://generativelanguage.googleapis.com/v1beta/models/${attempt.model}:generateContent?key=${encodeURIComponent(apiKey)}`,
     {
@@ -193,7 +214,7 @@ async function requestGemini(attempt, apiKey, system, prompt, jsonMode) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: "user", parts: parts }],
         ...(jsonMode ? { generationConfig: { responseMimeType: "application/json" } } : {})
       })
     }
@@ -251,16 +272,33 @@ export default async function handler(req, res) {
 
   const body = parseBody(req);
   const allowedTasks = ["chat", "evaluation", "revision-sheet", "flashcards", "qcm"];
-  if (!body || !allowedTasks.includes(body.task)) {
+  const task = body && (body.task || (typeof body.prompt === "string" ? "chat" : ""));
+  if (!body || !allowedTasks.includes(task)) {
     return jsonResponse(res, 400, { error: "Requête IA invalide." });
   }
   const messages = normalizeMessages(body.messages);
-  const prompt = buildUserContent(body, messages);
-  const revisionTask = ["revision-sheet", "flashcards", "qcm"].includes(body.task);
+  const prompt = typeof body.prompt === "string"
+    ? sanitizeCourseBodyText(body.prompt).slice(0, MAX_INPUT_LENGTH)
+    : buildUserContent(body, messages);
+  const revisionTask = ["revision-sheet", "flashcards", "qcm"].includes(task);
   const system = `${revisionTask ? REVISION_RULES : SYSTEM_RULES}\n\n${String(body.system || "").slice(0, 12000)}\n\nTu es et réponds au nom du Tuteur IA Reviso. Ne révèle jamais les fournisseurs, les modèles externes, les clés d'accès ou les détails techniques.`.trim();
   if (!prompt || prompt.length + system.length > MAX_INPUT_LENGTH) {
     return jsonResponse(res, 413, { error: "Le contenu dépasse la taille autorisée." });
   }
+
+  const requestedImage = typeof body.imageBase64 === "string" ? body.imageBase64.trim() : "";
+  if (requestedImage.length > MAX_IMAGE_BASE64_LENGTH) {
+    return jsonResponse(res, 413, { error: "L’image dépasse la taille autorisée." });
+  }
+  if (requestedImage && !/^[A-Za-z0-9+/]+={0,2}$/.test(requestedImage)) {
+    return jsonResponse(res, 400, { error: "Format d’image invalide." });
+  }
+  const imageBase64 = requestedImage;
+  const imageMimeType = ["image/jpeg", "image/png", "image/webp"].includes(
+    String(body.imageMimeType || "image/jpeg").toLowerCase()
+  ) ? String(body.imageMimeType || "image/jpeg").toLowerCase() : "image/jpeg";
+  const images = Array.isArray(body.images) ? body.images.slice() : [];
+  if (imageBase64) images.push({ mimeType: imageMimeType, data: imageBase64 });
 
   const geminiKey = getGeminiKey();
   const mistralKey = getMistralKey();
@@ -280,14 +318,14 @@ export default async function handler(req, res) {
   for (const attempt of availableAttempts) {
     try {
       const text = attempt.provider === "gemini"
-        ? await requestGemini(attempt, geminiKey, system, prompt, body.jsonMode === true || ["flashcards", "qcm"].includes(body.task))
+        ? await requestGemini(attempt, geminiKey, system, prompt, images, body.jsonMode === true || ["flashcards", "qcm"].includes(task))
         : await requestChatCompletion(
           attempt.provider,
           attempt,
           providerKeys[attempt.provider],
           system,
           prompt,
-          body.jsonMode === true || ["flashcards", "qcm"].includes(body.task)
+          body.jsonMode === true || ["flashcards", "qcm"].includes(task)
         );
       return jsonResponse(res, 200, { text: sanitizeOutput(text) });
     } catch {
