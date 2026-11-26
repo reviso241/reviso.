@@ -79,42 +79,10 @@ function parseBody(req) {
 }
 
 function sanitizeCourseBodyText(rawText) {
-  const lines = String(rawText || "")
+  return String(rawText || "")
     .replace(/\r\n?/g, "\n")
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\uFFFD\u25AF\u25AA\u25A0\u25CF\uF0B7]/g, " ")
-    .split("\n");
-  const adminLine = /^\s*(?:ipea|institut(?:\s|$)|universit[ée](?:\s|$)|facult[ée](?:\s|$)|[ée]cole(?:\s|$)|d[ée]partement(?:\s|$)|fili[èe]re(?:\s|$)|niveau(?:\s|$)|l[123]|m[12]|(?:dr|pr|m(?:me)?)\.?\s+[A-ZÀ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'’-]+|formateur(?:trice)?|enseignant(?:e)?|professeur(?:e)?|charg[ée]e?s? de cours|contact|tel\.?|t[ée]l(?:[ée]phone)?|e-?mail|email|courriel|adresse|ann[ée]e (?:universitaire|acad[ée]mique)|objectifs? du cours|r[ée]sultats? attendus|d[ée]marche p[ée]dagogique|pr[ée]?-?requis|volume horaire|bibliographie)(?:\b|\s*[:\-])/i;
-  const contentStart = /^\s*(?:INTRODUCTION(?:\b|$)|CHAPITRE\s+(?:[IVXLCDM]+|\d+)\b|CHAPTER\s+(?:[IVXLCDM]+|\d+)\b|D[ÉE]FINITION\b|(?:D[ÉE]FINITION|R[ÔO]LE|TYPES?|DIFF[ÉE]RENCE)\s*[:—-])/i;
-  const boilerplate = /^\s*(?:(?:[IVXLCDM]+|[A-Z])\.\s*)?(?:OBJECTIFS? DU COURS|R[ÉE]SULTATS? ATTENDUS|D[ÉE]MARCHE P[ÉE]DAGOGIQUE|PR[ÉE]?-?REQUIS|VOLUME HORAIRE|BIBLIOGRAPHIE)\b/i;
-  const cleaned = lines.map(line => line
-    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\uFFFD\u25AF\u25AA\u25A0\u25CF\uF0B7]/g, " ")
-    .replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, "")
-    .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, " ")
-    .replace(/(?:\+?\d[\d\s()./-]{7,}\d)/g, " ")
-    .replace(/\b(?:https?:\/\/|www\.)\S+/gi, " ")
-    .trim());
-  let startIndex = cleaned.findIndex(line => contentStart.test(line));
-  if (startIndex < 0) {
-    startIndex = cleaned.findIndex(line => /^\s*(?:D[ÉE]FINITION|R[ÔO]LE|TYPES?|DIFF[ÉE]RENCE|PRINCIPE|M[ÉE]CANISME|FONCTION)\s*[:—-]/i.test(line));
-  }
-  const bodyLines = startIndex > 0 ? cleaned.slice(startIndex) : cleaned;
-  let skippingBoilerplate = false;
-  return bodyLines.filter(line => {
-    const value = line.trim();
-    if (!value) return !skippingBoilerplate;
-    if (contentStart.test(value)) skippingBoilerplate = false;
-    if (boilerplate.test(value)) {
-      skippingBoilerplate = true;
-      return false;
-    }
-    if (skippingBoilerplate) return false;
-    const pageOrYear = /^(?:(?:19|20)\d{2}(?:\s*[-/–]\s*(?:19|20)?\d{2})?|\d{1,2}[/-]\d{1,2}[-/]{1,2}(?:19|20)\d{2}|(?:page\s*)?\d{1,4}|p\.\s*\d{1,4})$/i;
-    return !pageOrYear.test(value) &&
-      !adminLine.test(value) &&
-      !/\b(?:IPEA|institut|universit[ée]|facult[ée]|[ée]cole|d[ée]partement|fili[èe]re|niveau|L[123]|M[12]|FORMATEUR|ENSEIGNANT|PROFESSEUR|CHARG[ÉE]E?S?\s+DE\s+COURS|LOGISTICIEN(?:NE)?\s*[-–—]\s*ACHETEUR(?:SE)?|PAGE\s*\d+|OBJECTIFS? DU COURS|PR[ÉE]?-?REQUIS|BO[IÎ]TE POSTALE|B\.?P\.?\s*\d+)\b/i.test(value) &&
-      !/(?:^|\s)(?:DR\.?|PR\.?|M(?:ME)?\.?)\s+[A-ZÀ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'’-]+/i.test(value) &&
-      !/@/.test(value);
-  }).join("\n").replace(/[ \t]{2,}/g, " ").replace(/\n[ \t]*\n(?:[ \t]*\n)+/g, "\n\n").trim();
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\uFFFD]/g, " ")
+    .trim();
 }
 
 function sanitizeOutput(text) {
