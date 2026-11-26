@@ -4576,6 +4576,9 @@
       storeRevisionArtifact(context.key, artifact);
 
       const scope = captureUserScope();
+      const images = Array.isArray(context.document.allPreviews)
+        ? context.document.allPreviews.slice(0, 3).map(data => ({ mimeType: 'image/jpeg', data }))
+        : [];
       const request = requestRevisoAI({
         task,
         jsonMode: task !== 'revision-sheet',
@@ -4583,6 +4586,7 @@
         subject: getDocumentSubject(context.document),
         chapter: context.chapter.title,
         courseText: context.courseText,
+        images,
         system: buildStrictAcademicContext(),
         ...(context.document.schemaPreviewBase64
           ? {
@@ -6446,6 +6450,7 @@
         pdfOps.paintInlineImageXObject
       ].filter(Number.isInteger));
       const pageTexts = [];
+      const allPreviews = [];
       let extractedLength = 0;
       let ocrAttempts = 0;
       let worker = null;
@@ -6457,52 +6462,37 @@
           const operatorList = await page.getOperatorList();
           const hasImage = operatorList.fnArray &&
             Array.from(operatorList.fnArray).some(operator => imageOperatorCodes.has(operator));
-          if (hasImage && pageNumber <= 15) {
-            const viewport = page.getViewport({ scale: 1.8 });
+          if (hasImage) {
+            const viewport = page.getViewport({ scale: 1.5 });
             const canvas = document.createElement('canvas');
             canvas.width = Math.ceil(viewport.width);
             canvas.height = Math.ceil(viewport.height);
             let imageText = '';
             try {
               const context = canvas.getContext('2d');
-              if (!context) throw new Error('Impossible de préparer une page PDF pour l’analyse visuelle.');
-              await page.render({ canvasContext: context, viewport }).promise;
-              if (window.Tesseract && typeof window.Tesseract.recognize === 'function') {
-                try {
-                  const result = await window.Tesseract.recognize(canvas, 'fra');
-                  imageText = result.data && result.data.text ? result.data.text.trim() : '';
-                } catch (error) {
-                  console.warn(`OCR de l’image ou du schéma page ${pageNumber} indisponible.`, error);
+              if (context) {
+                await page.render({ canvasContext: context, viewport }).promise;
+                if (window.Tesseract && typeof window.Tesseract.recognize === 'function') {
+                  try {
+                    const result = await window.Tesseract.recognize(canvas, 'fra');
+                    imageText = result.data && result.data.text ? result.data.text.trim() : '';
+                  } catch (e) {}
+                }
+                const pS = Math.min(1, 800 / canvas.width);
+                const pCanvas = document.createElement('canvas');
+                pCanvas.width = Math.max(1, Math.round(canvas.width * pS));
+                pCanvas.height = Math.max(1, Math.round(canvas.height * pS));
+                const pCtx = pCanvas.getContext('2d');
+                if (pCtx) {
+                  pCtx.drawImage(canvas, 0, 0, pCanvas.width, pCanvas.height);
+                  const dataUrl = pCanvas.toDataURL('image/jpeg', 0.6);
+                  const s = dataUrl.indexOf(',');
+                  if (s > 0) allPreviews.push(dataUrl.slice(s + 1));
                 }
               }
-              if (!extractionMetadata.schemaPreviewBase64) {
-                const previewScale = Math.min(1, 1024 / canvas.width);
-                const previewCanvas = document.createElement('canvas');
-                previewCanvas.width = Math.max(1, Math.round(canvas.width * previewScale));
-                previewCanvas.height = Math.max(1, Math.round(canvas.height * previewScale));
-                try {
-                  const previewContext = previewCanvas.getContext('2d');
-                  if (!previewContext) throw new Error('Impossible de préparer l’aperçu du schéma PDF.');
-                  previewContext.drawImage(canvas, 0, 0, previewCanvas.width, previewCanvas.height);
-                  const dataUrl = previewCanvas.toDataURL('image/jpeg', 0.75);
-                  const separator = dataUrl.indexOf(',');
-                  if (separator < 0) throw new Error('Encodage de l’aperçu PDF impossible.');
-                  extractionMetadata.schemaPreviewBase64 = dataUrl.slice(separator + 1);
-                } finally {
-                  previewCanvas.width = 0;
-                  previewCanvas.height = 0;
-                }
-              }
-            } catch (error) {
-              console.warn(`Rendu visuel de la page PDF ${pageNumber} indisponible.`, error);
-            } finally {
-              canvas.width = 0;
-              canvas.height = 0;
-            }
-            if (imageText) {
-              pageText = [pageText, `[Texte image/schema page ${pageNumber}]\n${imageText}`]
-                .filter(Boolean).join('\n\n');
-            }
+            } catch (e) {}
+            finally { canvas.width = 0; canvas.height = 0; }
+            if (imageText) pageText = [pageText, imageText].filter(Boolean).join(' ');
           }
           if (pageText.length < 20 && ocrAttempts < 10 &&
               window.Tesseract && typeof window.Tesseract.createWorker === 'function') {
@@ -6518,6 +6508,8 @@
               await page.render({ canvasContext: context, viewport }).promise;
               const result = await worker.recognize(canvas);
               if (result.data.text) pageText = result.data.text.trim();
+          extractionMetadata.allPreviews = allPreviews;
+
             } finally {
               canvas.width = 0;
               canvas.height = 0;
@@ -6603,7 +6595,7 @@
           const extractionMetadata = {};
           const raw = await extractTextFromFile(file, extractionMetadata);
           if (!isUserScopeCurrent(userScope)) break;
-          const clean = sanitizeCourseBodyText(raw).slice(0, 18000);
+          const clean = sanitizeCourseBodyText(raw);
           const document = {
             id: 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
             category,
@@ -6614,9 +6606,8 @@
             addedAt: new Date().toLocaleDateString('fr-FR'),
             rawFileStored: true,
             inferredSubject: inferCourseSubject(file.name, clean),
-            ...(extractionMetadata.schemaPreviewBase64
-              ? { schemaPreviewBase64: extractionMetadata.schemaPreviewBase64 }
-              : {})
+            ...(extractionMetadata.schemaPreviewBase64 ? { schemaPreviewBase64: extractionMetadata.schemaPreviewBase64 } : {}),
+            ...(extractionMetadata.allPreviews ? { allPreviews: extractionMetadata.allPreviews } : {})
           };
           try {
             await saveLocalDocumentAsset(document, file, [], userScope.userId);

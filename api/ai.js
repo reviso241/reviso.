@@ -297,7 +297,7 @@ export default async function handler(req, res) {
   const imageMimeType = ["image/jpeg", "image/png", "image/webp"].includes(
     String(body.imageMimeType || "image/jpeg").toLowerCase()
   ) ? String(body.imageMimeType || "image/jpeg").toLowerCase() : "image/jpeg";
-  const images = Array.isArray(body.images) ? body.images.slice() : [];
+  const images = Array.isArray(body.images) ? body.images.filter(img => img && typeof img.mimeType === 'string' && typeof img.data === 'string') : [];
   if (imageBase64) images.push({ mimeType: imageMimeType, data: imageBase64 });
 
   const geminiKey = getGeminiKey();
