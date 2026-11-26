@@ -9238,6 +9238,37 @@
         navigator.serviceWorker.register('./sw.js').catch(err => {
           console.error('Enregistrement du service worker Reviso :', err);
         });
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (refreshing) return;
+          refreshing = true;
+          window.location.reload();
+        });
+
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+          reg.addEventListener('updatefound', () => {
+            const worker = reg.installing;
+            worker.addEventListener('statechange', () => {
+              if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+                showUpdateBanner(reg);
+              }
+            });
+          });
+        }).catch(err => {
+          console.error('Enregistrement du service worker Reviso :', err);
+        });
+
+        function showUpdateBanner(reg) {
+          const banner = document.createElement('div');
+          banner.id = 'update-banner';
+          banner.style.cssText = 'position:fixed; bottom:20px; right:20px; z-index:9999; background:#1e293b; color:#fff; padding:15px; border-radius:8px; box-shadow:0 4px 6px rgba(0,0,0,0.3);';
+          banner.innerHTML = 'Mise à jour disponible <button id="update-btn" style="margin-left:10px; background:#3b82f6; color:#fff; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">Mettre à jour maintenant</button>';
+          document.body.appendChild(banner);
+          document.getElementById('update-btn').onclick = () => {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          };
+        }
+
       }
 
       // Démarrage vierge : ouverture de la configuration académique si aucun profil n'est enregistré
