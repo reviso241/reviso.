@@ -4358,7 +4358,7 @@
       const baseTitle = fileName.replace(/\.[^/.]+$/, '');
       let title = String(rawTitle || baseTitle || 'Document sans titre').trim();
       
-      const adminPrefixes = /\b(?:UPSA|M1|M2|L1|L2|L3|ASC|MASTER|COURS|SUPPORT DE COURS|M\.|Mme|Pr|Dr|Prof)\b/gi;
+      const adminPrefixes = /\b(?:UPSA|M1|M2|L1|L2|L3|ASC|MASTER|COURS|SUPPORT DE COURS|M\.|Mme|Pr|Dr|Prof|YOUBYT)\b/gi;
       title = title.replace(adminPrefixes, '').replace(/\(\d+\)/g, '').replace(/\s+/g, ' ').trim();
       
       return title.slice(0, 180) || 'Document';
@@ -4543,7 +4543,7 @@
     async function generateActiveRevision(task, force = false) {
       const context = getRevisionArtifactKeyContext();
       if (!context) {
-        showToast('Sélectionnez un document avec du contenu pédagogique pour générer la révision.');
+        // showToast('Sélectionnez un document avec du contenu pédagogique pour générer la révision.');
         return;
       }
       const hasTask = task === 'revision-sheet'
@@ -8121,12 +8121,10 @@
       qcmAnsweredCount = 0;
       saveState();
       renderRevisionView();
-      const activeRevisionTab = ['fiches', 'flashcards', 'qcm']
-        .find(name => !document.getElementById(`rev-sub-${name}`).classList.contains('hidden'));
-      if (activeRevisionTab) {
-        const taskByTab = { fiches: 'revision-sheet', flashcards: 'flashcards', qcm: 'qcm' };
-        void generateActiveRevision(taskByTab[activeRevisionTab]);
-      }
+      // Auto-trigger for all tabs
+      void generateActiveRevision('revision-sheet');
+      void generateActiveRevision('flashcards');
+      void generateActiveRevision('qcm');
     }
 
     function getActiveRevisionFlashcards() {
