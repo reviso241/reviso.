@@ -4576,25 +4576,19 @@
       storeRevisionArtifact(context.key, artifact);
 
       const scope = captureUserScope();
-      const images = Array.isArray(context.document.allPreviews)
-        ? context.document.allPreviews.slice(0, 3).map(data => ({ mimeType: 'image/jpeg', data }))
-        : [];
-      const request = requestRevisoAI({
-        task,
-        jsonMode: task !== 'revision-sheet',
-        level: appState.profile ? appState.profile.level : 'à préciser',
-        subject: getDocumentSubject(context.document),
-        chapter: context.chapter.title,
-        courseText: context.courseText,
-        images,
-        system: buildStrictAcademicContext(),
-        ...(context.document.schemaPreviewBase64
-          ? {
-            imageBase64: context.document.schemaPreviewBase64,
-            imageMimeType: 'image/jpeg'
-          }
-          : {})
-      });
+        const images = Array.isArray(context.document.extractedMedia)
+          ? context.document.extractedMedia.slice(0, 2).map(data => ({ mimeType: 'image/jpeg', data }))
+          : [];
+        const request = requestRevisoAI({
+          task,
+          jsonMode: task !== 'revision-sheet',
+          level: appState.profile ? appState.profile.level : 'à préciser',
+          subject: getDocumentSubject(context.document),
+          chapter: context.chapter.title,
+          courseText: context.courseText.slice(0, 15000),
+          images,
+          system: buildStrictAcademicContext(),
+        });
       const generation = (async () => {
         try {
           const responseText = await request;
@@ -6443,89 +6437,43 @@
       if (!window.pdfjsLib) throw new Error('PDF.js est indisponible : vérifiez la connexion puis réessayez.');
       const buffer = await file.arrayBuffer();
       const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
-      const maxPages = Math.min(pdf.numPages, 40);
-      const pdfOps = window.pdfjsLib.OPS || {};
-      const imageOperatorCodes = new Set([
-        pdfOps.paintImageXObject,
-        pdfOps.paintInlineImageXObject
-      ].filter(Number.isInteger));
-      const pageTexts = [];
+      const maxPages = pdf.numPages;
       const allPreviews = [];
-      let extractedLength = 0;
-      let ocrAttempts = 0;
-      let worker = null;
-      try {
-        for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
-          const page = await pdf.getPage(pageNumber);
-          const content = await page.getTextContent();
-          let pageText = content.items.map(item => item.str || '').join(' ').trim();
-          const operatorList = await page.getOperatorList();
-          const hasImage = operatorList.fnArray &&
-            Array.from(operatorList.fnArray).some(operator => imageOperatorCodes.has(operator));
-          if (hasImage) {
-            const viewport = page.getViewport({ scale: 1.5 });
-            const canvas = document.createElement('canvas');
-            canvas.width = Math.ceil(viewport.width);
-            canvas.height = Math.ceil(viewport.height);
-            let imageText = '';
-            try {
-              const context = canvas.getContext('2d');
-              if (context) {
-                await page.render({ canvasContext: context, viewport }).promise;
-                if (window.Tesseract && typeof window.Tesseract.recognize === 'function') {
-                  try {
-                    const result = await window.Tesseract.recognize(canvas, 'fra');
-                    imageText = result.data && result.data.text ? result.data.text.trim() : '';
-                  } catch (e) {}
-                }
-                const pS = Math.min(1, 800 / canvas.width);
-                const pCanvas = document.createElement('canvas');
-                pCanvas.width = Math.max(1, Math.round(canvas.width * pS));
-                pCanvas.height = Math.max(1, Math.round(canvas.height * pS));
-                const pCtx = pCanvas.getContext('2d');
-                if (pCtx) {
-                  pCtx.drawImage(canvas, 0, 0, pCanvas.width, pCanvas.height);
-                  const dataUrl = pCanvas.toDataURL('image/jpeg', 0.6);
-                  const s = dataUrl.indexOf(',');
-                  if (s > 0) allPreviews.push(dataUrl.slice(s + 1));
-                }
-              }
-            } catch (e) {}
-            finally { canvas.width = 0; canvas.height = 0; }
-            if (imageText) pageText = [pageText, imageText].filter(Boolean).join(' ');
-          }
-          if (pageText.length < 20 && ocrAttempts < 10 &&
-              window.Tesseract && typeof window.Tesseract.createWorker === 'function') {
-            if (!worker) worker = await window.Tesseract.createWorker('fra');
-            ocrAttempts++;
-            const viewport = page.getViewport({ scale: 1.5 });
-            const canvas = document.createElement('canvas');
-            canvas.width = Math.ceil(viewport.width);
-            canvas.height = Math.ceil(viewport.height);
-            const context = canvas.getContext('2d');
-            if (!context) throw new Error('Impossible de préparer une page PDF pour l’OCR.');
-            try {
-              await page.render({ canvasContext: context, viewport }).promise;
-              const result = await worker.recognize(canvas);
-              if (result.data.text) pageText = result.data.text.trim();
-          extractionMetadata.allPreviews = allPreviews;
+      const pageTexts = [];
 
-            } finally {
-              canvas.width = 0;
-              canvas.height = 0;
-            }
-          }
-          extractedLength += pageText.length;
-          pageTexts.push(pageText);
+      for (let pageNumber = 1; pageNumber <= maxPages; pageNumber++) {
+        const page = await pdf.getPage(pageNumber);
+        const textContent = await page.getTextContent();
+        const items = textContent.items.sort((a, b) => b.transform[5] - a.transform[5] || a.transform[4] - b.transform[4]);
+        
+        let pageText = items.map(item => item.str).join(' ');
+        pageText = pageText.replace(/^(?:universit[ée]|facult[ée]|[ée]cole|institut|page\s*\d+)/gi, '');
+
+        const operatorList = await page.getOperatorList();
+        const hasImage = operatorList.fnArray && Array.from(operatorList.fnArray).some(op => [window.pdfjsLib.OPS.paintImageXObject, window.pdfjsLib.OPS.paintInlineImageXObject].includes(op));
+
+        if (hasImage && window.Tesseract) {
+          const viewport = page.getViewport({ scale: 2 });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width; canvas.height = viewport.height;
+          const context = canvas.getContext('2d');
+          await page.render({ canvasContext: context, viewport }).promise;
+
+          const res = await window.Tesseract.recognize(canvas, 'fra');
+          if (res.data.text) pageText += `\n[Texte extrait de l'image/schema page ${pageNumber}]\n${res.data.text}`;
+
+          const pCanvas = document.createElement('canvas');
+          const scale = Math.min(1, 1024 / canvas.width);
+          pCanvas.width = canvas.width * scale; pCanvas.height = canvas.height * scale;
+          pCanvas.getContext('2d').drawImage(canvas, 0, 0, pCanvas.width, pCanvas.height);
+          allPreviews.push(pCanvas.toDataURL('image/jpeg', 0.72).split(',')[1]);
+          
+          canvas.width = 0; canvas.height = 0;
         }
-      } finally {
-        if (worker) await worker.terminate();
+        pageTexts.push(`--- PAGE ${pageNumber} / ${maxPages} ---\n${pageText}`);
       }
-      if (extractedLength < 20 && !ocrAttempts) {
-        throw new Error('Le PDF semble numérisé. Le module OCR est indisponible ; vérifiez la connexion puis réessayez.');
-      }
-      return pageTexts.map((text, index) => `Page ${index + 1}\n${text || 'Aucun texte lisible détecté.'}`)
-        .join('\n\n').trim() || `Support PDF importé : ${file.name}`;
+      extractionMetadata.allPreviews = allPreviews;
+      return pageTexts.join('\n\n');
     }
 
     async function extractTextFromFile(file, extractionMetadata = {}) {
@@ -6595,31 +6543,33 @@
           const extractionMetadata = {};
           const raw = await extractTextFromFile(file, extractionMetadata);
           if (!isUserScopeCurrent(userScope)) break;
-          const clean = sanitizeCourseBodyText(raw);
-          const document = {
+          const fileNameNoExt = file.name.replace(/\.[^/.]+$/, '');
+          const clean = raw;
+          const words = clean.split(/\s+/).filter(Boolean).length;
+          
+          if (words < 40) {
+             console.warn('Extraction insuffisante');
+             alert('Le document contient très peu de texte. Vérifiez s\'il s\'agit d\'une image non-OCR ou d\'un fichier vide.');
+          }
+
+          const documentPack = {
             id: 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
             category,
-            title: file.name.replace(/\.[^/.]+$/, ''),
+            title: fileNameNoExt,
             fileName: file.name,
-            content: clean,
-            words: clean.split(/\s+/).filter(Boolean).length,
+            fullText: clean,
+            words,
             addedAt: new Date().toLocaleDateString('fr-FR'),
             rawFileStored: true,
             inferredSubject: inferCourseSubject(file.name, clean),
-            ...(extractionMetadata.schemaPreviewBase64 ? { schemaPreviewBase64: extractionMetadata.schemaPreviewBase64 } : {}),
-            ...(extractionMetadata.allPreviews ? { allPreviews: extractionMetadata.allPreviews } : {})
+            extractedMedia: extractionMetadata.allPreviews || [],
+            tableOfContents: clean.split('\n').filter(l => /^#{1,3}\s/.test(l))
           };
-          try {
-            await saveLocalDocumentAsset(document, file, [], userScope.userId);
-          } catch (storageError) {
-            if (!isUserScopeCurrent(userScope)) break;
-            document.rawFileStored = false;
-            storageWarnings++;
-            console.error('Archivage local du fichier :', storageError);
-          }
-          if (!isUserScopeCurrent(userScope)) break;
-          appState.documents.unshift(document);
-          syncStudyItemToCloud(document);
+          
+          await saveLocalDocumentAsset(documentPack, file, [], userScope.userId);
+          
+          appState.documents.unshift(documentPack);
+          syncStudyItemToCloud(documentPack);
           imported++;
         } catch (err) {
           if (!isUserScopeCurrent(userScope)) break;
