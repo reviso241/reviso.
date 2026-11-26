@@ -2272,25 +2272,29 @@
          ONGLET 3 : RÉVISION ACTIVE (AMPOULE LUMINEUSE + FICHES, FLASHCARDS, QCM)
          ====================================================================== -->
     <section id="view-revision" class="page-view space-y-5">
-      <div class="surface-card grid grid-cols-1 gap-3 p-4 sm:grid-cols-3">
-        <div>
-          <label for="revision-subject-select" class="mb-1 block text-[11px] font-semibold">Matière / UE</label>
-          <input id="revision-subject-select" class="input-field" list="revision-subject-options" placeholder="Saisir ou choisir une matière" onchange="updateRevisionSelection('subject')" />
-          <datalist id="revision-subject-options"></datalist>
+      <details class="surface-card p-3">
+        <summary class="cursor-pointer text-xs font-semibold">Choisir le cours à réviser</summary>
+        <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div>
+            <label for="revision-subject-select" class="mb-1 block text-[11px] font-semibold">Matière / UE</label>
+            <select id="revision-subject-select" class="input-field" onchange="updateRevisionSelection('subject')">
+              <option value="">Aucune matière disponible</option>
+            </select>
+          </div>
+          <div>
+            <label id="revision-document-label" for="revision-document-select" class="mb-1 block text-[11px] font-semibold">Cours / Document (0 disponibles)</label>
+            <select id="revision-document-select" class="input-field" onchange="updateRevisionSelection('document')">
+              <option value="">Aucun document lié à cette matière</option>
+            </select>
+          </div>
+          <div>
+            <label for="revision-chapter-select" class="mb-1 block text-[11px] font-semibold">Chapitre ou section</label>
+            <select id="revision-chapter-select" class="input-field" onchange="updateRevisionSelection('chapter')">
+              <option value="0">Tout le cours (ensemble des chapitres)</option>
+            </select>
+          </div>
         </div>
-        <div>
-          <label for="revision-document-select" class="mb-1 block text-[11px] font-semibold">Cours / Document</label>
-          <select id="revision-document-select" class="input-field" onchange="updateRevisionSelection('document')">
-            <option value="">Aucun document disponible</option>
-          </select>
-        </div>
-        <div>
-          <label for="revision-chapter-select" class="mb-1 block text-[11px] font-semibold">Chapitre ou section</label>
-          <select id="revision-chapter-select" class="input-field" onchange="updateRevisionSelection('chapter')">
-            <option value="full">Document complet</option>
-          </select>
-        </div>
-      </div>
+      </details>
 
       <div class="surface-card flex flex-col justify-between gap-4 p-5 sm:flex-row sm:items-center">
         <div class="flex items-center gap-3.5">
@@ -2570,10 +2574,10 @@
             </button>
           </div>
 
-          <div id="tutor-subject-session" class="hidden border-b px-4 py-3" style="border-color: var(--border-subtle);">
-            <p id="tutor-subject-session-label" class="mb-2 text-[11px] font-semibold" style="color: var(--text-secondary);"></p>
-            <div id="tutor-subject-session-options" class="flex flex-wrap gap-2"></div>
-          </div>
+          <details id="tutor-subject-session" class="hidden border-b px-4 py-3" style="border-color: var(--border-subtle);">
+            <summary id="tutor-subject-session-label" class="cursor-pointer text-[11px] font-semibold" style="color: var(--text-secondary);"></summary>
+            <select id="tutor-subject-session-options" class="input-field mt-2 py-1.5 text-[11px]" aria-label="Matière de la session" onchange="selectTutorSubject(this.value)"></select>
+          </details>
 
           <div id="tutor-chat-messages" class="max-h-[340px] space-y-3 overflow-y-auto p-4 text-xs leading-relaxed sm:text-sm"></div>
 
@@ -3313,11 +3317,13 @@
       }));
       if (!appState.revisionArtifacts || typeof appState.revisionArtifacts !== 'object' ||
           Array.isArray(appState.revisionArtifacts)) appState.revisionArtifacts = {};
-      if (appState.revisionArtifactVersion !== 1) {
-        appState.revisionArtifacts = {};
-        appState.flashcards = [];
-        appState.qcmList = [];
-        appState.revisionArtifactVersion = 1;
+      if (appState.revisionArtifactVersion !== 2) {
+        Object.values(appState.revisionArtifacts).forEach(artifact => {
+          if (!artifact || typeof artifact !== 'object') return;
+          delete artifact.sheet;
+          delete artifact.sheetAi;
+        });
+        appState.revisionArtifactVersion = 2;
         needsStateMigration = true;
       }
       if (!Array.isArray(appState.flashcards)) appState.flashcards = [];
@@ -4286,14 +4292,16 @@
     function sanitizeCourseText(rawText) {
       const sourceLines = String(rawText || '')
         .replace(/\r\n?/g, '\n')
-        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\uFFFD\u25AF\u25AA\u25A0\u25CF\uF0B7]/g, ' ')
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ')
+        .replace(/[\uFFFD\u25A0-\u25FF\uF000-\uF8FF]/g, ' ')
         .split('\n');
       const adminLine = /^\s*(?:ipea|institut(?:\s|$)|universit[ée](?:\s|$)|facult[ée](?:\s|$)|[ée]cole(?:\s|$)|d[ée]partement(?:\s|$)|fili[èe]re(?:\s|$)|niveau(?:\s|$)|l[123]|m[12]|(?:dr|pr|m(?:me)?)\.?\s+[A-ZÀ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'’-]+|formateur(?:trice)?|enseignant(?:e)?|professeur(?:e)?|charg[ée]e?s? de cours|ma[iî]tre de conf[ée]rences|intervenant(?:e)?|auteur(?:e)?|animateur(?:trice)?|responsable(?: pédagogique)?|anim[ée] par|dispens[ée] par|contact|tel\.?|t[ée]l(?:[ée]phone)?|e-?mail|courriel|adresse|ann[ée]e (?:universitaire|acad[ée]mique)|objectifs? du cours|r[ée]sultats? attendus|d[ée]marche p[ée]dagogique|pr[éee]?-?requis|volume horaire|bibliographie)(?:\b|\s*[:\-])/i;
       const contentStart = /^\s*(?:INTRODUCTION(?:\b|$)|CHAPITRE\s+(?:[IVXLCDM]+|\d+)\b|CHAPTER\s+(?:[IVXLCDM]+|\d+)\b|D[ÉE]FINITION\b|(?:D[ÉE]FINITION|R[ÔO]LE|TYPES?|DIFF[ÉE]RENCE)\s*[:—-])/i;
       const conceptualHeading = /^\s*(?:D[ÉE]FINITION|R[ÔO]LE|TYPES?|DIFF[ÉE]RENCE|PRINCIPE|M[ÉE]CANISME|FONCTION|PROPRI[ÉE]T[ÉE]S?)\s*[:—-]/i;
       const adminTitle = /(?:^|\s)(?:DR\.?|PR\.?|M(?:ME)?\.?)\s+[A-ZÀ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'’-]+/i;
       const cleaned = sourceLines.map(line => line
-        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\uFFFD\u25AF\u25AA\u25A0\u25CF\uF0B7]/g, ' ')
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ')
+        .replace(/[\uFFFD\u25A0-\u25FF\uF000-\uF8FF]/g, ' ')
         .replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '')
         .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, ' ')
         .replace(/(?:\+?\d[\d\s()./-]{7,}\d)/g, ' ')
@@ -4333,7 +4341,13 @@
     }
 
     function sanitizeCourseTitle(rawTitle, content = '') {
-      const cleanedTitle = sanitizeCourseText(rawTitle).split(/\r?\n/).map(line => line.trim()).filter(Boolean)[0] || '';
+      const titleParts = String(rawTitle || '').split(/\s*(?:\||—|–|;)\s*|\s+-\s+/)
+        .map(part => sanitizeCourseText(part).trim())
+        .filter(part => part &&
+          !/\b(?:UPSA|IPEA|L[123]|M[12])\b/i.test(part) &&
+          !/\b(?:formateur(?:trice)?|enseignant(?:e)?|professeur(?:e)?|charg[ée]e?s? de cours)\b/i.test(part) &&
+          !/(?:^|\s)(?:M(?:ME)?\.?|DR\.?|PR\.?)\s+[A-ZÀ-Þ][A-ZÀ-Þ'’-]+(?:\s+[A-ZÀ-Þ][A-ZÀ-Þ'’-]+){0,2}\b/i.test(part));
+      const cleanedTitle = titleParts.join(' — ');
       if (cleanedTitle && !/^(?:document complet|document|cours|annale|sans titre)$/i.test(cleanedTitle)) {
         return cleanedTitle.slice(0, 180);
       }
@@ -4406,32 +4420,40 @@
     function buildStructuredRevisionText(text, documentTitle = 'Cours', chapterTitle = 'Document complet') {
       const cleanText = sanitizeCourseBodyText(text);
       const concepts = extractCourseConcepts(cleanText);
+      const definitions = new Set(concepts.map(item => normalizeR2Text(item.statement)));
+      const mechanisms = cleanText.split(/(?<=[.!?])\s+|\n+/)
+        .map(item => item.replace(/^[*-]\s*/, '').trim())
+        .filter(item => item.length >= 24 && item.length <= 360 &&
+          !definitions.has(normalizeR2Text(item)) &&
+          /\b(?:entra[iî]ne|provoque|d[ée]pend de|aboutit [àa]|conduit [àa]|lorsque|donc|ainsi|premi[èe]rement|ensuite|enfin|[ée]tape|m[ée]canisme|processus)\b/i.test(item))
+        .filter((item, index, list) => list.findIndex(candidate => normalizeR2Text(candidate) === normalizeR2Text(item)) === index)
+        .slice(0, 4);
       const heading = chapterTitle && chapterTitle !== 'Document complet' ? chapterTitle : documentTitle;
       return [
         `Chapitre — ${heading}`,
         '',
         'I. Objectifs notionnels',
-        'A. Finalité du chapitre',
+        'A. Compétences à acquérir',
         ...(concepts.length
-          ? concepts.slice(0, 3).map((item, index) => `${index + 1}. Expliquer ${item.label} à partir de sa définition et de son rôle.`)
-          : ['1. Repérer les définitions et les mécanismes explicitement présentés dans le cours.']),
+          ? concepts.slice(0, 3).map((item, index) => `${index + 1}. Définir ${item.label} et identifier sa place dans le chapitre.`)
+          : ['1. Repérer les notions et leurs relations à partir des titres et développements du cours.']),
         '',
         'II. Concepts et définitions clés',
         'A. Notions à maîtriser',
         ...(concepts.length
-          ? concepts.slice(0, 5).map((item, index) => `${index + 1}. ${item.label} : ${item.statement}`)
+          ? concepts.slice(0, 5).map((item, index) => `${index + 1}. ${item.label} : ${item.definition}`)
           : ['1. Aucun concept définitoire détecté automatiquement.']),
         '',
         'III. Articulation et mécanisme détaillé',
         'A. Déroulement du raisonnement',
-        ...(concepts.length
-          ? concepts.slice(0, 5).map((item, index) => `${index + 1}. Relier le rôle de ${item.label} à la définition : ${item.statement}`)
-          : ['1. Aucun mécanisme conceptuel identifié automatiquement dans ce passage.']),
+        ...(mechanisms.length
+          ? mechanisms.map((item, index) => `${index + 1}. ${item}`)
+          : ['1. Le passage ne décrit pas de mécanisme distinct des définitions détectées. Reliez les notions entre elles à partir des exemples et étapes du cours.']),
         '',
         'IV. Synthèse à retenir',
         'A. Repères essentiels',
         ...(concepts.length
-          ? concepts.slice(0, 3).map((item, index) => `${index + 1}. Maîtriser ${item.label} et les termes clés de sa définition.`)
+          ? [`1. Notions centrales : ${concepts.slice(0, 5).map(item => item.label).join(' ; ')}.`]
           : ['1. Relire les titres pédagogiques et vérifier les liens entre les notions identifiées.'])
       ].join('\n');
     }
@@ -4614,7 +4636,7 @@
         } catch (error) {
           if (!isUserScopeCurrent(scope)) return;
           console.warn(`Génération IA ${task} indisponible; le contenu local nettoyé est conservé.`, error);
-          showToast('Génération en ligne indisponible. Le contenu local vérifié reste accessible.');
+          if (force) showToast('Génération en ligne indisponible. Le contenu local vérifié reste accessible.');
           if (getRevisionArtifactContext()?.key === context.key) renderRevisionView();
         } finally {
           revisionGenerationPromises.delete(requestKey);
@@ -6956,6 +6978,7 @@
           const value = sentence.replace(/^[*-]\s*/, '').trim();
           if (value.length < 24 || value.length > 360 || excluded.test(value) || !marker.test(value)) return;
           const beforeMarker = value.split(marker)[0].replace(/^[\d\s*.-]+/, '').trim();
+          const markerMatch = value.match(marker);
           const label = (beforeMarker.length >= 3 && beforeMarker.length <= 90
             ? beforeMarker
             : section).replace(/[,:;—-]+$/, '').trim();
@@ -6963,7 +6986,14 @@
             ? label
             : section;
           if (!conceptLabel || /^(?:introduction|conclusion|généralités)$/i.test(conceptLabel)) return;
-          concepts.push({ label: conceptLabel.slice(0, 100), statement: value });
+          const definition = markerMatch
+            ? value.slice(value.search(marker) + markerMatch[0].length).trim().replace(/^[,;:—-]\s*/, '')
+            : value;
+          concepts.push({
+            label: conceptLabel.slice(0, 100),
+            definition: definition || value,
+            statement: value
+          });
         });
       });
       return Array.from(new Map(concepts.map(concept => [
@@ -6978,7 +7008,7 @@
         id: `local-fc-${documentId}-${index}`,
         sourceDocumentId: documentId,
         front: `Que signifie « ${concept.label} » ?`,
-        back: concept.statement,
+        back: `${concept.label} : ${concept.definition}`,
         status: 'learning'
       }));
       const questionPrompts = [
@@ -6993,7 +7023,7 @@
         const otherConcepts = concepts
           .filter(item => item !== concept)
           .slice(0, 2)
-          .map(item => item.statement);
+          .map(item => `${item.label} : ${item.definition}`);
         const inverseForms = [
           [/\bse définit comme\b/i, 'ne se définit pas comme'],
           [/\best défini comme\b/i, 'n’est pas défini comme'],
@@ -7010,6 +7040,7 @@
           [/\bcomprend\b/i, 'ne comprend pas'],
           [/\bse distingue par\b/i, 'ne se distingue pas par']
         ];
+        const correctStatement = `${concept.label} : ${concept.definition}`;
         let inverse = concept.statement;
         const matchingInverse = inverseForms.find(([pattern]) => pattern.test(concept.statement));
         if (matchingInverse) inverse = concept.statement.replace(matchingInverse[0], matchingInverse[1]);
@@ -7018,17 +7049,17 @@
           inverse !== concept.statement ? inverse : `Le passage ne définit pas « ${concept.label} ».`,
           `Le cours indique que la définition de « ${concept.label} » est absente.`,
           `Aucune règle concernant « ${concept.label} » n’est présentée dans ce chapitre.`
-        ])).filter(option => option !== concept.statement).slice(0, 3);
+        ])).filter(option => option !== correctStatement).slice(0, 3);
         const options = distractors.slice();
         const correctIndex = index % 4;
-        options.splice(correctIndex, 0, concept.statement);
+        options.splice(correctIndex, 0, correctStatement);
         return {
           sourceDocumentId: documentId,
           revisionKey: `${documentId}::${chapterTitle}`,
           question: questionPrompts[index].replace(concepts[0].label, concept.label),
           options,
           correctIndex,
-          explanation: `Le cours définit cette notion ainsi : ${concept.statement}`
+          explanation: `Le cours définit cette notion ainsi : ${correctStatement}`
         };
       }) : [];
       return { cards, qcms, concepts, sheet: null, documentTitle };
@@ -7249,18 +7280,10 @@
 
       if (!appState.documents.length) {
         clearBtn.classList.add('hidden');
-        container.innerHTML = `
-          <div class="surface-alt p-6 text-center">
-            <p class="text-xs font-semibold">Aucun document importé pour le moment.</p>
-            <p class="mt-1 text-[11px]" style="color: var(--text-muted);">
-              Importez un fichier, photographiez les pages d'un cours ou ajoutez vos notes manuellement.
-            </p>
-          </div>
-        `;
-        return;
+      } else {
+        clearBtn.classList.remove('hidden');
       }
 
-      clearBtn.classList.remove('hidden');
       const labels = {
         cours: { text: 'Cours', color: 'var(--tab-0-color)' },
         programme: { text: 'Programme', color: 'var(--tab-2-color)' },
@@ -7269,24 +7292,45 @@
 
       const visibleDocuments = appState.documents.filter(doc => !normalizedQuery ||
         normalizeR2Text(`${doc.title} ${doc.subject || ''} ${doc.content}`).includes(normalizedQuery));
-      if (!visibleDocuments.length) {
+      if (!visibleDocuments.length && appState.documents.length) {
         container.innerHTML = '<div class="surface-alt p-4 text-center text-xs" style="color: var(--text-muted);">Aucun document ne correspond à cette recherche.</div>';
         return;
       }
 
-      const groupedDocuments = new Map();
-      visibleDocuments.forEach(doc => {
-        const subject = getDocumentSubject(doc);
-        if (!groupedDocuments.has(subject)) groupedDocuments.set(subject, []);
-        groupedDocuments.get(subject).push(doc);
-      });
+      const openCategories = new Set(Array.from(container.querySelectorAll('details[open][data-document-category]'))
+        .map(details => details.dataset.documentCategory));
       const subjectOptions = getAvailableCartableSubjects();
-      container.innerHTML = Array.from(groupedDocuments.entries())
-        .sort(([left], [right]) => left.localeCompare(right, 'fr'))
-        .map(([subject, documents]) => `
-        <section class="space-y-2 border-t pt-3 first:border-t-0 first:pt-0" style="border-color: var(--border-subtle);">
-          <h4 class="text-xs font-bold">${escapeHtml(subject)}</h4>
-          ${documents.map(doc => {
+      const categories = [
+        { key: 'cours', title: 'Cours importés' },
+        { key: 'programme', title: 'Programmes officiels importés' },
+        { key: 'annales', title: 'Annales importées' }
+      ];
+      const groupedByCategory = new Map(categories.map(category => [category.key,
+        visibleDocuments.filter(doc => doc.category === category.key)
+      ]));
+      const categoryMarkup = categories.map(category => {
+        const categoryDocuments = groupedByCategory.get(category.key);
+        const groupedBySubject = new Map();
+        categoryDocuments.forEach(doc => {
+          const subject = getDocumentSubject(doc);
+          if (!groupedBySubject.has(subject)) groupedBySubject.set(subject, []);
+          groupedBySubject.get(subject).push(doc);
+        });
+        return `
+        <details class="surface-alt rounded-xl p-3" data-document-category="${category.key}" ${openCategories.has(category.key) ? 'open' : ''}>
+          <summary class="flex cursor-pointer list-none items-center justify-between gap-3 text-xs font-bold" style="list-style: none;">
+            <span>${category.title} (${categoryDocuments.length})</span>
+            <svg class="shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </summary>
+          <div class="mt-3 space-y-3">
+          ${categoryDocuments.length ? '' : '<p class="text-[11px]" style="color: var(--text-muted);">Aucun fichier importé.</p>'}
+          ${Array.from(groupedBySubject.entries()).sort(([left], [right]) => left.localeCompare(right, 'fr'))
+            .map(([subject, documents]) => `
+            <section class="space-y-2 border-t pt-3 first:border-t-0 first:pt-0" style="border-color: var(--border-subtle);">
+              <h4 class="text-xs font-bold">${escapeHtml(subject)}</h4>
+              ${documents.map(doc => {
         const meta = labels[doc.category] || labels.cours;
         const safeDocumentId = encodeURIComponent(doc.id).replace(/'/g, '%27');
         const storageDescription = doc.photoCapture
@@ -7321,9 +7365,14 @@
             </div>
           </div>
         `;
-      }).join('')}
-        </section>
-      `).join('');
+            }).join('')}
+            </section>
+          `).join('')}
+          </div>
+        </details>
+      `;
+      }).join('');
+      container.innerHTML = categoryMarkup;
     }
 
     function renderAnnalesView() {
@@ -7752,8 +7801,12 @@
     }
 
     function getRevisionSubjects() {
+      const retakeSubjects = appState.profile && Array.isArray(appState.profile.retakeSubjects)
+        ? appState.profile.retakeSubjects.map(item => typeof item === 'string' ? item : item.subject)
+        : [];
       return Array.from(new Map([
         ...getAvailableCartableSubjects(),
+        ...retakeSubjects,
         ...appState.documents.map(getDocumentSubject)
       ].map(subject => String(subject || '').trim())
         .filter(Boolean)
@@ -7766,17 +7819,29 @@
       const cleanContent = sanitizeCourseBodyText(doc.content);
       const lines = cleanContent.split(/\r?\n/);
       const headings = [];
+      const documentTitle = sanitizeCourseTitle(doc.title, cleanContent);
+      const seenHeadings = new Set();
       lines.forEach((line, index) => {
         const title = line.trim().replace(/^#{1,6}\s*/, '');
         if (!title || title.length > 100) return;
-        if (/^(chapitre|section|partie|unité|ue)\b/i.test(title) ||
-            /^\d+(?:\.\d+)*[.)]?\s+\S/.test(title)) {
+        const structuralHeading = /^(?:chapitre\s+(?:[ivxlcdm]+|\d+)\b|section\b|partie\b|unité\b|ue\b)/i.test(title) ||
+          /^(?:[IVXLCDM]+|\d+(?:\.\d+)*[.)]?)\.\s+\S/i.test(title) ||
+          /^\d+(?:\.\d+)*[.)]?\s+\S/.test(title);
+        const uppercaseHeading = title.length <= 60 &&
+          title.split(/\s+/).length <= 8 &&
+          /^[A-ZÀ-Þ0-9][A-ZÀ-Þ0-9\s'’(),:;/-]+$/.test(title) &&
+          /[A-ZÀ-Þ]/.test(title);
+        if (structuralHeading || uppercaseHeading) {
+          const normalizedTitle = normalizeR2Text(sanitizeCourseTitle(title)).replace(/[\s—–-]+/g, ' ').trim();
+          const normalizedDocumentTitle = normalizeR2Text(documentTitle).replace(/[\s—–-]+/g, ' ').trim();
+          if (!normalizedTitle || normalizedTitle === normalizedDocumentTitle || seenHeadings.has(normalizedTitle)) return;
+          seenHeadings.add(normalizedTitle);
           headings.push({ title, lineIndex: index });
         }
       });
-      if (!headings.length) return [{ title: sanitizeCourseTitle(doc.title, cleanContent), content: cleanContent }];
+      if (!headings.length) return [{ title: documentTitle, content: cleanContent }];
       return [
-        { title: sanitizeCourseTitle(doc.title, cleanContent), content: cleanContent },
+        { title: documentTitle, content: cleanContent },
         ...headings.map((heading, index) => ({
           title: heading.title,
           content: lines.slice(heading.lineIndex + 1, headings[index + 1]?.lineIndex || lines.length).join('\n').trim()
@@ -7786,27 +7851,48 @@
 
     function renderRevisionSelectors() {
       const subjectSelect = document.getElementById('revision-subject-select');
-      const subjectOptions = document.getElementById('revision-subject-options');
       const documentSelect = document.getElementById('revision-document-select');
+      const documentLabel = document.getElementById('revision-document-label');
       const chapterSelect = document.getElementById('revision-chapter-select');
       const selection = appState.revisionSelection;
       const subjects = getRevisionSubjects();
       const previousSubject = selection.subject;
-      subjectOptions.replaceChildren();
+      subjectSelect.replaceChildren();
       subjects.forEach(subject => {
         const option = document.createElement('option');
         option.value = subject;
-        subjectOptions.appendChild(option);
+        option.textContent = subject;
+        subjectSelect.appendChild(option);
       });
-      selection.subject = previousSubject || subjects[0] || '';
+      if (!subjects.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Aucune matière disponible';
+        subjectSelect.appendChild(option);
+      }
+      selection.subject = subjects.includes(previousSubject)
+        ? previousSubject
+        : subjects[0] || '';
+      if (subjects.length && !previousSubject) selection.subject = subjects[0];
       subjectSelect.value = selection.subject;
 
-      const documents = appState.documents.filter(doc => getDocumentSubject(doc) === selection.subject);
+      const normalizedSubject = normalizeR2Text(selection.subject);
+      const documents = appState.documents.filter(doc =>
+        normalizedSubject && normalizeR2Text(getDocumentSubject(doc)) === normalizedSubject);
       documentSelect.replaceChildren();
+      if (documentLabel) {
+        documentLabel.textContent = `Cours / Document (${documents.length} disponible${documents.length === 1 ? '' : 's'})`;
+      }
+      if (!documents.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Aucun document lié à cette matière';
+        documentSelect.appendChild(option);
+      }
       documents.forEach(doc => {
         const option = document.createElement('option');
         option.value = doc.id;
-        option.textContent = doc.title;
+        option.textContent = sanitizeCourseTitle(doc.title, doc.content);
         documentSelect.appendChild(option);
       });
       documentSelect.disabled = !documents.length;
@@ -7817,11 +7903,16 @@
       const chapters = getDocumentChapters(selectedDoc);
       chapterSelect.replaceChildren();
       chapters.forEach((chapter, index) => {
+        if (index === 0) return;
         const option = document.createElement('option');
         option.value = String(index);
-        option.textContent = chapter.title;
+        option.textContent = sanitizeCourseTitle(chapter.title, chapter.content);
         chapterSelect.appendChild(option);
       });
+      const allCourseOption = document.createElement('option');
+      allCourseOption.value = '0';
+      allCourseOption.textContent = 'Tout le cours (ensemble des chapitres)';
+      chapterSelect.insertBefore(allCourseOption, chapterSelect.firstChild);
       chapterSelect.disabled = !selectedDoc;
       const validChapterIndex = Number(selection.chapterIndex);
       selection.chapterIndex = Number.isInteger(validChapterIndex) && validChapterIndex >= 0 && validChapterIndex < chapters.length
@@ -8545,7 +8636,7 @@
         : selection.mode === 'free'
           ? 'Session libre'
           : 'Toutes mes matières';
-      label.textContent = `Matière sélectionnée pour cette session : ${selectedLabel}`;
+      label.textContent = `Matière sélectionnée pour cette session : ${sanitizeCourseTitle(selectedLabel)}`;
       const choices = [
         { value: '__all__', label: 'Toutes mes matières' },
         ...subjects.map(subject => ({ value: subject, label: subject })),
@@ -8553,20 +8644,14 @@
       ];
       options.replaceChildren();
       choices.forEach(choice => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.textContent = choice.label;
-        button.setAttribute('aria-pressed', String(
-          choice.value === appState.activeTutorSubject ||
-          (choice.value === '__all__' && selection.mode === 'all') ||
-          (choice.value === '__free__' && selection.mode === 'free')
-        ));
-        button.className = 'rounded-full border px-3 py-1.5 text-[10px] font-semibold transition-colors';
-        const active = button.getAttribute('aria-pressed') === 'true';
-        button.classList.add(active ? 'btn-active-accent' : 'surface-alt');
-        button.addEventListener('click', () => selectTutorSubject(choice.value));
-        options.appendChild(button);
+        const option = document.createElement('option');
+        option.value = choice.value;
+        option.textContent = sanitizeCourseTitle(choice.label);
+        options.appendChild(option);
       });
+      options.value = selection.mode === 'single'
+        ? selection.subject
+        : selection.mode === 'free' ? '__free__' : '__all__';
     }
 
     function selectTutorSubject(subject) {

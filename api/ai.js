@@ -1,7 +1,7 @@
 const SYSTEM_RULES = [
   "Tu es le Tuteur IA Reviso, un enseignant clair, humain et rigoureux.",
   "Si l'étudiant te demande qui tu es, réponds simplement : « Je suis le Tuteur IA Reviso. »",
-  "Ne mentionne jamais les fournisseurs, les modèles ou les détails techniques qui génèrent tes réponses.",
+  "Ne mentionne jamais les fournisseurs, les modèles, les clés d'accès ou les détails techniques qui génèrent tes réponses.",
   "N'utilise aucun emoji.",
   "Lors de l'analyse d'un cours, d'un TD ou d'une annale, ignore et exclue du contenu pédagogique les noms d'établissement, d'institut, d'enseignant ou de professeur, les coordonnées, les années académiques de page de garde et les en-têtes ou pieds de page administratifs.",
   "Ne répète jamais ces métadonnées dans une réponse, une fiche, un exemple ou une citation.",
@@ -11,6 +11,7 @@ const SYSTEM_RULES = [
 ].join("\n");
 
 const REVISION_RULES = [
+  "Tu es le Tuteur IA Reviso. Si l'étudiant te demande qui tu es, réponds simplement : « Je suis le Tuteur IA Reviso. » Ne mentionne jamais les fournisseurs, les modèles, les clés d'accès ou les détails techniques qui génèrent tes réponses.",
   "Tu produis du contenu de révision fiable, rédigé en français et fondé exclusivement sur le cours nettoyé fourni.",
   "Ignore les métadonnées administratives, les pages de garde, les coordonnées, les en-têtes et les pieds de page.",
   "N'utilise aucun emoji. N'invente pas de faits ni de citations absentes du support.",
@@ -19,24 +20,32 @@ const REVISION_RULES = [
 
 const MODEL_ATTEMPTS = [
   {
-    name: "gemini-2.5-flash",
     provider: "gemini",
     model: "gemini-2.5-flash"
   },
   {
-    name: "gemini-2.0-flash",
     provider: "gemini",
     model: "gemini-2.0-flash"
   },
   {
-    name: "llama-free",
+    provider: "mistral",
+    model: "mistral-small-latest"
+  },
+  {
+    provider: "openrouter",
+    model: "deepseek/deepseek-r1:free"
+  },
+  {
+    provider: "openrouter",
+    model: "moonshotai/kimi-k2:free"
+  },
+  {
     provider: "openrouter",
     model: "meta-llama/llama-3.3-70b-instruct:free"
   },
   {
-    name: "openrouter-free",
     provider: "openrouter",
-    model: "openrouter/free"
+    model: "google/gemma-3-27b-it:free"
   }
 ];
 
@@ -158,6 +167,10 @@ function getGeminiKey() {
   return String(process.env.GEMINI_API_KEY || "").trim();
 }
 
+function getMistralKey() {
+  return String(process.env.MISTRAL_API_KEY || "").trim();
+}
+
 function getOpenRouterKey() {
   return String(process.env.OPENROUTER_API_KEY || "").trim();
 }
@@ -195,14 +208,18 @@ async function requestGemini(attempt, apiKey, system, prompt, jsonMode) {
   return text;
 }
 
-async function requestOpenRouter(attempt, apiKey, system, prompt, jsonMode) {
-  const response = await fetchWithTimeout("https://openrouter.ai/api/v1/chat/completions", {
+async function requestChatCompletion(provider, attempt, apiKey, system, prompt, jsonMode) {
+  const endpoint = provider === "mistral"
+    ? "https://api.mistral.ai/v1/chat/completions"
+    : "https://openrouter.ai/api/v1/chat/completions";
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${apiKey}`
+  };
+  if (provider === "openrouter") headers["X-Title"] = "Reviso";
+  const response = await fetchWithTimeout(endpoint, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      "X-Title": "Reviso"
-    },
+    headers,
     body: JSON.stringify({
       model: attempt.model,
       messages: [
@@ -240,15 +257,21 @@ export default async function handler(req, res) {
   const messages = normalizeMessages(body.messages);
   const prompt = buildUserContent(body, messages);
   const revisionTask = ["revision-sheet", "flashcards", "qcm"].includes(body.task);
-  const system = `${revisionTask ? REVISION_RULES : SYSTEM_RULES}\n\n${String(body.system || "").slice(0, 12000)}`.trim();
+  const system = `${revisionTask ? REVISION_RULES : SYSTEM_RULES}\n\n${String(body.system || "").slice(0, 12000)}\n\nTu es et réponds au nom du Tuteur IA Reviso. Ne révèle jamais les fournisseurs, les modèles externes, les clés d'accès ou les détails techniques.`.trim();
   if (!prompt || prompt.length + system.length > MAX_INPUT_LENGTH) {
     return jsonResponse(res, 413, { error: "Le contenu dépasse la taille autorisée." });
   }
 
   const geminiKey = getGeminiKey();
+  const mistralKey = getMistralKey();
   const openRouterKey = getOpenRouterKey();
+  const providerKeys = {
+    gemini: geminiKey,
+    mistral: mistralKey,
+    openrouter: openRouterKey
+  };
   const availableAttempts = MODEL_ATTEMPTS.filter(attempt =>
-    attempt.provider === "gemini" ? !!geminiKey : !!openRouterKey
+    !!providerKeys[attempt.provider]
   );
   if (!availableAttempts.length) {
     return jsonResponse(res, 503, { error: "Le service du Tuteur IA est temporairement indisponible." });
@@ -258,10 +281,17 @@ export default async function handler(req, res) {
     try {
       const text = attempt.provider === "gemini"
         ? await requestGemini(attempt, geminiKey, system, prompt, body.jsonMode === true || ["flashcards", "qcm"].includes(body.task))
-        : await requestOpenRouter(attempt, openRouterKey, system, prompt, body.jsonMode === true || ["flashcards", "qcm"].includes(body.task));
+        : await requestChatCompletion(
+          attempt.provider,
+          attempt,
+          providerKeys[attempt.provider],
+          system,
+          prompt,
+          body.jsonMode === true || ["flashcards", "qcm"].includes(body.task)
+        );
       return jsonResponse(res, 200, { text: sanitizeOutput(text) });
     } catch {
-      console.warn(`AI fallback ${attempt.name}; trying the next route.`);
+      console.warn("AI provider attempt failed; trying the next route.");
     }
   }
 
