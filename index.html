@@ -8251,29 +8251,31 @@
       }
     }
 
-    const fcCounter = document.getElementById('flashcard-counter');
-      const fcFront = document.getElementById('flashcard-front-text');
-      const fcBack = document.getElementById('flashcard-back-text');
-      const fullTextFlashcard = doc ? await getCourseText(doc) : '';
-      if (doc && fullTextFlashcard.trim().length > 20 && !visibleFlashcards.length) {
-        void generateActiveRevision('flashcards');
-      }
-
-      const visibleFlashcards = getVisibleFlashcards();
-      if (visibleFlashcards.length) {
-        const fc = visibleFlashcards[currentFlashcardIndex % visibleFlashcards.length];
-        fcCounter.textContent = `Carte ${(currentFlashcardIndex % visibleFlashcards.length) + 1} / ${visibleFlashcards.length}`;
-        fcFront.textContent = fc.front;
-        fcBack.textContent = fc.back;
-      } else {
-        fcCounter.textContent = 'Carte 0 / 0';
-        fcFront.textContent = doc
-          ? 'Aucune carte dans ce filtre.'
-          : 'Aucune flashcard disponible. Ajoutez un cours dans l\'onglet Documents.';
-        fcBack.textContent = '---';
-      }
-
-      renderQcmQuestion();
+    (async () => {
+        const fcCounter = document.getElementById('flashcard-counter');
+        const fcFront = document.getElementById('flashcard-front-text');
+        const fcBack = document.getElementById('flashcard-back-text');
+        const fullTextFlashcard = doc ? await getCourseText(doc) : '';
+        if (doc && fullTextFlashcard.trim().length > 20 && !visibleFlashcards.length) {
+          void generateActiveRevision('flashcards');
+        }
+  
+        const visibleFlashcards = getVisibleFlashcards();
+        if (visibleFlashcards.length) {
+          const fc = visibleFlashcards[currentFlashcardIndex % visibleFlashcards.length];
+          fcCounter.textContent = `Carte ${(currentFlashcardIndex % visibleFlashcards.length) + 1} / ${visibleFlashcards.length}`;
+          fcFront.textContent = fc.front;
+          fcBack.textContent = fc.back;
+        } else {
+          fcCounter.textContent = 'Carte 0 / 0';
+          fcFront.textContent = doc
+            ? 'Aucune carte dans ce filtre.'
+            : 'Aucune flashcard disponible. Ajoutez un cours dans l\'onglet Documents.';
+          fcBack.textContent = '---';
+        }
+  
+        renderQcmQuestion();
+      })();
     
 
 
