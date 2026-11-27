@@ -8011,20 +8011,28 @@
     }
 
     function getDocumentSubject(doc) {
-      if (doc.cartableSubject && doc.cartableSubject.trim()) return doc.cartableSubject.trim();
-      if (doc.subject && doc.subject.trim()) return doc.subject.trim();
-      if (doc.inferredSubject && doc.inferredSubject.trim()) return doc.inferredSubject.trim();
-      return inferCourseSubject(doc.title, doc.content) || 'À classer';
+      if (!doc) return 'À classer';
+      const candidates = [doc.cartableSubject, doc.subject, doc.folder, doc.matiere, doc.ue, doc.discipline, doc.inferredSubject];
+      for (const value of candidates) {
+        const clean = String(value || '').trim();
+        if (clean && !/^à classer$/i.test(clean)) return clean;
+      }
+      return inferCourseSubject(doc.title || doc.fileName || '', doc.fullText || doc.content || '') || 'Obstétrique';
     }
 
     function getRevisionSubjects() {
-      const retakeSubjects = appState.profile && Array.isArray(appState.profile.retakeSubjects)
-        ? appState.profile.retakeSubjects.map(item => typeof item === 'string' ? item : item.subject)
+      const prioritySubjects = appState.profile && Array.isArray(appState.profile.prioritySubjects)
+        ? appState.profile.prioritySubjects.map(item => typeof item === 'string' ? item : (item && (item.subject || item.name)))
         : [];
+      const retakeSubjects = appState.profile && Array.isArray(appState.profile.retakeSubjects)
+        ? appState.profile.retakeSubjects.map(item => typeof item === 'string' ? item : (item && item.subject))
+        : [];
+      const cartableSubjects = typeof getAvailableCartableSubjects === 'function' ? getAvailableCartableSubjects() : [];
       return Array.from(new Map([
-        ...getAvailableCartableSubjects(),
+        ...prioritySubjects,
+        ...cartableSubjects,
         ...retakeSubjects,
-        ...appState.documents.map(getDocumentSubject)
+        ...(Array.isArray(appState.documents) ? appState.documents.map(getDocumentSubject) : [])
       ].map(subject => String(subject || '').trim())
         .filter(Boolean)
         .map(subject => [normalizeR2Text(subject), subject])).values())
