@@ -3526,9 +3526,10 @@
           });
           if (r2Res.ok) {
             const data = await r2Res.json();
-            if (data && data.ok && data.publicUrl) {
-              document.bundleUrl = data.publicUrl;
-              document.r2Key = data.r2Key;
+            const resolvedR2Url = data && (data.publicUrl || data.url || data.r2Url);
+            if (data && data.ok && (resolvedR2Url || data.r2Key)) {
+              if (resolvedR2Url) document.bundleUrl = resolvedR2Url;
+              document.r2Key = data.r2Key || document.r2Key;
               if (typeof appState !== "undefined" && Array.isArray(appState.documents)) {
                 const target = appState.documents.find(d => d.id === cleanDocument.id);
                 if (target) {
@@ -8141,6 +8142,9 @@ renderCloudAccount();
         const r2Text = assembleFullContent(bundle);
         if (r2Text) {
           doc.cleanedText = r2Text;
+          doc.fullText = r2Text;
+          doc.content = r2Text;
+          doc.text = r2Text;
           if (bundle.schemaDescriptions) doc.schemaDescriptions = bundle.schemaDescriptions;
           return r2Text;
         }
