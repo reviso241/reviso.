@@ -8254,11 +8254,9 @@ async function switchRevisionSubTab(subName) {
           /[A-ZÀ-Þ]/.test(title);
         if (structuralHeading || uppercaseHeading) {
           // Exclure titre principal et fragments administratifs
-          const normalizedTitle = (typeof normalizeR2Text === 'function' ? normalizeR2Text(title) : title.trim());
+          const normalizedTitle = normalizeR2Text(sanitizeCourseTitle(title)).replace(/^[:\-\s]+|[:\-\s]+$/g, '');
           if (normalizedTitle.toLowerCase() === normalizeR2Text(documentTitle).toLowerCase() || 
               /^(?:introduction|conclusion|sommaire|bibliographie|annexes|enseignant|coordonnées)/i.test(normalizedTitle)) return;
-
-          const normalizedTitle = normalizeR2Text(sanitizeCourseTitle(title)).replace(/[\s—–-]+/g, ' ').trim();
           const normalizedDocumentTitle = normalizeR2Text(documentTitle).replace(/[\s—–-]+/g, ' ').trim();
           if (!normalizedTitle || normalizedTitle === normalizedDocumentTitle || seenHeadings.has(normalizedTitle)) return;
           seenHeadings.add(normalizedTitle);
