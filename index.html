@@ -4180,7 +4180,7 @@
     }
 
     async function syncCloudDataForUser(user, generation) {
-      if (!supabaseClient || !user || user.id !== activeUserId) return;
+      if (!supabaseClient || !user || !user.email || user.id !== activeUserId) return;
       try {
         const [itemsResponse, sessionsResponse] = await Promise.all([
           supabaseClient.from('study_items')
