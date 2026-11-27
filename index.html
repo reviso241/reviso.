@@ -9716,6 +9716,79 @@ async function switchRevisionSubTab(subName) {
         : '';
       return `Matière : ${subject}\nDocument : ${title}\n\n${cleanBody}${visuals}`.trim();
     }
+  
+    async function requestRevisoAI(payload = {}) {
+      const body = {
+        ...payload,
+        ...(typeof payload.courseText === 'string'
+          ? { courseText: payload.courseText.slice(0, 10000) }
+          : {}),
+        ...(typeof payload.sources === 'string'
+          ? { sources: payload.sources.slice(0, 12000) }
+          : {}),
+      };
+      const response = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data || typeof data.text !== 'string') {
+        throw new Error((data && data.error) || `Erreur serveur IA (${response.status})`);
+      }
+      return data.text;
+    }
+
+    function formatStructuredSheetHtml(rawText) {
+      const safe = (typeof escapeHtml === 'function')
+        ? escapeHtml(String(rawText || ''))
+        : String(rawText || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+
+      const lines = safe.split(/\r?\n/);
+      const htmlParts = [];
+      let inList = false;
+
+      const closeList = () => {
+        if (inList) {
+          htmlParts.push('</ul>');
+          inList = false;
+        }
+      };
+
+      const formatInline = (str) =>
+        str.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line) {
+          closeList();
+          continue;
+        }
+        if (/^#{1,3}\s+/.test(line) || /^(?:[IVXLCDM]+\.|Évaluation\b|Evaluation\b)/i.test(line)) {
+          closeList();
+          const titleText = line.replace(/^#{1,3}\s+/, '');
+          htmlParts.push(`<h4 class="font-bold mt-3 mb-1 text-sm">${formatInline(titleText)}</h4>`);
+        } else if (/^[A-Z]\.\s+/.test(line)) {
+          closeList();
+          htmlParts.push(`<h5 class="font-semibold mt-2 mb-1 text-xs">${formatInline(line)}</h5>`);
+        } else if (/^[-*•]\s+/.test(line) || /^\d+[.)]\s+/.test(line)) {
+          if (!inList) {
+            htmlParts.push('<ul class="list-disc pl-4 space-y-1 text-xs">');
+            inList = true;
+          }
+          const itemText = line.replace(/^(?:[-*•]|\d+[.)])\s+/, '');
+          htmlParts.push(`<li>${formatInline(itemText)}</li>`);
+        } else {
+          closeList();
+          htmlParts.push(`<p class="mb-1.5 text-xs leading-relaxed">${formatInline(line)}</p>`);
+        }
+      }
+      closeList();
+      return htmlParts.join('\n') || '<p class="text-xs opacity-70">Aucun contenu généré.</p>';
+    }
   </script>
 
 </body>
