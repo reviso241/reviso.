@@ -8260,6 +8260,8 @@
         const fcCounter = document.getElementById('flashcard-counter');
         const fcFront = document.getElementById('flashcard-front-text');
         const fcBack = document.getElementById('flashcard-back-text');
+      const revisionFlashcardContext = getRevisionArtifactContext();
+      const doc = revisionFlashcardContext ? revisionFlashcardContext.document : null;
         const fullTextFlashcard = doc ? await getCourseText(doc) : '';
         if (doc && fullTextFlashcard.trim().length > 20 && !visibleFlashcards.length) {
           void generateActiveRevision('flashcards');
