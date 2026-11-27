@@ -4344,7 +4344,13 @@
       const contentStart = /^\s*(?:INTRODUCTION(?:\b|$)|CHAPITRE\s+(?:[IVXLCDM]+|\d+)\b|CHAPTER\s+(?:[IVXLCDM]+|\d+)\b|D[ÉE]FINITION\b|(?:D[ÉE]FINITION|R[ÔO]LE|TYPES?|DIFF[ÉE]RENCE)\s*[:—-])/i;
       const conceptualHeading = /^\s*(?:D[ÉE]FINITION|R[ÔO]LE|TYPES?|DIFF[ÉE]RENCE|PRINCIPE|M[ÉE]CANISME|FONCTION|PROPRI[ÉE]T[ÉE]S?)\s*[:—-]/i;
       const adminTitle = /(?:^|\s)(?:DR\.?|PR\.?|M(?:ME)?\.?)\s+[A-ZÀ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'’-]+/i;
-      const cleaned = sourceLines.map(line => line
+      // Nettoyage administratif et filtrage
+      const filteredLines = sourceLines.filter(line => {
+        const t = line.trim();
+        if (t.length < 5) return false;
+        return !adminLine.test(t) && !adminTitle.test(t);
+      });
+      const cleaned = filteredLines.map(line => line
         .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ')
         .replace(/[\uFFFD\u25A0-\u25FF\uF000-\uF8FF]/g, ' ')
         .replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '')
@@ -4398,9 +4404,15 @@
     function sanitizeCourseBodyText(rawText) {
       if (!rawText) return "";
       let text = String(rawText);
-      // Supprimer uniquement les coordonnées/en-têtes administratifs sans détruire le corps
-      const adminPattern = /\b(?:t[ée]l(?:[ée]phone)?|e-?mail|adresse|courriel|page\s*\d+\s*(?:\/|sur)\s*\d+)\b/gi;
-      return text.replace(adminPattern, "").trim();
+      // Supprimer les en-têtes/pieds administratifs, enseignants, etc.
+      const adminPattern = /\b(?:t[ée]l(?:[ée]phone)?|e-?mail|adresse|courriel|page\s*\d+\s*(?:\/|sur)\s*\d+|professeur|enseignant|université|institut|faculté|département|année\s*académique)\b/gi;
+      const lines = text.split('\n').filter(line => {
+        const trimmed = line.trim();
+        if (trimmed.length < 5) return false;
+        // Supprimer lignes qui sont majoritairement des noms d'instituts
+        return !/^(?:université|faculté|département|institut)/i.test(trimmed);
+      });
+      return lines.join('\n').replace(adminPattern, "").trim();
     }
 
     function formatStructuredSheetHtml(text) {
@@ -4582,6 +4594,15 @@
         alert('Le document sélectionné est vide ou mal chargé. Impossible de générer la révision.');
         return;
       }
+      // 1. Force await full text
+      if (!context.courseText || context.courseText.trim().length < 20) {
+        context.courseText = await getCourseText(context.document);
+        if (!context.courseText || context.courseText.trim().length < 20) {
+           alert('Le document sélectionné est vide ou mal chargé.');
+           return;
+        }
+      }
+
       const hasTask = task === 'revision-sheet'
         ? Boolean(context.artifact.sheet && context.artifact.sheetAi)
         : task === 'flashcards'
@@ -8057,6 +8078,10 @@
           /^[A-ZÀ-Þ0-9][A-ZÀ-Þ0-9\s'’(),:;/-]+$/.test(title) &&
           /[A-ZÀ-Þ]/.test(title);
         if (structuralHeading || uppercaseHeading) {
+          // Exclure titre principal et fragments administratifs
+          if (normalizedTitle.toLowerCase() === normalizeR2Text(documentTitle).toLowerCase() || 
+              /^(?:introduction|conclusion|sommaire|bibliographie|annexes|enseignant|coordonnées)/i.test(normalizedTitle)) return;
+
           const normalizedTitle = normalizeR2Text(sanitizeCourseTitle(title)).replace(/[\s—–-]+/g, ' ').trim();
           const normalizedDocumentTitle = normalizeR2Text(documentTitle).replace(/[\s—–-]+/g, ' ').trim();
           if (!normalizedTitle || normalizedTitle === normalizedDocumentTitle || seenHeadings.has(normalizedTitle)) return;
