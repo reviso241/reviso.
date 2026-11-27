@@ -7974,7 +7974,11 @@ renderCloudAccount();
   if (!doc && !docId) return "";
   const assembleFullContent = (item) => {
     if (!item) return "";
-    const baseText = item.cleanedText || item.text || item.content || item.extractedText || item.rawText || "";
+    const target = (item.document && typeof item.document === "object") ? item.document : item;
+    let baseText = target.cleanedText || target.text || target.content || target.extractedText || target.rawText || item.cleanedText || item.text || item.content || "";
+    if ((!baseText || baseText.length < 50) && Array.isArray(item.pages) && item.pages.length) {
+      baseText = item.pages.map(p => typeof p === "string" ? p : (p.text || p.content || "")).join("\n\n");
+    }
     const schemas = Array.isArray(item.schemaDescriptions) && item.schemaDescriptions.length
       ? "\n\n--- SCHEMAS ET VISUELS DU COURS ---\n" + item.schemaDescriptions.map((s, idx) => "[Schema " + (idx + 1) + (s.page ? " - Page " + s.page : "") + "] : " + (s.description || s)).join("\n")
       : "";
