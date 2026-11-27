@@ -9718,8 +9718,12 @@ async function switchRevisionSubTab(subName) {
     }
   
     async function requestRevisoAI(payload = {}) {
+      const normalizedTask = payload.task === 'generate-sheet'
+        ? 'revision-sheet'
+        : (payload.task || (typeof payload.prompt === 'string' ? 'chat' : 'revision-sheet'));
       const body = {
         ...payload,
+        task: normalizedTask,
         ...(typeof payload.courseText === 'string'
           ? { courseText: payload.courseText.slice(0, 10000) }
           : {}),

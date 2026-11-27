@@ -282,9 +282,10 @@ export default async function handler(req, res) {
     !!providerKeys[attempt.provider]
   );
   if (!availableAttempts.length) {
-    return jsonResponse(res, 503, { error: "Le service du Tuteur IA est temporairement indisponible." });
+    return jsonResponse(res, 503, { error: `Service IA indisponible (${attemptErrors.join(" | ") || "aucune clé configurée"})` });
   }
 
+  const attemptErrors = [];
   for (const attempt of availableAttempts) {
     try {
       const text = attempt.provider === "gemini"
@@ -303,5 +304,5 @@ export default async function handler(req, res) {
     }
   }
 
-  return jsonResponse(res, 503, { error: "Le service du Tuteur IA est temporairement indisponible." });
+  return jsonResponse(res, 503, { error: `Service IA indisponible (${attemptErrors.join(" | ") || "aucune clé configurée"})` });
 }
