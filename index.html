@@ -8254,6 +8254,7 @@ async function switchRevisionSubTab(subName) {
           /[A-ZÀ-Þ]/.test(title);
         if (structuralHeading || uppercaseHeading) {
           // Exclure titre principal et fragments administratifs
+          const normalizedTitle = (typeof normalizeR2Text === 'function' ? normalizeR2Text(title) : title.trim());
           if (normalizedTitle.toLowerCase() === normalizeR2Text(documentTitle).toLowerCase() || 
               /^(?:introduction|conclusion|sommaire|bibliographie|annexes|enseignant|coordonnées)/i.test(normalizedTitle)) return;
 
@@ -9703,6 +9704,19 @@ async function switchRevisionSubTab(subName) {
         return sanitizeCourseText(rawText);
       }
       return String(rawText || '').trim();
+    }
+  
+    function buildStructuredRevisionText(doc, chapterScope) {
+      const title = sanitizeCourseTitle(doc?.title || doc?.name || 'Cours');
+      const subject = String(doc?.subject || doc?.matiere || 'Matière générale').trim();
+      const rawBody = (chapterScope && chapterScope !== '__ALL__' && typeof chapterScope === 'object')
+        ? (chapterScope.content || chapterScope.text || doc?.content || '')
+        : (doc?.content || doc?.text || '');
+      const cleanBody = sanitizeCourseBodyText(rawBody);
+      const visuals = Array.isArray(doc?.schemaDescriptions) && doc.schemaDescriptions.length
+        ? '\n\n[Schémas & Visuels analysés]\n' + doc.schemaDescriptions.map((s, i) => `- Visuel ${i + 1}: ${s}`).join('\n')
+        : '';
+      return `Matière : ${subject}\nDocument : ${title}\n\n${cleanBody}${visuals}`.trim();
     }
   </script>
 
