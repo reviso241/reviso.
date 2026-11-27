@@ -7193,7 +7193,11 @@ renderCloudAccount();
         return;
       }
       if (!isUserScopeCurrent(userScope)) return;
+      const removedDoc = appState.documents.find(d => d.id === id);
       appState.documents = appState.documents.filter(d => d.id !== id);
+      if (removedDoc && typeof supabaseClient !== 'undefined' && supabaseClient && currentCloudUser && currentCloudUser.id && removedDoc.title) {
+        supabaseClient.from('study_items').delete().eq('user_id', currentCloudUser.id).eq('title', removedDoc.title).then(() => {}).catch(() => {});
+      }
       rebuildStudyArtifactsFromDocuments();
       saveState();
       refreshAllUI();
@@ -7215,6 +7219,9 @@ renderCloudAccount();
             return;
           }
           if (!isUserScopeCurrent(userScope)) return;
+          if (typeof supabaseClient !== 'undefined' && supabaseClient && currentCloudUser && currentCloudUser.id) {
+            supabaseClient.from('study_items').delete().eq('user_id', currentCloudUser.id).then(() => {}).catch(() => {});
+          }
           appState.documents = [];
           appState.schedule = [];
           appState.flashcards = [];
