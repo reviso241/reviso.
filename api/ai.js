@@ -113,6 +113,8 @@ function buildUserContent(body, messages) {
   }
   if (["revision-sheet", "flashcards", "qcm"].includes(body.task)) {
     const course = sanitizeCourseBodyText(body.courseText).slice(0, 10000);
+    if (!course || course.length < 20) return "Contenu de cours insuffisant pour générer une révision.";
+
     const level = String(body.level || "à préciser").slice(0, 160);
     const subject = String(body.subject || "à préciser").slice(0, 160);
     const chapter = String(body.chapter || "Document complet").slice(0, 240);

@@ -4525,6 +4525,11 @@
           signal: controller.signal
         });
         const result = await response.json().catch(() => ({}));
+        if (response.status === 400 || response.status === 413 || response.status === 503) {
+           const msg = response.status === 413 ? 'Texte trop volumineux pour l\'IA.' : 'Erreur de communication avec l\'IA.';
+           alert(msg);
+           throw new Error(msg);
+        }
         if (!response.ok || !result.text) {
           throw new Error(result.error || 'Le Tuteur IA est momentanément indisponible.');
         }
@@ -4573,9 +4578,10 @@
 
     async function generateActiveRevision(task, force = false) {
       const context = getRevisionArtifactKeyContext();
-      if (!context) {
-        // showToast('Sélectionnez un document avec du contenu pédagogique pour générer la révision.');
+      if (!context || !context.courseText || !context.courseText.trim()) {
+        alert('Le document sélectionné est vide ou mal chargé. Impossible de générer la révision.');
         return;
+      }
       }
       const hasTask = task === 'revision-sheet'
         ? Boolean(context.artifact.sheet && context.artifact.sheetAi)
@@ -4689,7 +4695,7 @@
       revisionGenerationPromises.set(requestKey, generation);
       if (getRevisionArtifactContext()?.key === context.key) renderRevisionView();
       return generation;
-    }
+    
 
     function getR2CategoryLabel(value) {
       const normalized = normalizeR2Text(value).replace(/-/g, ' ').trim();
