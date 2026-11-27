@@ -4368,27 +4368,16 @@ renderCloudAccount();
         .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ')
         .replace(/[\uFFFD\u25A0-\u25FF\uF000-\uF8FF]/g, ' ')
         .split('\n');
-      const adminLine = /^\s*(?:ipea|institut(?:\s|$)|universit[ée](?:\s|$)|facult[ée](?:\s|$)|[ée]cole(?:\s|$)|d[ée]partement(?:\s|$)|fili[èe]re(?:\s|$)|niveau(?:\s|$)|l[123]|m[12]|(?:dr|pr|m(?:me)?)\.?\s+[A-ZÀ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'’-]+|formateur(?:trice)?|enseignant(?:e)?|professeur(?:e)?|charg[ée]e?s? de cours|ma[iî]tre de conf[ée]rences|intervenant(?:e)?|auteur(?:e)?|animateur(?:trice)?|responsable(?: pédagogique)?|anim[ée] par|dispens[ée] par|contact|tel\.?|t[ée]l(?:[ée]phone)?|e-?mail|courriel|adresse|ann[ée]e (?:universitaire|acad[ée]mique)|objectifs? du cours|r[ée]sultats? attendus|d[ée]marche p[ée]dagogique|pr[éee]?-?requis|volume horaire|bibliographie)(?:\b|\s*[:\-])/i;
-      const contentStart = /^\s*(?:INTRODUCTION(?:\b|$)|CHAPITRE\s+(?:[IVXLCDM]+|\d+)\b|CHAPTER\s+(?:[IVXLCDM]+|\d+)\b|D[ÉE]FINITION\b|(?:D[ÉE]FINITION|R[ÔO]LE|TYPES?|DIFF[ÉE]RENCE)\s*[:—-])/i;
-      const conceptualHeading = /^\s*(?:D[ÉE]FINITION|R[ÔO]LE|TYPES?|DIFF[ÉE]RENCE|PRINCIPE|M[ÉE]CANISME|FONCTION|PROPRI[ÉE]T[ÉE]S?)\s*[:—-]/i;
-      const adminTitle = /(?:^|\s)(?:DR\.?|PR\.?|M(?:ME)?\.?)\s+[A-ZÀ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'’-]+/i;
-      // Nettoyage administratif et filtrage
-      const filteredLines = sourceLines.filter(line => {
-        const t = line.trim();
-        if (t.length < 5) return false;
-        return !adminLine.test(t) && !adminTitle.test(t);
-      });
-      const cleaned = filteredLines.map(line => line
-        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ')
-        .replace(/[\uFFFD\u25A0-\u25FF\uF000-\uF8FF]/g, ' ')
-        .replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '')
-        .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, ' ')
-        .replace(/(?:\+?\d[\d\s()./-]{7,}\d)/g, ' ')
-        .replace(/\b(?:https?:\/\/|www\.)\S+/gi, ' ')
-        .trim());
-      let firstContentIndex = cleaned.findIndex(line => contentStart.test(line));
-      if (firstContentIndex < 0) firstContentIndex = cleaned.findIndex(line => conceptualHeading.test(line));
-      const lines = firstContentIndex > 0 ? cleaned.slice(firstContentIndex) : cleaned;
+      const cleaned = sourceLines
+        .map(line => line
+          .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F]/g, ' ')
+          .replace(/[\uFFFD\u25A0-\u25FF\uF000-\uF8FF]/g, ' ')
+          .replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '')
+          .replace(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, ' ')
+          .replace(/\b(?:https?:\/\/|www\.)\S+/gi, ' ')
+          .trim())
+        .filter(line => line.length >= 2);
+      const lines = cleaned;
       const boilerplateBlock = /^\s*(?:(?:[IVXLCDM]+|[A-Z])\.\s*)?(?:OBJECTIFS? DU COURS|R[ÉE]SULTATS? ATTENDUS|D[ÉE]MARCHE P[ÉE]DAGOGIQUE|PR[ÉE]?-?REQUIS|VOLUME HORAIRE|BIBLIOGRAPHIE)\b/i;
       let skippingBoilerplate = false;
       const retained = [];
@@ -8127,8 +8116,12 @@ renderCloudAccount();
         req.onerror = () => reject(req.error);
       });
       const dbText = assembleFullContent(storedDoc);
-      if (dbText && dbText.length > 50) {
-        doc.cleanedText = dbText;
+      if (dbText && dbText.length > 20) {
+        if (doc && typeof doc === "object") {
+          doc.cleanedText = dbText;
+          doc.content = dbText;
+          doc.text = dbText;
+        }
         return dbText;
       }
     }
