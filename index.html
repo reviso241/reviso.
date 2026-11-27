@@ -8722,6 +8722,7 @@
         progLabel.textContent = 'Quiz en attente';
         scoreLabel.textContent = 'Score : 0 / 0';
         qText.textContent = 'Sélectionnez un cours et un chapitre contenant du texte pour générer un quiz ciblé.';
+      const revisionContext = getRevisionArtifactContext();
       const doc = revisionContext.document;
       const fullText = doc ? await getCourseText(doc) : '';
       if (doc && fullText.trim().length > 20) {
