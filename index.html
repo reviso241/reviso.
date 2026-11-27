@@ -7967,8 +7967,11 @@ renderCloudAccount();
       renderRevisionSelectors();
     }
 
-    window.getCourseText = async function getCourseText(doc) {
-  if (!doc) return "";
+    window.getCourseText = async function getCourseText(docOrId) {
+  if (!docOrId) return "";
+  const docId = typeof docOrId === "string" ? docOrId : docOrId.id;
+  const doc = typeof docOrId === "object" ? docOrId : ((typeof appState !== "undefined" && Array.isArray(appState.documents)) ? appState.documents.find(d => d.id === docId) : { id: docId });
+  if (!doc && !docId) return "";
   const assembleFullContent = (item) => {
     if (!item) return "";
     const baseText = item.cleanedText || item.text || item.content || item.extractedText || item.rawText || "";
@@ -7988,7 +7991,7 @@ renderCloudAccount();
       const db = await openLocalFilesDatabase();
       const storedDoc = await new Promise((resolve, reject) => {
         const tx = db.transaction(LOCAL_FILES_STORE, "readonly");
-        const req = tx.objectStore(LOCAL_FILES_STORE).get(doc.id);
+        const req = tx.objectStore(LOCAL_FILES_STORE).get(docId);
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
       });
