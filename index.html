@@ -4381,6 +4381,15 @@ renderCloudAccount();
         .join('\n');
     }
 
+function sanitizeCourseTitle(rawTitle) {
+  const cleaned = String(rawTitle || '')
+    .replace(/\.(?:pdf|docx?|pptx?|txt|md|csv|rtf)$/i, '')
+    .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cleaned || 'Document sans titre';
+}
+
     function containsAdministrativeOutput(value) {
       return /\b(?:IPEA|institut|universit[ée]|facult[ée]|[ée]cole|formateur|enseignant|professeur|charg[ée]e?s? de cours|logisticien(?:ne)?\s*[-–—]\s*acheteur(?:se)?|t[ée]l(?:[ée]phone)?|e-?mail|page\s*\d+|objectifs? du cours|pr[ée]?-?requis|volume horaire|bibliographie|bo[iî]te postale|b\.?p\.?\s*\d+)\b|(?:^|\s)(?:DR\.?|PR\.?|M(?:ME)?\.?)\s+[A-ZÀ-Þ][A-Za-zÀ-ÖØ-öø-ÿ'’-]+|@|[\uFFFD\u25AF\u25AA\u25A0\u25CF\uF0B7]/i.test(String(value || ''));
     }
@@ -7897,6 +7906,42 @@ renderCloudAccount();
     if ((!baseText || baseText.length < 50) && Array.isArray(item.pages) && item.pages.length) {
       baseText = item.pages.map(p => typeof p === "string" ? p : (p.text || p.content || "")).join("\n\n");
     }
+
+function getRevisionArtifactContext(docOrId, options = {}) {
+  const doc = typeof docOrId === 'string'
+    ? (typeof appState !== 'undefined' && Array.isArray(appState.documents)
+        ? appState.documents.find(d => d && (d.id === docOrId || d.title === docOrId))
+        : null)
+    : (docOrId || null);
+
+  if (!doc) {
+    return {
+      doc: null,
+      title: '',
+      text: '',
+      fullText: '',
+      summary: '',
+      ...options
+    };
+  }
+
+  const rawFull = typeof doc.fullText === 'string' ? doc.fullText : '';
+  const rawContent = typeof doc.content === 'string' ? doc.content : '';
+  const rawSummary = typeof doc.summary === 'string' ? doc.summary : '';
+  const resolvedText = rawFull || rawContent || rawSummary || '';
+
+  return {
+    doc,
+    id: doc.id || '',
+    title: doc.title || 'Document sans titre',
+    category: doc.category || 'cours',
+    subject: doc.subject || '',
+    text: resolvedText,
+    fullText: rawFull || resolvedText,
+    summary: rawSummary,
+    ...options
+  };
+}
     const schemas = Array.isArray(item.schemaDescriptions) && item.schemaDescriptions.length
       ? "\n\n--- SCHEMAS ET VISUELS DU COURS ---\n" + item.schemaDescriptions.map((s, idx) => "[Schema " + (idx + 1) + (s.page ? " - Page " + s.page : "") + "] : " + (s.description || s)).join("\n")
       : "";
