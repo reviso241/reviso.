@@ -4004,31 +4004,7 @@
         }
         const signedUpUser = data.session ? data.user : null;
         if (signedUpUser) await activateUserStore(signedUpUser);
-
-    window.getCourseText = async function getCourseText(doc) {
-      if (!doc) return '';
-      const text = doc.cleanedText || doc.text || doc.content || doc.extractedText || doc.rawText || '';
-      if (text && text.length > 50) return text;
-
-      // Sinon, tenter de charger depuis IndexedDB
-      try {
-        const db = await openLocalFilesDatabase();
-        const storedDoc = await new Promise((resolve, reject) => {
-          const transaction = db.transaction(LOCAL_FILES_STORE, 'readonly');
-          const request = transaction.objectStore(LOCAL_FILES_STORE).get(doc.id);
-          request.onsuccess = () => resolve(request.result);
-          request.onerror = () => reject(request.error);
-        });
-        if (storedDoc) {
-          return storedDoc.cleanedText || storedDoc.text || storedDoc.content || storedDoc.extractedText || storedDoc.rawText || '';
-        }
-      } catch (e) {
-        console.error('Erreur lors du chargement du texte depuis IndexedDB', e);
-      }
-      return text;
-    }
-
-        renderCloudAccount();
+renderCloudAccount();
         if (data.session && data.user) await syncProfileToCloud(data.user);
         const successMessage = data.session
           ? 'Compte créé et connecté.'
@@ -7991,7 +7967,64 @@
       renderRevisionSelectors();
     }
 
-    async function switchRevisionSubTab(subName) {
+    window.getCourseText = async function getCourseText(doc) {
+  if (!doc) return "";
+  const assembleFullContent = (item) => {
+    if (!item) return "";
+    const baseText = item.cleanedText || item.text || item.content || item.extractedText || item.rawText || "";
+    const schemas = Array.isArray(item.schemaDescriptions) && item.schemaDescriptions.length
+      ? "\n\n--- SCHEMAS ET VISUELS DU COURS ---\n" + item.schemaDescriptions.map((s, idx) => "[Schema " + (idx + 1) + (s.page ? " - Page " + s.page : "") + "] : " + (s.description || s)).join("\n")
+      : "";
+    return (baseText + schemas).trim();
+  };
+
+  // 1. Memoire immediate
+  const memText = assembleFullContent(doc);
+  if (memText && memText.length > 50) return memText;
+
+  // 2. Cache local IndexedDB
+  try {
+    if (typeof openLocalFilesDatabase === "function" && typeof LOCAL_FILES_STORE !== "undefined") {
+      const db = await openLocalFilesDatabase();
+      const storedDoc = await new Promise((resolve, reject) => {
+        const tx = db.transaction(LOCAL_FILES_STORE, "readonly");
+        const req = tx.objectStore(LOCAL_FILES_STORE).get(doc.id);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      const dbText = assembleFullContent(storedDoc);
+      if (dbText && dbText.length > 50) {
+        doc.cleanedText = dbText;
+        return dbText;
+      }
+    }
+  } catch (e) {
+    console.warn("IndexedDB lecture impossible:", e);
+  }
+
+  // 3. Fallback Cloudflare R2 (bundle JSON complet : texte + schemas)
+  const r2BundleUrl = doc.bundleUrl || doc.r2BundleUrl || (doc.r2Url && doc.r2Url.endsWith(".json") ? doc.r2Url : null);
+  if (r2BundleUrl) {
+    try {
+      const res = await fetch(r2BundleUrl);
+      if (res.ok) {
+        const bundle = await res.json();
+        const r2Text = assembleFullContent(bundle);
+        if (r2Text) {
+          doc.cleanedText = r2Text;
+          if (bundle.schemaDescriptions) doc.schemaDescriptions = bundle.schemaDescriptions;
+          return r2Text;
+        }
+      }
+    } catch (err) {
+      console.warn("Erreur chargement bundle R2:", err);
+    }
+  }
+
+  return memText;
+};
+var getCourseText = window.getCourseText;
+async function switchRevisionSubTab(subName) {
       ['fiches', 'flashcards', 'qcm', 'evaluation'].forEach(name => {
         const btn = document.getElementById(`subtab-btn-${name}`);
         const panel = document.getElementById(`rev-sub-${name}`);
