@@ -3494,6 +3494,56 @@
         transaction.onerror = () => reject(transaction.error || new Error('Écriture IndexedDB impossible.'));
         transaction.onabort = () => reject(transaction.error || new Error('Écriture IndexedDB annulée.'));
       });
+
+      // Synchronisation non-bloquante vers Cloudflare R2 (reviso-courses)
+      try {
+        const fullText = [
+          cleanDocument.content || "",
+          Array.isArray(pages) && pages.length
+            ? pages.map(p => typeof p === "string" ? p : (p.text || p.content || "")).join("\n\n")
+            : ""
+        ].filter(Boolean).join("\n\n").trim();
+
+        if (fullText.length > 20) {
+          fetch("/api/courses-r2", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "save-course",
+              userId: userId || "guest",
+              course: {
+                id: cleanDocument.id,
+                title: cleanDocument.title,
+                subject: cleanDocument.subject || cleanDocument.matiere || "",
+                fileName: rawFile ? rawFile.name : (cleanDocument.fileName || ""),
+                content: cleanDocument.content || fullText,
+                fullText,
+                pages: Array.isArray(pages) ? pages : [],
+                schemaDescriptions: cleanDocument.schemaDescriptions || null,
+                createdAt: cleanDocument.createdAt || new Date().toISOString()
+              }
+            })
+          })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (data && data.ok && data.publicUrl) {
+              document.bundleUrl = data.publicUrl;
+              document.r2Key = data.r2Key;
+              if (typeof appState !== "undefined" && Array.isArray(appState.documents)) {
+                const target = appState.documents.find(d => d.id === cleanDocument.id);
+                if (target) {
+                  target.bundleUrl = data.publicUrl;
+                  target.r2Key = data.r2Key;
+                }
+              }
+              if (typeof persistState === "function") persistState();
+            }
+          })
+          .catch(err => console.warn("Sync R2 cours differee:", err));
+        }
+      } catch (r2Err) {
+        console.warn("Erreur preparation sync R2:", r2Err);
+      }
     }
 
     async function getLocalDocumentAsset(id, userId = activeUserId) {
@@ -8011,11 +8061,13 @@ renderCloudAccount();
 
   // 3. Fallback Cloudflare R2 (bundle JSON complet : texte + schemas)
   const r2BundleUrl = doc.bundleUrl || doc.r2BundleUrl || (doc.r2Url && doc.r2Url.endsWith(".json") ? doc.r2Url : null);
-  if (r2BundleUrl) {
+  const r2FallbackEndpoint = r2BundleUrl || (docId ? `/api/courses-r2?action=get-course&userId=${encodeURIComponent(typeof activeUserId !== "undefined" ? activeUserId : "guest")}&courseId=${encodeURIComponent(docId)}` : null);
+  if (r2FallbackEndpoint) {
     try {
-      const res = await fetch(r2BundleUrl);
+      const res = await fetch(r2FallbackEndpoint);
       if (res.ok) {
-        const bundle = await res.json();
+        const rawData = await res.json();
+        const bundle = rawData && rawData.course ? rawData.course : rawData;
         const r2Text = assembleFullContent(bundle);
         if (r2Text) {
           doc.cleanedText = r2Text;
@@ -9566,4 +9618,5 @@ async function switchRevisionSubTab(subName) {
 
 </body>
 </html>
+
 
