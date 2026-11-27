@@ -4402,6 +4402,34 @@ function sanitizeCourseTitle(rawTitle) {
       return JSON.parse(normalized.slice(start, end + 1));
     }
 
+    function getRevisionArtifactContext() {
+      const docSelect = document.getElementById('revision-course-select')
+        || document.getElementById('revision-doc-select')
+        || document.querySelector('[data-revision-doc-select]');
+      const chapSelect = document.getElementById('revision-chapter-select')
+        || document.querySelector('[data-revision-chapter-select]');
+      const docs = (typeof appState !== 'undefined' && Array.isArray(appState.documents))
+        ? appState.documents
+        : [];
+      const selectedId = docSelect && docSelect.value ? docSelect.value : (docs[0] ? docs[0].id : '');
+      const doc = docs.find(d => d && d.id === selectedId) || docs[0] || null;
+      if (!doc) return null;
+
+      const chapters = Array.isArray(doc.chapters) ? doc.chapters : [];
+      const chapIdx = chapSelect && chapSelect.value !== '' ? Number(chapSelect.value) : 0;
+      const chapter = chapters[chapIdx] || chapters[0] || { title: 'Document complet', content: '' };
+      const rawText = doc.fullText || doc.content || doc.text || chapter.content || doc.summary || '';
+      const courseText = (typeof sanitizeCourseText === 'function' ? sanitizeCourseText(rawText) : '') || rawText;
+      const key = `${doc.id}::${chapIdx || 0}`;
+
+      return {
+        key,
+        document: doc,
+        chapter,
+        courseText
+      };
+    }
+
     function getRevisionArtifactKeyContext() {
       const context = getRevisionArtifactContext();
       if (!context) return null;
@@ -4427,6 +4455,9 @@ function sanitizeCourseTitle(rawTitle) {
         return;
       }
       if (!context.courseText || context.courseText.trim().length < 20) {
+        if (typeof window.ensureDocumentVisualAnalysis === "function") {
+          await window.ensureDocumentVisualAnalysis(context.document);
+        }
         const loadedText = await getCourseText(context.document);
         if (loadedText && loadedText.trim().length >= 20) {
           context.document.content = loadedText;
@@ -7894,6 +7925,86 @@ function sanitizeCourseTitle(rawTitle) {
       renderRevisionSelectors();
     }
 
+        window.ensureDocumentVisualAnalysis = async function ensureDocumentVisualAnalysis(docOrId) {
+      if (!docOrId) return [];
+      const docId = typeof docOrId === "string" ? docOrId : docOrId.id;
+      const doc = typeof docOrId === "object"
+        ? docOrId
+        : ((typeof appState !== "undefined" && Array.isArray(appState.documents))
+            ? appState.documents.find(d => d && d.id === docId)
+            : null);
+      if (!doc) return [];
+      if (Array.isArray(doc.schemaDescriptions) && doc.schemaDescriptions.length) {
+        return doc.schemaDescriptions;
+      }
+
+      let storedRecord = null;
+      try {
+        if (typeof openLocalFilesDatabase === "function" && typeof LOCAL_FILES_STORE !== "undefined") {
+          const db = await openLocalFilesDatabase();
+          storedRecord = await new Promise((resolve) => {
+            const tx = db.transaction(LOCAL_FILES_STORE, "readonly");
+            const req = tx.objectStore(LOCAL_FILES_STORE).get(doc.id);
+            req.onsuccess = () => resolve(req.result || null);
+            req.onerror = () => resolve(null);
+          });
+        }
+      } catch (_) {}
+
+      const pages = storedRecord && Array.isArray(storedRecord.pages) ? storedRecord.pages : [];
+      const imagePages = pages
+        .map((p, idx) => ({
+          page: (p && p.page) || (idx + 1),
+          image: p && (p.imageDataUrl || p.dataUrl || p.image || p.thumbnail || "")
+        }))
+        .filter(p => typeof p.image === "string" && p.image.startsWith("data:image/"))
+        .slice(0, 8);
+
+      let rawImageDataUrl = "";
+      if (!imagePages.length && storedRecord && storedRecord.rawFile && storedRecord.rawFile.type && storedRecord.rawFile.type.startsWith("image/")) {
+        rawImageDataUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+          reader.onerror = () => resolve("");
+          reader.readAsDataURL(storedRecord.rawFile);
+        });
+      }
+
+      const visualPayload = imagePages.length
+        ? imagePages
+        : (rawImageDataUrl ? [{ page: 1, image: rawImageDataUrl }] : []);
+
+      if (!visualPayload.length) return [];
+
+      try {
+        const res = await fetch("/api/courses-r2", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "analyze-visuals",
+            userId: typeof activeUserId !== "undefined" ? activeUserId : "guest",
+            courseId: doc.id,
+            title: doc.title || "",
+            pages: visualPayload
+          })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const descriptions = Array.isArray(data && data.schemaDescriptions) ? data.schemaDescriptions : [];
+          if (descriptions.length) {
+            doc.schemaDescriptions = descriptions;
+            if (typeof saveState === "function") saveState();
+            if (typeof saveLocalDocumentAsset === "function" && storedRecord) {
+              void saveLocalDocumentAsset(doc, storedRecord.rawFile || null, pages);
+            }
+            return descriptions;
+          }
+        }
+      } catch (err) {
+        console.warn("Analyse visuelle à la demande indisponible :", err);
+      }
+      return [];
+    };
     window.getCourseText = async function getCourseText(docOrId) {
   if (!docOrId) return "";
   const docId = typeof docOrId === "string" ? docOrId : docOrId.id;
@@ -7907,41 +8018,6 @@ function sanitizeCourseTitle(rawTitle) {
       baseText = item.pages.map(p => typeof p === "string" ? p : (p.text || p.content || "")).join("\n\n");
     }
 
-function getRevisionArtifactContext(docOrId, options = {}) {
-  const doc = typeof docOrId === 'string'
-    ? (typeof appState !== 'undefined' && Array.isArray(appState.documents)
-        ? appState.documents.find(d => d && (d.id === docOrId || d.title === docOrId))
-        : null)
-    : (docOrId || null);
-
-  if (!doc) {
-    return {
-      doc: null,
-      title: '',
-      text: '',
-      fullText: '',
-      summary: '',
-      ...options
-    };
-  }
-
-  const rawFull = typeof doc.fullText === 'string' ? doc.fullText : '';
-  const rawContent = typeof doc.content === 'string' ? doc.content : '';
-  const rawSummary = typeof doc.summary === 'string' ? doc.summary : '';
-  const resolvedText = rawFull || rawContent || rawSummary || '';
-
-  return {
-    doc,
-    id: doc.id || '',
-    title: doc.title || 'Document sans titre',
-    category: doc.category || 'cours',
-    subject: doc.subject || '',
-    text: resolvedText,
-    fullText: rawFull || resolvedText,
-    summary: rawSummary,
-    ...options
-  };
-}
     const schemas = Array.isArray(item.schemaDescriptions) && item.schemaDescriptions.length
       ? "\n\n--- SCHEMAS ET VISUELS DU COURS ---\n" + item.schemaDescriptions.map((s, idx) => "[Schema " + (idx + 1) + (s.page ? " - Page " + s.page : "") + "] : " + (s.description || s)).join("\n")
       : "";
@@ -8414,9 +8490,7 @@ async function switchRevisionSubTab(subName) {
       const revisionFlashcardContext = getRevisionArtifactContext();
       const doc = revisionFlashcardContext ? revisionFlashcardContext.document : null;
         const fullTextFlashcard = doc ? await getCourseText(doc) : '';
-        if (doc && fullTextFlashcard.trim().length > 20 && !visibleFlashcards.length) {
-          void generateActiveRevision('flashcards');
-        }
+        // Génération flashcards uniquement à la demande
   
         const visibleFlashcards = getVisibleFlashcards();
         if (visibleFlashcards.length) {
@@ -8876,9 +8950,7 @@ async function switchRevisionSubTab(subName) {
       const revisionContext = getRevisionArtifactContext();
       const doc = revisionContext?.document;
       const fullText = doc ? await getCourseText(doc) : '';
-      if (doc && fullText.trim().length > 20) {
-        void generateActiveRevision('qcm');
-      }
+      // Génération QCM uniquement à la demande
 
         optsBox.innerHTML = '';
         return;
