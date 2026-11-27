@@ -4527,7 +4527,7 @@ function sanitizeCourseTitle(rawTitle) {
           if (containsLongRawLine) throw new Error('La réponse reprend un passage brut du document.');
           if (task === 'revision-sheet') {
             if (responseText.length < 120 || containsAdministrativeOutput(responseText) ||
-                !/\bÉvaluation\b/i.test(responseText)) {
+                !/\b[EÉ]valuation\b/i.test(responseText)) {
               throw new Error('La fiche générée ne respecte pas le format pédagogique attendu.');
             }
             latest.sheet = responseText.trim();
@@ -8469,7 +8469,7 @@ async function switchRevisionSubTab(subName) {
           system: buildStrictAcademicContext()
         });
 
-        box.innerHTML = `<div class="prose prose-sm">${response}</div>`;
+        box.innerHTML = `<div class="prose prose-sm">${formatStructuredSheetHtml(response)}</div>`;
       } catch (err) {
         console.error("AI Generation failed, falling back to local:", err);
         const concepts = extractCourseConcepts(processedText);
