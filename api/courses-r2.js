@@ -94,7 +94,7 @@ export default async function handler(req, res) {
           return res.status(200).json({ ok: true, course, r2Key: key });
         } catch (err) {
           if (err.name === "NoSuchKey" || err.$metadata?.httpStatusCode === 404) {
-            return res.status(404).json({ ok: false, notFound: true, error: "Cours non encore synchronisé sur R2." });
+            return res.status(200).json({ ok: false, notFound: true, error: "Cours non encore synchronisé sur R2." });
           }
           throw err;
         }
@@ -178,4 +178,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: error.message || "Erreur serveur R2 Courses." });
   }
 }
+
 

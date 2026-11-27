@@ -8083,6 +8083,38 @@ renderCloudAccount();
   return memText;
 };
 var getCourseText = window.getCourseText;
+window.syncCoursesFromR2 = async function syncCoursesFromR2(userId = (typeof activeUserId !== "undefined" ? activeUserId : "guest")) {
+  try {
+    const res = await fetch(`/api/courses-r2?action=list-courses&userId=${encodeURIComponent(userId)}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    if (!data || !data.ok || !Array.isArray(data.courses)) return [];
+    if (typeof appState !== "undefined" && Array.isArray(appState.documents)) {
+      let added = 0;
+      for (const remote of data.courses) {
+        if (!appState.documents.some(d => d.id === remote.id)) {
+          appState.documents.push({
+            id: remote.id,
+            title: remote.title,
+            subject: remote.subject || "",
+            fileName: remote.fileName || "",
+            r2Key: remote.r2Key,
+            updatedAt: remote.updatedAt
+          });
+          added++;
+        }
+      }
+      if (added > 0) {
+        if (typeof persistState === "function") persistState();
+        if (typeof refreshAllUI === "function") refreshAllUI();
+      }
+    }
+    return data.courses;
+  } catch (e) {
+    console.warn("Restauration liste cours R2 ignoree:", e);
+    return [];
+  }
+};
 async function switchRevisionSubTab(subName) {
       ['fiches', 'flashcards', 'qcm', 'evaluation'].forEach(name => {
         const btn = document.getElementById(`subtab-btn-${name}`);
@@ -9618,5 +9650,6 @@ async function switchRevisionSubTab(subName) {
 
 </body>
 </html>
+
 
 
