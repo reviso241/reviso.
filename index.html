@@ -9688,7 +9688,23 @@ async function switchRevisionSubTab(subName) {
   setInterval(() => { void window.__revisoHydrateAllDocs(); }, 1500);
   document.addEventListener('click', () => { void window.__revisoHydrateAllDocs(); }, true);
 })();
-</script>
+
+    function sanitizeCourseTitle(rawTitle) {
+      const cleaned = String(rawTitle || '')
+        .replace(/\.(?:pdf|docx?|pptx?|txt|md|csv|rtf|png|jpe?g|webp)$/i, '')
+        .replace(/[\u0000-\u001F\u007F-\u009F]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+      return cleaned || 'Document sans titre';
+    }
+
+    function sanitizeCourseBodyText(rawText) {
+      if (typeof sanitizeCourseText === 'function') {
+        return sanitizeCourseText(rawText);
+      }
+      return String(rawText || '').trim();
+    }
+  </script>
 
 </body>
 </html>
