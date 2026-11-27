@@ -4005,7 +4005,7 @@
         const signedUpUser = data.session ? data.user : null;
         if (signedUpUser) await activateUserStore(signedUpUser);
 
-    async function getCourseText(doc) {
+    window.getCourseText = async function getCourseText(doc) {
       if (!doc) return '';
       const text = doc.cleanedText || doc.text || doc.content || doc.extractedText || doc.rawText || '';
       if (text && text.length > 50) return text;
