@@ -8009,8 +8009,9 @@
       if (subName === 'fiches') {
         const { doc } = await getSelectedRevisionDocumentAndText();
         if (doc) {
-           await getCourseText(doc);
-           if (doc.content || doc.text) {
+           const _txt = await getCourseText(doc);
+        if (_txt) { doc.content = _txt; }
+        if (doc.content || doc.text) {
              void generateActiveRevision('revision-sheet');
            }
         }
