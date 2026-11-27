@@ -8477,7 +8477,7 @@ async function switchRevisionSubTab(subName) {
         box.innerHTML = `
           <h4 class="font-bold mb-2">Fiche (Local)</h4>
           <p><strong>Notions :</strong> ${escapeHtml(essentials)}</p>
-          <div class="mt-2 text-xs">${formatStructuredSheetHtml(processedText.slice(0, 500))}</div>
+          <div class="mt-2 text-xs opacity-80">Service IA en attente de connexion. Vérifiez les clés API sur Vercel puis cliquez sur <strong>Actualiser la fiche</strong>.</div>
         `;
       }
     }
