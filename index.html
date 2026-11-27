@@ -4583,9 +4583,18 @@ renderCloudAccount();
 
     function getRevisionArtifactContext() {
       const context = renderRevisionSelectors();
-      if (!context.document || !context.chapter || !sanitizeCourseText(context.chapter.content)) return null;
-      const key = `${context.document.id}::${appState.revisionSelection.chapterIndex}::${context.chapter.title}`;
-      return { ...context, key, courseText: sanitizeCourseText(context.chapter.content) };
+      if (!context || !context.document) return null;
+      const doc = context.document;
+      const chapter = context.chapter || { title: 'Document complet', content: doc.cleanedText || doc.content || doc.text || '' };
+      const rawText = chapter.content || doc.cleanedText || doc.content || doc.text || '';
+      const cleaned = sanitizeCourseText(rawText);
+      const key = `${doc.id}::${appState.revisionSelection.chapterIndex}::${chapter.title || 'Document complet'}`;
+      return {
+        ...context,
+        chapter,
+        key,
+        courseText: cleaned || rawText || ''
+      };
     }
 
     function containsAdministrativeOutput(value) {
@@ -4616,27 +4625,30 @@ renderCloudAccount();
       saveState();
     }
 
-    async function generateActiveRevision(task, force = false) {
+    async function generateActiveRevision(task, force = false, showAlertIfEmpty = true) {
       let context = getRevisionArtifactKeyContext();
       if (!context || !context.document) {
-        alert('Aucun document sélectionné. Choisissez un cours dans l’onglet Documents.');
+        if (force || showAlertIfEmpty) {
+          alert('Aucun document sélectionné. Importez ou choisissez un cours dans l’onglet Documents.');
+        }
         return;
       }
-      // 1. Toujours charger le texte complet (mémoire, IndexedDB ou R2) avant vérification
       if (!context.courseText || context.courseText.trim().length < 20) {
         const loadedText = await getCourseText(context.document);
         if (loadedText && loadedText.trim().length >= 20) {
           context.document.content = loadedText;
           context.document.text = loadedText;
           context.document.cleanedText = loadedText;
-          context = getRevisionArtifactKeyContext() || context;
-          if (!context.courseText || context.courseText.trim().length < 20) {
-            context.courseText = loadedText;
+          if (context.chapter && (!context.chapter.content || context.chapter.title === 'Document complet')) {
+            context.chapter.content = loadedText;
           }
+          context.courseText = sanitizeCourseText(loadedText) || loadedText;
         }
       }
       if (!context.courseText || context.courseText.trim().length < 20) {
-        alert('Le document sélectionné est vide ou mal chargé. Impossible de générer la révision.');
+        if (force || showAlertIfEmpty) {
+          alert('Le document sélectionné est vide ou mal chargé. Impossible de générer la révision.');
+        }
         return;
       }
 
@@ -8390,8 +8402,11 @@ async function switchRevisionSubTab(subName) {
       subjectSelect.value = selection.subject;
 
       const normalizedSubject = normalizeR2Text(selection.subject);
-      const documents = appState.documents.filter(doc =>
+      let documents = appState.documents.filter(doc =>
         normalizedSubject && normalizeR2Text(getDocumentSubject(doc)) === normalizedSubject);
+      if (!documents.length && appState.documents.length) {
+        documents = appState.documents.slice();
+      }
         
       documentSelect.replaceChildren();
       if (documentLabel) {
@@ -8401,14 +8416,14 @@ async function switchRevisionSubTab(subName) {
       if (!documents.length) {
         const option = document.createElement('option');
         option.value = '';
-        option.textContent = 'Aucun document lié à cette matière';
+        option.textContent = 'Aucun document disponible';
         documentSelect.appendChild(option);
       }
       
       documents.forEach(doc => {
         const option = document.createElement('option');
         option.value = doc.id;
-        option.textContent = sanitizeCourseTitle(doc.title, doc.fullText || doc.content || '', doc.fileName);
+        option.textContent = sanitizeCourseTitle(doc.title, doc.fullText || doc.cleanedText || doc.content || doc.text || '', doc.fileName);
         documentSelect.appendChild(option);
       });
       
@@ -8417,6 +8432,12 @@ async function switchRevisionSubTab(subName) {
       const selectedDoc = documents.find(doc => doc.id === selection.documentId) || documents[0] || null;
       selection.documentId = selectedDoc ? selectedDoc.id : '';
       documentSelect.value = selection.documentId;
+      if (selectedDoc && !selection.subject) {
+        selection.subject = getDocumentSubject(selectedDoc);
+        if (selection.subject && Array.from(subjectSelect.options).some(o => o.value === selection.subject)) {
+          subjectSelect.value = selection.subject;
+        }
+      }
 
       const chapters = getDocumentChapters(selectedDoc);
       chapterSelect.replaceChildren();
@@ -8440,10 +8461,15 @@ async function switchRevisionSubTab(subName) {
         : '0';
       chapterSelect.value = selection.chapterIndex;
       
+      const fallbackDocText = selectedDoc ? (selectedDoc.cleanedText || selectedDoc.content || selectedDoc.text || '') : '';
       return {
         subject: selection.subject,
         document: selectedDoc,
-        chapter: selectedDoc ? (Number(selection.chapterIndex) === 0 ? { title: 'Document complet', content: selectedDoc.content } : chapters[Number(selection.chapterIndex) - 1]) : null
+        chapter: selectedDoc
+          ? (Number(selection.chapterIndex) === 0
+              ? { title: 'Document complet', content: fallbackDocText }
+              : (chapters[Number(selection.chapterIndex) - 1] || { title: 'Document complet', content: fallbackDocText }))
+          : null
       };
     }
 
@@ -8466,10 +8492,9 @@ async function switchRevisionSubTab(subName) {
       saveState();
       renderRevisionSelectors();
       renderRevisionView();
-      // Auto-trigger for all tabs
-      void generateActiveRevision('revision-sheet');
-      void generateActiveRevision('flashcards');
-      void generateActiveRevision('qcm');
+      void generateActiveRevision('revision-sheet', false, false);
+      void generateActiveRevision('flashcards', false, false);
+      void generateActiveRevision('qcm', false, false);
     }
 
     function getActiveRevisionFlashcards() {
