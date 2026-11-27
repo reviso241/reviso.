@@ -3505,12 +3505,12 @@
         ].filter(Boolean).join("\n\n").trim();
 
         if (fullText.length > 20) {
-          fetch("/api/courses-r2", {
+          const r2Res = await fetch("/api/courses-r2", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               action: "save-course",
-              userId: userId || "guest",
+              userId: userId || (typeof activeUserId !== "undefined" ? activeUserId : "guest"),
               course: {
                 id: cleanDocument.id,
                 title: cleanDocument.title,
@@ -3518,14 +3518,14 @@
                 fileName: rawFile ? rawFile.name : (cleanDocument.fileName || ""),
                 content: cleanDocument.content || fullText,
                 fullText,
-                pages: Array.isArray(pages) ? pages : [],
+                pages: Array.isArray(pages) ? pages.slice(0, 60) : [],
                 schemaDescriptions: cleanDocument.schemaDescriptions || null,
                 createdAt: cleanDocument.createdAt || new Date().toISOString()
               }
             })
-          })
-          .then(r => r.ok ? r.json() : null)
-          .then(data => {
+          });
+          if (r2Res.ok) {
+            const data = await r2Res.json();
             if (data && data.ok && data.publicUrl) {
               document.bundleUrl = data.publicUrl;
               document.r2Key = data.r2Key;
@@ -3536,10 +3536,12 @@
                   target.r2Key = data.r2Key;
                 }
               }
-              if (typeof persistState === "function") persistState();
+              if (typeof saveState === "function") saveState();
+              console.info("Cours sauvegarde sur Cloudflare R2 :", data.r2Key);
             }
-          })
-          .catch(err => console.warn("Sync R2 cours differee:", err));
+          } else {
+            console.warn("Echec sauvegarde R2 :", r2Res.status, await r2Res.text());
+          }
         }
       } catch (r2Err) {
         console.warn("Erreur preparation sync R2:", r2Err);
@@ -8104,6 +8106,37 @@ window.syncCoursesFromR2 = async function syncCoursesFromR2(userId = (typeof act
           added++;
         }
       }
+      // Pousser vers R2 les cours locaux qui n'ont pas encore ete synchronises
+      for (const localDoc of appState.documents) {
+        if (localDoc && localDoc.id && !localDoc.r2Key && typeof getCourseText === "function") {
+          const txt = await getCourseText(localDoc);
+          if (txt && txt.trim().length > 20) {
+            fetch("/api/courses-r2", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "save-course",
+                userId,
+                course: {
+                  id: localDoc.id,
+                  title: localDoc.title || "Cours sans titre",
+                  subject: localDoc.subject || "",
+                  fileName: localDoc.fileName || "",
+                  content: txt,
+                  fullText: txt,
+                  createdAt: localDoc.addedAt || new Date().toISOString()
+                }
+              })
+            }).then(r => r.ok ? r.json() : null).then(saved => {
+              if (saved && saved.ok) {
+                localDoc.r2Key = saved.r2Key;
+                localDoc.bundleUrl = saved.publicUrl;
+                if (typeof saveState === "function") saveState();
+              }
+            }).catch(() => {});
+          }
+        }
+      }
       if (added > 0) {
         if (typeof persistState === "function") persistState();
         if (typeof refreshAllUI === "function") refreshAllUI();
@@ -9650,6 +9683,7 @@ async function switchRevisionSubTab(subName) {
 
 </body>
 </html>
+
 
 
 
