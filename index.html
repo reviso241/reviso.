@@ -4582,7 +4582,6 @@
         alert('Le document sélectionné est vide ou mal chargé. Impossible de générer la révision.');
         return;
       }
-      }
       const hasTask = task === 'revision-sheet'
         ? Boolean(context.artifact.sheet && context.artifact.sheetAi)
         : task === 'flashcards'
@@ -4695,7 +4694,7 @@
       revisionGenerationPromises.set(requestKey, generation);
       if (getRevisionArtifactContext()?.key === context.key) renderRevisionView();
       return generation;
-    
+    }
 
     function getR2CategoryLabel(value) {
       const normalized = normalizeR2Text(value).replace(/-/g, ' ').trim();
