@@ -87,10 +87,17 @@ export default async function handler(req, res) {
         const courseId = sanitizeSegment(req.query.courseId, "");
         if (!courseId) return res.status(400).json({ ok: false, error: "courseId requis." });
         const key = `courses/${userId}/${courseId}.json`;
-        const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
-        const raw = await obj.Body.transformToString("utf-8");
-        const course = JSON.parse(raw);
-        return res.status(200).json({ ok: true, course, r2Key: key });
+        try {
+          const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+          const raw = await obj.Body.transformToString("utf-8");
+          const course = JSON.parse(raw);
+          return res.status(200).json({ ok: true, course, r2Key: key });
+        } catch (err) {
+          if (err.name === "NoSuchKey" || err.$metadata?.httpStatusCode === 404) {
+            return res.status(404).json({ ok: false, notFound: true, error: "Cours non encore synchronisé sur R2." });
+          }
+          throw err;
+        }
       }
 
       return res.status(400).json({ ok: false, error: "Action GET inconnue." });
@@ -171,3 +178,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ ok: false, error: error.message || "Erreur serveur R2 Courses." });
   }
 }
+
