@@ -8723,7 +8723,7 @@
         scoreLabel.textContent = 'Score : 0 / 0';
         qText.textContent = 'Sélectionnez un cours et un chapitre contenant du texte pour générer un quiz ciblé.';
       const revisionContext = getRevisionArtifactContext();
-      const doc = revisionContext.document;
+      const doc = revisionContext?.document;
       const fullText = doc ? await getCourseText(doc) : '';
       if (doc && fullText.trim().length > 20) {
         void generateActiveRevision('qcm');
@@ -8772,12 +8772,12 @@
       saveState();
       if (qcmAnsweredCount > 0 && qcmAnsweredCount % qcmList.length === 0) {
         const revisionContext = renderRevisionSelectors();
-        const subject = revisionContext.document ? getDocumentSubject(revisionContext.document) : 'Révision';
+        const subject = revisionContext?.document ? getDocumentSubject(revisionContext?.document) : 'Révision';
         const selectedSource = appState.documents.find(document => document.id === q.sourceDocumentId);
         const includesPrivatePhoto = Boolean(selectedSource && selectedSource.photoCapture);
         if (!includesPrivatePhoto) {
           syncCompletedStudySession(
-            `Quiz QCM — ${subject}${revisionContext.chapter ? ` — ${revisionContext.chapter.title}` : ''}`,
+            `Quiz QCM — ${subject}${revisionContext?.chapter ? ` — ${revisionContext?.chapter.title}` : ''}`,
             Math.round((qcmScore / qcmAnsweredCount) * 100)
           );
         }
