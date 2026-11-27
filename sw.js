@@ -1,4 +1,4 @@
-const CACHE_NAME = 'reviso-cache-v33937';
+const CACHE_NAME = 'reviso-cache-v33940';
 const SHELL_CACHE = CACHE_NAME;
 const CDN_CACHE = 'reviso-cdn-v20';
 const SHELL_FILES = ['./', './index.html', './manifest.webmanifest', './reviso-icon.svg'];

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr" data-theme="light">
 <head>
   <meta charset="UTF-8" />
@@ -5844,6 +5844,13 @@
         }
       });
 
+      if (TAB_META[newIndex].id === 'revision' || TAB_META[newIndex].id === 'documents') {
+        void refreshRevisionSelectors();
+      }
+
+      
+
+
       if (!options.fromDrag && window.scrollY > 80) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
@@ -7364,6 +7371,8 @@
       renderAssessmentView();
       renderTutorView();
       renderDrawerStatus();
+      refreshRevisionSelectors();
+
     }
 
     function renderHeaderAndHero() {
@@ -7977,7 +7986,12 @@
       showToast('Fichier calendrier (.ics) téléchargé.');
     }
 
-    function switchRevisionSubTab(subName) {
+    // 1. Rafraîchissement des listes déroulantes
+    async function refreshRevisionSelectors() {
+      renderRevisionSelectors();
+    }
+
+    async function switchRevisionSubTab(subName) {
       ['fiches', 'flashcards', 'qcm', 'evaluation'].forEach(name => {
         const btn = document.getElementById(`subtab-btn-${name}`);
         const panel = document.getElementById(`rev-sub-${name}`);
@@ -7992,7 +8006,16 @@
         }
       });
       if (subName === 'evaluation') renderAssessmentView();
-      if (appState.documents.length && subName === 'fiches') void generateActiveRevision('revision-sheet');
+      if (subName === 'fiches') {
+        const { doc } = await getSelectedRevisionDocumentAndText();
+        if (doc) {
+           await getCourseText(doc);
+           if (doc.content || doc.text) {
+             void generateActiveRevision('revision-sheet');
+           }
+        }
+      }
+
       if (appState.documents.length && subName === 'flashcards') void generateActiveRevision('flashcards');
       if (appState.documents.length && subName === 'qcm') void generateActiveRevision('qcm');
     }
@@ -9502,3 +9525,4 @@
 
 </body>
 </html>
+
