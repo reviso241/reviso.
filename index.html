@@ -3316,7 +3316,7 @@
       appState.documents = appState.documents.map(document => ({
         ...document,
         title: sanitizeCourseTitle(document.title, document.content),
-        content: sanitizeCourseText(document.content)
+        content: sanitizeCourseText(document.fullText || document.content || document.text || ''), fullText: sanitizeCourseText(document.fullText || document.content || document.text || '')
       }));
       if (!appState.revisionArtifacts || typeof appState.revisionArtifacts !== 'object' ||
           Array.isArray(appState.revisionArtifacts)) appState.revisionArtifacts = {};
@@ -3478,7 +3478,7 @@
       const cleanDocument = {
         ...document,
         title: sanitizeCourseTitle(document.title, document.content),
-        content: sanitizeCourseText(document.content)
+        content: sanitizeCourseText(document.fullText || document.content || document.text || ''), fullText: sanitizeCourseText(document.fullText || document.content || document.text || '')
       };
       await new Promise((resolve, reject) => {
         const transaction = database.transaction(LOCAL_FILES_STORE, 'readwrite');
@@ -3597,7 +3597,7 @@
             document: {
               ...record.document,
               title: sanitizeCourseTitle(record.document.title, record.document.content),
-              content: sanitizeCourseText(record.document.content)
+              content: sanitizeCourseText(record.document.fullText || record.document.content || record.document.text || ''), fullText: sanitizeCourseText(record.document.fullText || record.document.content || record.document.text || '')
             }
           };
         });
@@ -4574,8 +4574,8 @@ renderCloudAccount();
       const context = renderRevisionSelectors();
       if (!context || !context.document) return null;
       const doc = context.document;
-      const chapter = context.chapter || { title: 'Document complet', content: doc.cleanedText || doc.content || doc.text || '' };
-      const rawText = chapter.content || doc.cleanedText || doc.content || doc.text || '';
+      const chapter = context.chapter || { title: 'Document complet', content: doc.fullText || doc.cleanedText || doc.content || doc.text || '' };
+      const rawText = chapter.content || doc.fullText || doc.cleanedText || doc.content || doc.text || '';
       const cleaned = sanitizeCourseText(rawText);
       const key = `${doc.id}::${appState.revisionSelection.chapterIndex}::${chapter.title || 'Document complet'}`;
       return {
@@ -4627,7 +4627,7 @@ renderCloudAccount();
         if (loadedText && loadedText.trim().length >= 20) {
           context.document.content = loadedText;
           context.document.text = loadedText;
-          context.document.cleanedText = loadedText;
+          context.document.cleanedText = loadedText; context.document.fullText = loadedText;
           if (context.chapter && (!context.chapter.content || context.chapter.title === 'Document complet')) {
             context.chapter.content = loadedText;
           }
@@ -8091,7 +8091,7 @@ renderCloudAccount();
   const assembleFullContent = (item) => {
     if (!item) return "";
     const target = (item.document && typeof item.document === "object") ? item.document : item;
-    let baseText = target.cleanedText || target.text || target.content || target.extractedText || target.rawText || item.cleanedText || item.text || item.content || "";
+    let baseText = target.fullText || target.cleanedText || target.text || target.content || target.extractedText || target.rawText || item.fullText || item.cleanedText || item.text || item.content || "";
     if ((!baseText || baseText.length < 50) && Array.isArray(item.pages) && item.pages.length) {
       baseText = item.pages.map(p => typeof p === "string" ? p : (p.text || p.content || "")).join("\n\n");
     }
