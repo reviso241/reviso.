@@ -26,7 +26,9 @@ export default async function handler(req, res) {
     const headers = {
       "User-Agent": "Reviso-Vercel-Relay/1.0"
     };
-    for (const h of ["content-type", "authorization", "apikey", "x-client-info", "prefer"]) {
+    const fallbackKey = process.env.SUPABASE_ANON_KEY || "sb_publishable_gHfUMOTNsBRHgs7rFHPMLQ_krpywbEN";
+    headers["apikey"] = req.headers["apikey"] || fallbackKey;
+    for (const h of ["content-type", "authorization", "x-client-info", "prefer"]) {
       if (req.headers[h]) {
         headers[h] = req.headers[h];
       }
