@@ -9394,5 +9394,86 @@
       }
     });
   </script>
+
+<script id="reviso-universal-doc-loader">
+(function() {
+  async function loadTextFromAnyIDB(docId) {
+    if (!docId || typeof indexedDB === 'undefined') return '';
+    try {
+      const dbs = indexedDB.databases ? await indexedDB.databases() : [
+        { name: 'reviso-local-db' },
+        { name: 'reviso_local_files_v1' },
+        { name: 'RevisoDB' },
+        { name: 'reviso_documents_db' }
+      ];
+      for (const info of dbs) {
+        if (!info || !info.name) continue;
+        const found = await new Promise(resolve => {
+          const req = indexedDB.open(info.name);
+          req.onerror = () => resolve('');
+          req.onsuccess = () => {
+            const db = req.result;
+            const stores = Array.from(db.objectStoreNames || []);
+            if (!stores.length) { db.close(); return resolve(''); }
+            let idx = 0;
+            function nextStore() {
+              if (idx >= stores.length) { db.close(); return resolve(''); }
+              const storeName = stores[idx++];
+              try {
+                const tx = db.transaction(storeName, 'readonly');
+                const store = tx.objectStore(storeName);
+                const g = store.get(docId);
+                g.onsuccess = () => {
+                  const v = g.result;
+                  const txt = typeof v === 'string' ? v : (v && (v.fullText || v.cleanedText || v.rawText || v.text || v.content || (v.documentPack && (v.documentPack.fullText || v.documentPack.cleanedText))));
+                  if (txt && String(txt).trim().length > 30) { db.close(); return resolve(String(txt)); }
+                  const all = store.getAll();
+                  all.onsuccess = () => {
+                    const list = all.result || [];
+                    const match = list.find(item => item && (item.id === docId || item.docId === docId || item.documentId === docId));
+                    const mTxt = match && (match.fullText || match.cleanedText || match.rawText || match.text || match.content || (match.documentPack && match.documentPack.fullText));
+                    if (mTxt && String(mTxt).trim().length > 30) { db.close(); return resolve(String(mTxt)); }
+                    nextStore();
+                  };
+                  all.onerror = () => nextStore();
+                };
+                g.onerror = () => nextStore();
+              } catch (e) { nextStore(); }
+            }
+            nextStore();
+          };
+        });
+        if (found) return found;
+      }
+    } catch (e) {}
+    return '';
+  }
+
+  window.__revisoHydrateAllDocs = async function() {
+    if (typeof appState === 'undefined' || !Array.isArray(appState.documents)) return;
+    let changed = false;
+    for (const doc of appState.documents) {
+      const current = doc.content || doc.text || doc.extractedText || doc.rawText || (doc.documentPack && doc.documentPack.fullText) || '';
+      if (String(current).trim().length > 30) {
+        if (!doc.content) doc.content = current;
+        continue;
+      }
+      const fromIDB = await loadTextFromAnyIDB(doc.id);
+      if (fromIDB) {
+        doc.content = fromIDB;
+        doc.text = fromIDB;
+        changed = true;
+      }
+    }
+    if (changed && typeof renderRevisionSelectors === 'function') {
+      renderRevisionSelectors();
+    }
+  };
+
+  setInterval(() => { void window.__revisoHydrateAllDocs(); }, 1500);
+  document.addEventListener('click', () => { void window.__revisoHydrateAllDocs(); }, true);
+})();
+</script>
+
 </body>
 </html>
