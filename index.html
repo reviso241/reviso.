@@ -8251,7 +8251,14 @@ async function switchRevisionSubTab(subName) {
       const rawSource = doc.fullText || doc.cleanedText || doc.content || doc.text || '';
       if (!rawSource) return [];
 
-      // Remplacer les marqueurs "--- PAGE X / Y ---" par une séparation de bloc propre
+      const normSimple = (s) => String(s || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
       const withPageBreaks = rawSource
         .replace(/---\s*PAGE\s+\d+\s*(?:\/\s*\d+)?\s*---/gi, '\n\n')
         .replace(/([^\n])\s+((?:Chapitre|Partie|Section|Module|Th[èe]me)\s+(?:[IVXLCDM]+|\d+)\b)/gi, '$1\n$2')
@@ -8260,24 +8267,20 @@ async function switchRevisionSubTab(subName) {
 
       const lines = withPageBreaks.split(/\r?\n/);
       const headings = [];
-      const documentTitle = sanitizeCourseTitle(doc.title, withPageBreaks);
-      const docSubject = normalizeR2Text(getDocumentSubject(doc));
+      const docTitleNorm = normSimple(doc.title || '');
       const seenHeadings = new Set();
-
-      // Détecter et ignorer la page "Programme" / "Sommaire" pour éviter les faux titres vides
       let skipProgrammeBlock = false;
 
       lines.forEach((line, index) => {
         const title = line.trim().replace(/^#{1,6}\s*/, '').replace(/\s+/g, ' ');
         if (!title) return;
 
-        const normCheck = normalizeR2Text(title);
-        if (/^(?:programme|sommaire|table des mati[èe]res|plan du cours)$/i.test(normCheck)) {
+        const normCheck = normSimple(title);
+        if (/^(?:programme|sommaire|table des matieres|plan du cours)$/.test(normCheck)) {
           skipProgrammeBlock = true;
           return;
         }
         if (skipProgrammeBlock) {
-          // On sort du bloc Programme dès qu'un vrai paragraphe (> 90 caractères) ou une section numérotée apparaît
           if (title.length > 90 || /^(?:chapitre|partie|1\s*[.\-–:)]|I\s*[.\-–:)])/i.test(title)) {
             skipProgrammeBlock = false;
           } else {
@@ -8285,7 +8288,7 @@ async function switchRevisionSubTab(subName) {
           }
         }
 
-        if (title.length < 3 || title.length > 120) return;
+        if (title.length < 3 || title.length > 130) return;
 
         const prevEmpty = index === 0 || !lines[index - 1].trim();
         const nextLine = (lines[index + 1] || '').trim();
@@ -8315,20 +8318,19 @@ async function switchRevisionSubTab(subName) {
           !endsLikeSentence &&
           prevEmpty &&
           title.length >= 4 &&
-          title.length <= 80 &&
+          title.length <= 85 &&
           wordCount >= 1 &&
-          wordCount <= 10 &&
+          wordCount <= 11 &&
           /^[A-ZÀ-Þ]/.test(title) &&
           !/^(?:le|la|les|un|une|des|il|elle|on|nous|vous|ils|elles|ce|cette|ces|dans|pour|par|sur|avec|sans|en|au|aux|du|au terme|a l['’]issue)\b/i.test(title) &&
-          nextLine.length >= 35;
+          nextLine.length >= 30;
 
         if (isMajorPart || isSubSection || isStandaloneSub) {
-          const normalizedTitle = normalizeR2Text(sanitizeCourseTitle(title)).replace(/^[:\-\s]+|[:\-\s]+$/g, '');
-          const normalizedDocumentTitle = normalizeR2Text(documentTitle).replace(/[\s—–-]+/g, ' ').trim();
-          if (!normalizedTitle || normalizedTitle === normalizedDocumentTitle || normalizedTitle === docSubject || seenHeadings.has(normalizedTitle)) return;
-          if (/^(?:introduction|conclusion|objectifs du cours|charg[ée] de cours|bibliographie|annexes|enseignant|coordonn[ée]es|et flottes|upsa\b|gestion de parcs?)$/i.test(normalizedTitle)) return;
-          if (/(?:objectif global|objectif sp[ée]cifique|r[ée]sultats attendus|pr[ée]requis|volume horaire|m\.\s*youb|wilfrid)/i.test(normalizedTitle)) return;
-          seenHeadings.add(normalizedTitle);
+          const cleanKey = normSimple(title.replace(/^(?:chapitre|partie|section|module)\s+(?:[ivxlcdm]+|\d+)\s*[.\-–:)]*\s*/i, '').replace(/^(?:[ivxlcdm]{1,5}|[a-z]|\d+(?:\.\d+){0,2})\s*[.\-–:)]\s*/i, ''));
+          if (!cleanKey || cleanKey === docTitleNorm || seenHeadings.has(cleanKey)) return;
+          if (/^(?:introduction|conclusion|objectifs du cours|charge de cours|bibliographie|annexes|enseignant|coordonnees|et flottes|upsa|gestion de parcs?)$/.test(cleanKey)) return;
+          if (/(?:objectif global|objectif specifique|resultats attendus|prerequis|volume horaire|youb|wilfrid|logisticien)/.test(cleanKey)) return;
+          seenHeadings.add(cleanKey);
           headings.push({
             title: isMajorPart ? title : `↳ ${title}`,
             level: isMajorPart ? 1 : 2,
@@ -8352,10 +8354,10 @@ async function switchRevisionSubTab(subName) {
               break;
             }
           }
-          const cleanChunk = sanitizeCourseBodyText(lines.slice(heading.lineIndex + 1, endLine).join('\n'));
+          const rawChunk = lines.slice(heading.lineIndex + 1, endLine).join('\n').replace(/\n{3,}/g, '\n\n').trim();
           return {
             title: heading.title,
-            content: cleanChunk
+            content: rawChunk
           };
         })
         .filter(chapter => chapter.content && chapter.content.length >= 60);
@@ -9764,6 +9766,7 @@ async function switchRevisionSubTab(subName) {
     }
 
     function sanitizeCourseBodyText(rawText) {
+      text = String(text || '').replace(/---\s*PAGE\s+\d+\s*(?:\/\s*\d+)?\s*---/gi, '\n\n').replace(/\n{3,}/g, '\n\n');
       if (typeof sanitizeCourseText === 'function') {
         return sanitizeCourseText(rawText);
       }
