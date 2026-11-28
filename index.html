@@ -3359,6 +3359,7 @@
         appState.theme = prefersDark ? 'dark' : 'light';
       }
       if (needsStateMigration) saveState();
+    appState.revisionSelection = { subject: '', documentId: '', chapterIndex: '0' };
     }
 
     function saveState() {
@@ -7932,7 +7933,6 @@ function sanitizeCourseTitle(rawTitle) {
 
     // 1. Rafraîchissement des listes déroulantes
     async function refreshRevisionSelectors() {
-      appState.revisionSelection = { subject: '', documentId: '', chapterIndex: '0' };
       renderRevisionSelectors();
     }
 
@@ -8436,7 +8436,6 @@ async function switchRevisionSubTab(subName) {
       qcmScore = 0;
       qcmAnsweredCount = 0;
       saveState();
-      appState.revisionSelection = { subject: '', documentId: '', chapterIndex: '0' };
       renderRevisionSelectors();
       renderRevisionView();
       void generateActiveRevision('revision-sheet', false, false);
@@ -8624,8 +8623,7 @@ async function switchRevisionSubTab(subName) {
     }
 
     function createRevisionEvaluation(type, scheduledFor = null, suppliedQuestions = null) {
-      const context = appState.revisionSelection = { subject: '', documentId: '', chapterIndex: '0' };
-      renderRevisionSelectors();
+      const context = renderRevisionSelectors();
       if (!context.document || !context.chapter) {
         showToast('Sélectionnez un cours et un chapitre contenant du texte pédagogique.');
         return null;
@@ -8711,8 +8709,7 @@ async function switchRevisionSubTab(subName) {
       appState.revisionSelection.subject = getDocumentSubject(chosenDocument);
       appState.revisionSelection.documentId = chosenDocument.id;
       appState.revisionSelection.chapterIndex = '0';
-      const context = appState.revisionSelection = { subject: '', documentId: '', chapterIndex: '0' };
-      renderRevisionSelectors();
+      const context = renderRevisionSelectors();
       const reason = document.getElementById('evaluation-surprise-reason');
       const priorScores = historyByDocument.get(chosenDocument.id) || [];
       const button = document.getElementById('btn-surprise-evaluation');
@@ -9009,8 +9006,7 @@ async function switchRevisionSubTab(subName) {
       nextBtn.classList.remove('hidden');
       saveState();
       if (qcmAnsweredCount > 0 && qcmAnsweredCount % qcmList.length === 0) {
-        const revisionContext = appState.revisionSelection = { subject: '', documentId: '', chapterIndex: '0' };
-      renderRevisionSelectors();
+        const revisionContext = renderRevisionSelectors();
         const subject = revisionContext?.document ? getDocumentSubject(revisionContext?.document) : 'Révision';
         const selectedSource = appState.documents.find(document => document.id === q.sourceDocumentId);
         const includesPrivatePhoto = Boolean(selectedSource && selectedSource.photoCapture);
@@ -9697,7 +9693,6 @@ async function switchRevisionSubTab(subName) {
       }
     }
     if (changed && typeof renderRevisionSelectors === 'function') {
-      appState.revisionSelection = { subject: '', documentId: '', chapterIndex: '0' };
       renderRevisionSelectors();
     }
   };
