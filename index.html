@@ -8287,8 +8287,6 @@ async function switchRevisionSubTab(subName) {
 
       // 2. Corriger les artefacts d'espacement typiques des PDF / PowerPoint
       txt = txt
-        .replace(/\b([LlDd])\s+([aeu])\b/g, '$1$2')
-        .replace(/\b([PpGgFfCcSsMmTt])\s+([a-zà-ÿ]{2,})\b/g, '$1$2')
         .replace(/([a-zà-ÿ0-9])\s+-\s+([a-zà-ÿ0-9])/gi, '$1-$2')
         .replace(/\bCO\s+2\b/g, 'CO2')
         .replace(/\s+([.,;:!?])/g, '$1')
@@ -8398,19 +8396,18 @@ function getDocumentChapters(doc) {
             /^\d+\.\d+(?:\.\d+)?\s*[.\-–:)]*\s+[A-ZÀ-Þa-zà-ÿ0-9]/.test(title)
           );
 
-        // Niveau 2 bis : Sous-titres thematiques courts non numerotes (ex: "Type et gamme de vehicules", "Eco conduite")
+        // Niveau 2 bis : Sous-titres thematiques courts non numerotes (y compris titres de diapositives suivis de puces)
         const isStandaloneSub =
           !isMajorPart && !isSubSection &&
           !endsLikeSentence &&
           prevEndsParagraph &&
-          title.length >= 5 &&
-          title.length <= 65 &&
+          title.length >= 4 &&
+          title.length <= 75 &&
           wordCount >= 1 &&
-          wordCount <= 9 &&
+          wordCount <= 10 &&
           /^[A-ZÀ-Þ]/.test(title) &&
           !/^(?:le|la|les|un|une|des|il|elle|on|nous|vous|ils|elles|ce|cette|ces|dans|pour|par|sur|avec|sans|en|au|aux|du|au terme|a l['’]issue|trois modes|quelque soit)\b/i.test(title) &&
-          nextLine.length >= 35 &&
-          !/^[•\-*▪▫✓☐]\s+/.test(nextLine);
+          nextLine.length >= 12;
 
         if (isMajorPart || isSubSection || isStandaloneSub) {
           const cleanKey = normSimple(
@@ -8419,7 +8416,7 @@ function getDocumentChapters(doc) {
               .replace(/^(?:[ivxlcdm]{1,5}|[a-z]|\d+(?:\.\d+){0,2})\s*[.\-–:)]\s*/i, '')
           );
           if (!cleanKey || cleanKey === docTitleNorm || seenHeadings.has(cleanKey)) return;
-          if (/^(?:programme|sommaire|table des matieres|plan du cours|introduction|conclusion|objectifs du cours|charge de cours|bibliographie|annexes|enseignant|coordonnees|et flottes|upsa|upsa eae|sogatra|maersk|gestion de parcs?)$/.test(cleanKey)) return;
+          if (/^(?:programme|sommaire|table des matieres|plan du cours|charge de cours|bibliographie|annexes|enseignant|coordonnees|et flottes|upsa|upsa eae|sogatra|maersk|gestion de parcs?)$/.test(cleanKey)) return;
           if (/(?:objectif global|objectif specifique|resultats attendus|prerequis|volume horaire|youb|wilfrid|logisticien|yahoo)/.test(cleanKey)) return;
           seenHeadings.add(cleanKey);
           headings.push({
@@ -9903,7 +9900,7 @@ function getDocumentChapters(doc) {
         ...payload,
         task: normalizedTask,
         ...(typeof payload.courseText === 'string'
-          ? { courseText: payload.courseText.slice(0, 28000) }
+          ? { courseText: payload.courseText.slice(0, 55000) }
           : {}),
         ...(typeof payload.sources === 'string'
           ? { sources: payload.sources.slice(0, 12000) }
