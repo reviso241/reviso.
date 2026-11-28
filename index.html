@@ -9766,7 +9766,7 @@ async function switchRevisionSubTab(subName) {
     }
 
     function sanitizeCourseBodyText(rawText) {
-      text = String(text || '').replace(/---\s*PAGE\s+\d+\s*(?:\/\s*\d+)?\s*---/gi, '\n\n').replace(/\n{3,}/g, '\n\n');
+      rawText = String(rawText || '').replace(/---\s*PAGE\s+\d+\s*(?:\/\s*\d+)?\s*---/gi, '\n\n').replace(/\n{3,}/g, '\n\n');
       if (typeof sanitizeCourseText === 'function') {
         return sanitizeCourseText(rawText);
       }
