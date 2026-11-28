@@ -8247,42 +8247,46 @@ async function switchRevisionSubTab(subName) {
 
     function getDocumentChapters(doc) {
       if (!doc) return [];
-      const cleanContent = sanitizeCourseBodyText(doc.content);
+      const cleanContent = sanitizeCourseBodyText(doc.fullText || doc.cleanedText || doc.content || doc.text || '');
+      if (!cleanContent) return [];
       const lines = cleanContent.split(/\r?\n/);
       const headings = [];
       const documentTitle = sanitizeCourseTitle(doc.title, cleanContent);
       const seenHeadings = new Set();
+
       lines.forEach((line, index) => {
         const title = line.trim().replace(/^#{1,6}\s*/, '');
-        if (!title || title.length > 100) return;
-        const structuralHeading = /^(?:chapitre\s+(?:[ivxlcdm]+|\d+)\b|section\b|partie\b|unité\b|ue\b)/i.test(title) ||
-          /^(?:[IVXLCDM]+|\d+(?:\.\d+)*[.)]?)\.\s+\S/i.test(title) ||
-          /^\d+(?:\.\d+)*[.)]?\s+\S/.test(title);
-        const uppercaseHeading = title.length <= 60 &&
-          title.split(/\s+/).length <= 8 &&
+        if (!title || title.length < 4 || title.length > 110) return;
+        const structuralHeading =
+          /^(?:chapitre\s+(?:[ivxlcdm]+|\d+)\b|section\s+(?:[ivxlcdm]+|\d+)\b|partie\s+(?:[ivxlcdm]+|\d+)\b|module\s+\d+\b|th[èe]me\s+\d+\b)/i.test(title) ||
+          /^(?:[IVXLCDM]+)\.\s+[A-ZÀ-Þ0-9]/.test(title) ||
+          /^(?:[A-Z])\.\s+[A-ZÀ-Þ0-9]/.test(title) ||
+          /^\d+(?:\.\d+)*[.)]\s+[A-ZÀ-Þ0-9]/.test(title);
+        const uppercaseHeading =
+          title.length >= 6 &&
+          title.length <= 65 &&
+          title.split(/\s+/).length <= 9 &&
           /^[A-ZÀ-Þ0-9][A-ZÀ-Þ0-9\s'’(),:;/-]+$/.test(title) &&
-          /[A-ZÀ-Þ]/.test(title);
+          /[A-ZÀ-Þ]{3,}/.test(title);
+
         if (structuralHeading || uppercaseHeading) {
-          // Exclure titre principal et fragments administratifs
           const normalizedTitle = normalizeR2Text(sanitizeCourseTitle(title)).replace(/^[:\-\s]+|[:\-\s]+$/g, '');
-          if (normalizedTitle.toLowerCase() === normalizeR2Text(documentTitle).toLowerCase() || 
-              /^(?:introduction|conclusion|sommaire|bibliographie|annexes|enseignant|coordonnées)/i.test(normalizedTitle)) return;
           const normalizedDocumentTitle = normalizeR2Text(documentTitle).replace(/[\s—–-]+/g, ' ').trim();
           if (!normalizedTitle || normalizedTitle === normalizedDocumentTitle || seenHeadings.has(normalizedTitle)) return;
-          if (/^(?:et flottes|upsa\b|[123ivx]+[.)]\s*(?:objectif|r[ée]sultats attendus))/i.test(normalizedTitle)) return;
-          if (/^(?:et flottes|upsa\b|[123ivx]+[.)]\s*(?:objectif|r[ée]sultats attendus))/i.test(normalizedTitle)) return;
+          if (/^(?:introduction|conclusion|sommaire|table des mati[èe]res|bibliographie|annexes|enseignant|coordonn[ée]es|et flottes|upsa\b)/i.test(normalizedTitle)) return;
+          if (/(?:objectif global|objectif sp[ée]cifique|r[ée]sultats attendus|pr[ée]requis|volume horaire|m\.\s*youb)/i.test(normalizedTitle)) return;
           seenHeadings.add(normalizedTitle);
           headings.push({ title, lineIndex: index });
         }
       });
-      if (!headings.length) return [{ title: documentTitle, content: cleanContent }];
-      return [
-        { title: documentTitle, content: cleanContent },
-        ...headings.map((heading, index) => ({
+
+      if (!headings.length) return [];
+      return headings
+        .map((heading, index) => ({
           title: heading.title,
           content: lines.slice(heading.lineIndex + 1, headings[index + 1]?.lineIndex || lines.length).join('\n').trim()
-        })).filter(chapter => chapter.content)
-      ];
+        }))
+        .filter(chapter => chapter.content && chapter.content.length >= 120);
     }
 
     async function getSelectedRevisionDocumentAndText() {
@@ -8307,91 +8311,84 @@ async function switchRevisionSubTab(subName) {
       const documentSelect = document.getElementById('revision-document-select');
       const documentLabel = document.getElementById('revision-document-label');
       const chapterSelect = document.getElementById('revision-chapter-select');
-      
+
       const selection = appState.revisionSelection;
       const subjects = getRevisionSubjects();
       const previousSubject = selection.subject;
-      
+
       subjectSelect.replaceChildren();
+      const emptySubjectOpt = document.createElement('option');
+      emptySubjectOpt.value = '';
+      emptySubjectOpt.textContent = subjects.length ? '-- Choisir une matière --' : 'Aucune matière disponible';
+      subjectSelect.appendChild(emptySubjectOpt);
+
       subjects.forEach(subject => {
         const option = document.createElement('option');
         option.value = subject;
         option.textContent = subject;
         subjectSelect.appendChild(option);
       });
-      
-      if (!subjects.length) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'Aucune matière disponible';
-        subjectSelect.appendChild(option);
-      }
-      
-      selection.subject = subjects.includes(previousSubject) ? previousSubject : (subjects[0] || '');
-      if (subjects.length && !previousSubject) selection.subject = subjects[0];
+
+      selection.subject = subjects.includes(previousSubject) ? previousSubject : '';
       subjectSelect.value = selection.subject;
 
       const normalizedSubject = normalizeR2Text(selection.subject);
-      let documents = appState.documents.filter(doc =>
-        normalizedSubject && normalizeR2Text(getDocumentSubject(doc)) === normalizedSubject);
-      if (!documents.length && appState.documents.length) {
-        documents = appState.documents.slice();
-      }
-        
+      const documents = normalizedSubject
+        ? appState.documents.filter(doc => normalizeR2Text(getDocumentSubject(doc)) === normalizedSubject)
+        : [];
+
       documentSelect.replaceChildren();
       if (documentLabel) {
-        documentLabel.textContent = `Cours / Document (${documents.length} disponible${documents.length === 1 ? '' : 's'})`;
+        documentLabel.textContent = normalizedSubject
+          ? `Cours / Document (${documents.length} disponible${documents.length === 1 ? '' : 's'})`
+          : 'Cours / Document';
       }
-      
-      if (!documents.length) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'Aucun document disponible';
-        documentSelect.appendChild(option);
-      }
-      
+
+      const emptyDocOpt = document.createElement('option');
+      emptyDocOpt.value = '';
+      emptyDocOpt.textContent = !normalizedSubject
+        ? '-- Choisissez d’abord une matière --'
+        : (documents.length ? '-- Choisir un cours --' : 'Aucun document disponible');
+      documentSelect.appendChild(emptyDocOpt);
+
       documents.forEach(doc => {
         const option = document.createElement('option');
         option.value = doc.id;
         option.textContent = sanitizeCourseTitle(doc.title, doc.fullText || doc.cleanedText || doc.content || doc.text || '', doc.fileName);
         documentSelect.appendChild(option);
       });
-      
-      documentSelect.disabled = !documents.length;
-      
-      const selectedDoc = documents.find(doc => doc.id === selection.documentId) || documents[0] || null;
+
+      documentSelect.disabled = !normalizedSubject || !documents.length;
+
+      const selectedDoc = documents.find(doc => doc.id === selection.documentId) || null;
       selection.documentId = selectedDoc ? selectedDoc.id : '';
       documentSelect.value = selection.documentId;
-      if (selectedDoc && !selection.subject) {
-        selection.subject = getDocumentSubject(selectedDoc);
-        if (selection.subject && Array.from(subjectSelect.options).some(o => o.value === selection.subject)) {
-          subjectSelect.value = selection.subject;
-        }
-      }
 
-      const chapters = getDocumentChapters(selectedDoc);
+      const chapters = selectedDoc ? getDocumentChapters(selectedDoc) : [];
       chapterSelect.replaceChildren();
-      
+
       const allCourseOption = document.createElement('option');
       allCourseOption.value = '0';
-      allCourseOption.textContent = 'Tout le cours (ensemble des chapitres)';
+      allCourseOption.textContent = selectedDoc
+        ? (chapters.length ? `Tout le cours (${chapters.length} sections détectées)` : 'Tout le cours (document complet)')
+        : '-- Choisissez d’abord un cours --';
       chapterSelect.appendChild(allCourseOption);
-      
+
       chapters.forEach((chapter, index) => {
         const option = document.createElement('option');
         option.value = String(index + 1);
-        option.textContent = sanitizeCourseTitle(chapter.title, chapter.content || '');
+        option.textContent = chapter.title;
         chapterSelect.appendChild(option);
       });
-      
+
       chapterSelect.disabled = !selectedDoc;
       const validChapterIndex = Number(selection.chapterIndex);
-      selection.chapterIndex = Number.isInteger(validChapterIndex) && validChapterIndex >= 0 && validChapterIndex <= chapters.length
+      selection.chapterIndex = selectedDoc && Number.isInteger(validChapterIndex) && validChapterIndex >= 0 && validChapterIndex <= chapters.length
         ? String(validChapterIndex)
         : '0';
       chapterSelect.value = selection.chapterIndex;
-      
-      const fallbackDocText = selectedDoc ? (selectedDoc.cleanedText || selectedDoc.content || selectedDoc.text || '') : '';
+
+      const fallbackDocText = selectedDoc ? (selectedDoc.fullText || selectedDoc.cleanedText || selectedDoc.content || selectedDoc.text || '') : '';
       return {
         subject: selection.subject,
         document: selectedDoc,
