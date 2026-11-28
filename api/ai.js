@@ -150,8 +150,17 @@ function buildUserContent(body, messages) {
   ].filter(Boolean).join("\n\n");
 }
 
-function getGeminiKey() {
-  return String(process.env.GEMINI_API_KEY || "").trim();
+function getGeminiKeys() {
+  return [
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
+    process.env.GEMINI_API_KEY_4,
+    process.env.GEMINI_API_KEY_5,
+    process.env.GEMINI_API_KEY_BACKUP
+  ]
+    .map(k => String(k || "").trim())
+    .filter((k, idx, arr) => k && arr.indexOf(k) === idx);
 }
 
 function getMistralKey() {
