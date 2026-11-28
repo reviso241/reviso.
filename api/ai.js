@@ -19,30 +19,12 @@ const REVISION_RULES = [
 ].join("\n");
 
 const MODEL_ATTEMPTS = [
-  {
-    provider: "gemini",
-    model: "gemini-3.8-flash"
-  },
-  {
-    provider: "gemini",
-    model: "gemini-4-hydrogen"
-  },
-  {
-    provider: "gemini",
-    model: "gemini-2.5-flash"
-  },
-  {
-    provider: "mistral",
-    model: "mistral-small-latest"
-  },
-  {
-    provider: "openrouter",
-    model: "deepseek/deepseek-r1:free"
-  },
-  {
-    provider: "openrouter",
-    model: "moonshotai/kimi-k2:free"
-  }
+  { provider: "gemini", model: "gemini-2.5-flash" },
+  { provider: "gemini", model: "gemini-2.0-flash" },
+  { provider: "gemini", model: "gemini-2.5-flash-lite" },
+  { provider: "mistral", model: "mistral-small-latest" },
+  { provider: "openrouter", model: "deepseek/deepseek-r1:free" },
+  { provider: "openrouter", model: "moonshotai/kimi-k2:free" }
 ];
 
 const ATTEMPT_TIMEOUT_MS = 10000;
@@ -171,7 +153,7 @@ async function fetchWithTimeout(url, options) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), ATTEMPT_TIMEOUT_MS);
   try {
-    return await fetch(url, { signal: AbortSignal.timeout(3500),  ...options, signal: controller.signal });
+    return await fetch(url, { signal: AbortSignal.timeout(4500),  ...options, signal: controller.signal });
   } finally {
     clearTimeout(timeout);
   }
@@ -304,7 +286,7 @@ export default async function handler(req, res) {
   for (const attempt of availableAttempts) {
     const keysForProvider = providerKeys[attempt.provider];
     for (let i = 0; i < Math.min(keysForProvider.length, 3); i++) {
-      if (Date.now() - startedAt > 7500) break;
+      if (Date.now() - startedAt > 8500) break;
       const apiKey = keysForProvider[i];
       try {
         const text = attempt.provider === "gemini"

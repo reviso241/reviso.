@@ -8307,7 +8307,7 @@ async function switchRevisionSubTab(subName) {
         const isBullet = /^[•\-*▪▫✓☐]\s+/.test(line);
         const isHeading =
           /^(?:chapitre|partie|section|module|th[èe]me)\s+(?:[ivxlcdm]+|\d+)\b/i.test(line) ||
-          /^(?:[IVXLCDM]{1,5}|[A-Za-z]|\d+(?:\.\d+){0,2})\s*[.\-–:)]\s+\S/.test(line) ||
+          /^(?:[IVXLCDM]{1,5}|[A-Za-z]|\d+(?:\.\d+){0,2})\s*[.\-–:)]\s*\S/.test(line) ||
           (!/[.,;:!?]$/.test(line) && line.length <= 75 && /^[A-ZÀ-Þ]/.test(line) && (i === 0 || !rawLines[i - 1].trim()));
 
         if (isHeading) {
