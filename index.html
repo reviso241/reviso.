@@ -8259,9 +8259,8 @@ async function switchRevisionSubTab(subName) {
         .replace(/\s+/g, ' ')
         .trim();
 
-      // Normaliser les marqueurs de diapositives "--- PAGE X / Y ---" et séparer les titres collés
       const withPageBreaks = rawSource
-        .replace(/\\n/g, '\n').replace(/---\s*PAGE\s+\d+\s*(?:\/\s*\d+)?\s*---/gi, '\n\n')
+        .replace(/---\s*PAGE\s+\d+\s*(?:\/\s*\d+)?\s*---/gi, '\n\n')
         .replace(/([^\n])\s+((?:Chapitre|Partie|Section|Module|Th[èe]me)\s+(?:[IVXLCDM]+|\d+)\b)/gi, '$1\n$2')
         .replace(/([^\n])\s+((?:[IVXLCDM]{1,5})\s*[.\-–:)]\s+[A-ZÀ-Þ])/g, '$1\n$2')
         .replace(/([^\n])\s+((?:[A-Z])\s*[.\-–)]\s+[A-ZÀ-Þ])/g, '$1\n$2');
@@ -8272,44 +8271,50 @@ async function switchRevisionSubTab(subName) {
       const seenHeadings = new Set();
 
       lines.forEach((line, index) => {
-        const title = line.trim().replace(/^#{1,6}\s*/, '').replace(/\s+/g, ' ');
+        const rawTrim = line.trim();
+        // Ignorer les listes a puces (ex: page Programme / page 17)
+        if (/^[•\-*▪▫✓☐]\s+/.test(rawTrim)) return;
+
+        const title = rawTrim.replace(/^#{1,6}\s*/, '').replace(/\s+/g, ' ');
         if (!title || title.length < 3 || title.length > 130) return;
 
-        const prevEmpty = index === 0 || !lines[index - 1].trim();
+        const prevLine = index > 0 ? lines[index - 1].trim() : '';
+        const prevEmpty = index === 0 || !prevLine;
+        const prevEndsParagraph = prevEmpty || /[.!?:;)]$/.test(prevLine) || /^\d+\s*[.\-–:)]\s+/.test(prevLine) || /^(?:chapitre|partie|section|[ivxlcdm]+\s*[.\-–:)])/i.test(prevLine);
         const nextLine = (lines[index + 1] || '').trim();
-        const nextNextLine = (lines[index + 2] || '').trim();
-        const endsLikeSentence = /[.,;:!]$/.test(title);
+        const endsLikeSentence = /[.,;:!?]$/.test(title);
         const wordCount = title.split(/\s+/).length;
 
-        // Niveau 1 : Chapitres, Grandes parties (Chapitre 1, Partie I, I., II., III., 1 - Titre, Titres majuscules)
+        // Niveau 1 : Chapitres, Grandes parties (Chapitre 1, Partie I, I., II., III., 1-, 2., 3 -, Titres majuscules)
         const isMajorPart =
           /^(?:chapitre|partie|module|th[èe]me|titre|axe|s[ée]quence)\s+(?:[ivxlcdm]+|\d+)\b/i.test(title) ||
           /^(?:[IVXLCDM]{1,5})\s*[.\-–:)]\s+\S/.test(title) ||
-          /^\d+\s*[-–:]\s+[A-ZÀ-Þ]/.test(title) ||
+          /^\d+\s*[.\-–:)]\s+[A-ZÀ-Þ]/.test(title) ||
           (title.length >= 5 && title.length <= 75 && wordCount >= 2 && wordCount <= 10 &&
            /^[A-ZÀ-Þ0-9][A-ZÀ-Þ0-9\s'’(),:/-]+$/.test(title) && /[A-ZÀ-Þ]{3,}/.test(title));
 
-        // Niveau 2 : Sous-parties / Sections (Section 1, A., B., a., b., i., ii., 1., 1.1)
+        // Niveau 2 : Sous-parties / Sections (Section 1, A., B., a., b., i., ii., 1.1)
         const isSubSection =
           !isMajorPart && (
             /^(?:section)\s+(?:[ivxlcdm]+|\d+)\b/i.test(title) ||
             /^(?:[ivxlcdm]{1,5})\s*[.\-–:)]\s+[A-ZÀ-Þa-zà-ÿ0-9]/.test(title) ||
             /^(?:[A-Za-z])\s*[.\-–:)]\s+[A-ZÀ-Þa-zà-ÿ0-9]/.test(title) ||
-            /^\d+(?:\.\d+){0,2}\s*[.\-–:)]\s+[A-ZÀ-Þa-zà-ÿ0-9]/.test(title)
+            /^\d+\.\d+(?:\.\d+)?\s*[.\-–:)]*\s+[A-ZÀ-Þa-zà-ÿ0-9]/.test(title)
           );
 
-        // Niveau 2 bis : Titres de diapositive / sous-sections sans numéro en début de bloc
+        // Niveau 2 bis : Sous-titres thematiques courts non numerotes (ex: "Type et gamme de vehicules", "Eco conduite")
         const isStandaloneSub =
           !isMajorPart && !isSubSection &&
           !endsLikeSentence &&
-          prevEmpty &&
-          title.length >= 4 &&
-          title.length <= 95 &&
+          prevEndsParagraph &&
+          title.length >= 5 &&
+          title.length <= 65 &&
           wordCount >= 1 &&
-          wordCount <= 12 &&
+          wordCount <= 9 &&
           /^[A-ZÀ-Þ]/.test(title) &&
-          !/^(?:le|la|les|un|une|des|il|elle|on|nous|vous|ils|elles|ce|cette|ces|dans|pour|par|sur|avec|sans|en|au|aux|du|au terme|a l['’]issue)\b/i.test(title) &&
-          (nextLine.length >= 25 || (nextLine.length > 0 && nextNextLine.length >= 25));
+          !/^(?:le|la|les|un|une|des|il|elle|on|nous|vous|ils|elles|ce|cette|ces|dans|pour|par|sur|avec|sans|en|au|aux|du|au terme|a l['’]issue|trois modes|quelque soit)\b/i.test(title) &&
+          nextLine.length >= 35 &&
+          !/^[•\-*▪▫✓☐]\s+/.test(nextLine);
 
         if (isMajorPart || isSubSection || isStandaloneSub) {
           const cleanKey = normSimple(
@@ -8318,8 +8323,8 @@ async function switchRevisionSubTab(subName) {
               .replace(/^(?:[ivxlcdm]{1,5}|[a-z]|\d+(?:\.\d+){0,2})\s*[.\-–:)]\s*/i, '')
           );
           if (!cleanKey || cleanKey === docTitleNorm || seenHeadings.has(cleanKey)) return;
-          if (/^(?:programme|sommaire|table des matieres|plan du cours|introduction|conclusion|objectifs du cours|charge de cours|bibliographie|annexes|enseignant|coordonnees|et flottes|upsa|upsa eae|gestion de parcs?)$/.test(cleanKey)) return;
-          if (/(?:objectif global|objectif specifique|resultats attendus|prerequis|volume horaire|youb|wilfrid|logisticien)/.test(cleanKey)) return;
+          if (/^(?:programme|sommaire|table des matieres|plan du cours|introduction|conclusion|objectifs du cours|charge de cours|bibliographie|annexes|enseignant|coordonnees|et flottes|upsa|upsa eae|sogatra|maersk|gestion de parcs?)$/.test(cleanKey)) return;
+          if (/(?:objectif global|objectif specifique|resultats attendus|prerequis|volume horaire|youb|wilfrid|logisticien|yahoo)/.test(cleanKey)) return;
           seenHeadings.add(cleanKey);
           headings.push({
             title: isMajorPart ? title : `↳ ${title}`,
@@ -8350,7 +8355,7 @@ async function switchRevisionSubTab(subName) {
             content: rawChunk
           };
         })
-        .filter(chapter => chapter.content && chapter.content.length >= 50);
+        .filter(chapter => chapter.content && chapter.content.length >= 120);
     }
 
     async function getSelectedRevisionDocumentAndText() {
