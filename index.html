@@ -8248,7 +8248,7 @@ async function switchRevisionSubTab(subName) {
 
     function getDocumentChapters(doc) {
       if (!doc) return [];
-      const rawSource = doc.content || doc.text || doc.fullText || doc.cleanedText || '';
+      const rawSource = String(doc.content || doc.text || doc.fullText || doc.cleanedText || '').replace(/\\n/g, '\n');
       if (!rawSource) return [];
 
       const normSimple = (s) => String(s || '')
@@ -8261,7 +8261,7 @@ async function switchRevisionSubTab(subName) {
 
       // Normaliser les marqueurs de diapositives "--- PAGE X / Y ---" et séparer les titres collés
       const withPageBreaks = rawSource
-        .replace(/---\s*PAGE\s+\d+\s*(?:\/\s*\d+)?\s*---/gi, '\n\n')
+        .replace(/\\n/g, '\n').replace(/---\s*PAGE\s+\d+\s*(?:\/\s*\d+)?\s*---/gi, '\n\n')
         .replace(/([^\n])\s+((?:Chapitre|Partie|Section|Module|Th[èe]me)\s+(?:[IVXLCDM]+|\d+)\b)/gi, '$1\n$2')
         .replace(/([^\n])\s+((?:[IVXLCDM]{1,5})\s*[.\-–:)]\s+[A-ZÀ-Þ])/g, '$1\n$2')
         .replace(/([^\n])\s+((?:[A-Z])\s*[.\-–)]\s+[A-ZÀ-Þ])/g, '$1\n$2');
@@ -9756,7 +9756,7 @@ async function switchRevisionSubTab(subName) {
     }
 
     function sanitizeCourseBodyText(rawText) {
-      rawText = String(rawText || '').replace(/---\s*PAGE\s+\d+\s*(?:\/\s*\d+)?\s*---/gi, '\n\n').replace(/\n{3,}/g, '\n\n');
+      rawText = String(rawText || '').replace(/\\n/g, '\n').replace(/---\s*PAGE\s+\d+\s*(?:\/\s*\d+)?\s*---/gi, '\n\n').replace(/\n{3,}/g, '\n\n');
       if (typeof sanitizeCourseText === 'function') {
         return sanitizeCourseText(rawText);
       }
