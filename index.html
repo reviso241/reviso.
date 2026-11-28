@@ -8396,17 +8396,18 @@ function getDocumentChapters(doc) {
             /^\d+\.\d+(?:\.\d+)?\s*[.\-–:)]*\s+[A-ZÀ-Þa-zà-ÿ0-9]/.test(title)
           );
 
-        // Niveau 2 bis : Sous-titres thematiques courts non numerotes (y compris titres de diapositives suivis de puces)
+        // Niveau 2 bis : Sous-titres thematiques courts non numerotes (jamais une phrase avec verbe conjugue)
         const isStandaloneSub =
           !isMajorPart && !isSubSection &&
           !endsLikeSentence &&
           prevEndsParagraph &&
           title.length >= 4 &&
-          title.length <= 75 &&
+          title.length <= 58 &&
           wordCount >= 1 &&
-          wordCount <= 10 &&
+          wordCount <= 7 &&
           /^[A-ZÀ-Þ]/.test(title) &&
-          !/^(?:le|la|les|un|une|des|il|elle|on|nous|vous|ils|elles|ce|cette|ces|dans|pour|par|sur|avec|sans|en|au|aux|du|au terme|a l['’]issue|trois modes|quelque soit)\b/i.test(title) &&
+          !/^(?:le|la|les|un|une|des|l['’]|il|elle|on|nous|vous|ils|elles|ce|cette|ces|dans|pour|par|sur|avec|sans|en|au|aux|du|au terme|a l['’]issue|trois modes|quelque soit)\b/i.test(title) &&
+          !/\b(?:est|sont|doit|doivent|peut|peuvent|permet|permettent|vise|visent|consiste|suscite|generer|générer|avoir|être)\b/i.test(title) &&
           nextLine.length >= 12;
 
         if (isMajorPart || isSubSection || isStandaloneSub) {
