@@ -8199,18 +8199,14 @@ async function switchRevisionSubTab(subName) {
       });
       if (subName === 'evaluation') renderAssessmentView();
       if (subName === 'fiches') {
-        const { doc } = await getSelectedRevisionDocumentAndText();
-        if (doc) {
-           const _txt = await getCourseText(doc);
-        if (_txt) { doc.content = _txt; }
-        if (doc.content || doc.text) {
-             void generateActiveRevision('revision-sheet');
-           }
-        }
+        void renderRevisionView();
       }
-
-      if (appState.documents.length && subName === 'flashcards') void generateActiveRevision('flashcards');
-      if (appState.documents.length && subName === 'qcm') void generateActiveRevision('qcm');
+      if (subName === 'flashcards') {
+        void renderRevisionView();
+      }
+      if (subName === 'qcm') {
+        void renderRevisionView();
+      }
     }
 
     function inferCourseSubject(title, content) {
@@ -8581,9 +8577,7 @@ function getDocumentChapters(doc) {
       saveState();
       renderRevisionSelectors();
       renderRevisionView();
-      void generateActiveRevision('revision-sheet', false, false);
-      void generateActiveRevision('flashcards', false, false);
-      void generateActiveRevision('qcm', false, false);
+      // Generation a la demande (au clic sur Actualiser / Generer)
     }
 
     function getActiveRevisionFlashcards() {
