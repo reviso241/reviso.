@@ -8449,6 +8449,7 @@ async function switchRevisionSubTab(subName) {
       if (box && !box.dataset.hasGeneratedSheet) {
         box.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Sélectionnez votre cours, choisissez le format souhaité (<strong>Synthèse structurée</strong>, <strong>Schéma cause → conséquence</strong> ou <strong>Points clés &amp; Pièges</strong>), puis cliquez sur <strong>Actualiser la fiche</strong>.</p>`;
       }
+    }
 
     (async () => {
         const fcCounter = document.getElementById('flashcard-counter');
