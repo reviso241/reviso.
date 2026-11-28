@@ -8248,35 +8248,48 @@ async function switchRevisionSubTab(subName) {
 
     function getDocumentChapters(doc) {
       if (!doc) return [];
-      const cleanContent = sanitizeCourseBodyText(doc.fullText || doc.cleanedText || doc.content || doc.text || '');
-      if (!cleanContent) return [];
-      const lines = cleanContent.split(/\r?\n/);
+      const rawText = sanitizeCourseBodyText(doc.fullText || doc.cleanedText || doc.content || doc.text || '');
+      if (!rawText) return [];
+
+      const normalizedText = rawText
+        .replace(/([^\n])\s+((?:Chapitre|Partie|Section|Module|Th[èe]me)\s+(?:[IVXLCDM]+|\d+)\b)/gi, '$1\n$2')
+        .replace(/([^\n])\s+((?:[IVXLCDM]{1,5})\s*[.\-–:)]\s+[A-ZÀ-Þ])/g, '$1\n$2')
+        .replace(/([^\n])\s+((?:[A-Z])\s*[.\-–)]\s+[A-ZÀ-Þ])/g, '$1\n$2');
+
+      const lines = normalizedText.split(/\r?\n/);
       const headings = [];
-      const documentTitle = sanitizeCourseTitle(doc.title, cleanContent);
+      const documentTitle = sanitizeCourseTitle(doc.title, normalizedText);
       const docSubject = normalizeR2Text(getDocumentSubject(doc));
       const seenHeadings = new Set();
 
       lines.forEach((line, index) => {
         const title = line.trim().replace(/^#{1,6}\s*/, '').replace(/\s+/g, ' ');
-        if (!title || title.length < 4 || title.length > 110) return;
+        if (!title || title.length < 3 || title.length > 120) return;
 
         const prevEmpty = index === 0 || !lines[index - 1].trim();
         const nextLine = (lines[index + 1] || '').trim();
-        const endsLikeSentence = /[.,;:!?]$/.test(title) && !/[?]$/.test(title);
+        const endsLikeSentence = /[.,;:!]$/.test(title);
         const wordCount = title.split(/\s+/).length;
 
-        const isMajorChapter =
+        // Niveau 1 : Chapitres ou Grandes parties (Chapitre 1, Partie I, I., II., III., Titres majuscules)
+        const isMajorPart =
           /^(?:chapitre|partie|module|th[èe]me|titre|axe|s[ée]quence)\s+(?:[ivxlcdm]+|\d+)\b/i.test(title) ||
-          /^(?:[IVXLCDM]{1,5})\s*[.\-–:]\s+\S/.test(title) ||
-          (title.length >= 5 && title.length <= 70 && wordCount >= 2 && wordCount <= 10 &&
+          /^(?:[IVXLCDM]{1,5})\s*[.\-–:)]\s+\S/.test(title) ||
+          (title.length >= 5 && title.length <= 75 && wordCount >= 2 && wordCount <= 10 &&
            /^[A-ZÀ-Þ0-9][A-ZÀ-Þ0-9\s'’(),:/-]+$/.test(title) && /[A-ZÀ-Þ]{3,}/.test(title));
 
-        const isNumberedSection =
-          /^(?:section)\s+(?:[ivxlcdm]+|\d+)\b/i.test(title) ||
-          /^(?:[A-Z])\s*[.\-–)]\s+[A-ZÀ-Þa-zà-ÿ0-9]/.test(title) ||
-          /^\d+(?:\.\d+){0,2}\s*[.\-–)]\s+[A-ZÀ-Þa-zà-ÿ0-9]/.test(title);
+        // Niveau 2 : Sous-parties / Sections (Section 1, A., B., i., ii., 1., 1.1)
+        const isSubSection =
+          !isMajorPart && (
+            /^(?:section)\s+(?:[ivxlcdm]+|\d+)\b/i.test(title) ||
+            /^(?:[ivxlcdm]{1,5})\s*[.\-–:)]\s+[A-ZÀ-Þa-zà-ÿ0-9]/.test(title) ||
+            /^(?:[A-Z])\s*[.\-–:)]\s+[A-ZÀ-Þa-zà-ÿ0-9]/.test(title) ||
+            /^\d+(?:\.\d+){0,2}\s*[.\-–:)]\s+[A-ZÀ-Þa-zà-ÿ0-9]/.test(title)
+          );
 
-        const isStandaloneHeading =
+        // Niveau 2 bis : Titres courts non numérotés isolés au-dessus d'un paragraphe
+        const isStandaloneSub =
+          !isMajorPart && !isSubSection &&
           !endsLikeSentence &&
           prevEmpty &&
           title.length >= 4 &&
@@ -8285,27 +8298,44 @@ async function switchRevisionSubTab(subName) {
           wordCount <= 9 &&
           /^[A-ZÀ-Þ]/.test(title) &&
           !/^(?:le|la|les|un|une|des|il|elle|on|nous|vous|ils|elles|ce|cette|ces|dans|pour|par|sur|avec|sans|en|au|aux|du)\b/i.test(title) &&
-          nextLine.length >= 35;
+          nextLine.length >= 30;
 
-        if (isMajorChapter || isNumberedSection || isStandaloneHeading) {
+        if (isMajorPart || isSubSection || isStandaloneSub) {
           const normalizedTitle = normalizeR2Text(sanitizeCourseTitle(title)).replace(/^[:\-\s]+|[:\-\s]+$/g, '');
           const normalizedDocumentTitle = normalizeR2Text(documentTitle).replace(/[\s—–-]+/g, ' ').trim();
           if (!normalizedTitle || normalizedTitle === normalizedDocumentTitle || normalizedTitle === docSubject || seenHeadings.has(normalizedTitle)) return;
           if (/^(?:introduction|conclusion|sommaire|table des mati[èe]res|bibliographie|annexes|enseignant|coordonn[ée]es|et flottes|upsa\b|gestion de parcs?)$/i.test(normalizedTitle)) return;
           if (/(?:objectif global|objectif sp[ée]cifique|r[ée]sultats attendus|pr[ée]requis|volume horaire|m\.\s*youb)/i.test(normalizedTitle)) return;
           seenHeadings.add(normalizedTitle);
-          const displayTitle = isMajorChapter ? title : `↳ ${title}`;
-          headings.push({ title: displayTitle, lineIndex: index });
+          headings.push({
+            title: isMajorPart ? title : `↳ ${title}`,
+            level: isMajorPart ? 1 : 2,
+            lineIndex: index
+          });
         }
       });
 
       if (!headings.length) return [];
       return headings
-        .map((heading, index) => ({
-          title: heading.title,
-          content: lines.slice(heading.lineIndex + 1, headings[index + 1]?.lineIndex || lines.length).join('\n').trim()
-        }))
-        .filter(chapter => chapter.content && chapter.content.length >= 80);
+        .map((heading, index) => {
+          let endLine = lines.length;
+          for (let k = index + 1; k < headings.length; k++) {
+            if (heading.level === 1) {
+              if (headings[k].level === 1) {
+                endLine = headings[k].lineIndex;
+                break;
+              }
+            } else {
+              endLine = headings[k].lineIndex;
+              break;
+            }
+          }
+          return {
+            title: heading.title,
+            content: lines.slice(heading.lineIndex + 1, endLine).join('\n').trim()
+          };
+        })
+        .filter(chapter => chapter.content && chapter.content.length >= 60);
     }
 
     async function getSelectedRevisionDocumentAndText() {
