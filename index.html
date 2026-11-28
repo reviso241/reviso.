@@ -8268,6 +8268,7 @@ async function switchRevisionSubTab(subName) {
               /^(?:introduction|conclusion|sommaire|bibliographie|annexes|enseignant|coordonnées)/i.test(normalizedTitle)) return;
           const normalizedDocumentTitle = normalizeR2Text(documentTitle).replace(/[\s—–-]+/g, ' ').trim();
           if (!normalizedTitle || normalizedTitle === normalizedDocumentTitle || seenHeadings.has(normalizedTitle)) return;
+          if (/^(?:et flottes|upsa\b|[123ivx]+[.)]\s*(?:objectif|r[ée]sultats attendus))/i.test(normalizedTitle)) return;
           seenHeadings.add(normalizedTitle);
           headings.push({ title, lineIndex: index });
         }
