@@ -8436,6 +8436,12 @@ async function switchRevisionSubTab(subName) {
 
     function setSheetFormat(fmt) {
       currentSheetFormat = fmt;
+      const sheetBox = document.getElementById('revision-sheet-content');
+      if (sheetBox) {
+        delete sheetBox.dataset.hasGeneratedSheet;
+        sheetBox.innerHTML = `<p class="text-xs italic" style="color: var(--text-muted);">Génération du format <strong>${fmt === 'cause-effect' ? 'Schéma cause → conséquence' : fmt === 'key-points' ? 'Points clés & Pièges' : 'Synthèse structurée'}</strong> en cours...</p>`;
+      }
+      currentSheetFormat = fmt;
       renderRevisionView();
     }
 
