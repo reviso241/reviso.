@@ -58,7 +58,7 @@ const MODEL_ATTEMPTS = [
 ];
 
 const ATTEMPT_TIMEOUT_MS = 10000;
-const MAX_INPUT_LENGTH = 40000;
+const MAX_INPUT_LENGTH = 60000;
 const MAX_IMAGE_BASE64_LENGTH = 4000000;
 const MAX_OUTPUT_LENGTH = 16000;
 
@@ -102,7 +102,7 @@ function normalizeMessages(messages) {
 
 function buildUserContent(body, messages) {
   if (body.task === "evaluation") {
-    const course = sanitizeCourseBodyText(body.courseText).slice(0, 10000);
+    const course = sanitizeCourseBodyText(body.courseText).slice(0, 28000);
     return [
       `Niveau : ${String(body.level || "à préciser").slice(0, 160)}`,
       `Matière : ${String(body.subject || "à préciser").slice(0, 160)}`,
@@ -112,14 +112,18 @@ function buildUserContent(body, messages) {
     ].join("\n\n");
   }
   if (["revision-sheet", "flashcards", "qcm"].includes(body.task)) {
-    const course = sanitizeCourseBodyText(body.courseText).slice(0, 10000);
+    const course = sanitizeCourseBodyText(body.courseText).slice(0, 28000);
     if (!course || course.length < 20) return "Contenu de cours insuffisant pour générer une révision.";
 
     const level = String(body.level || "à préciser").slice(0, 160);
     const subject = String(body.subject || "à préciser").slice(0, 160);
     const chapter = String(body.chapter || "Document complet").slice(0, 240);
     const instructions = {
-      "revision-sheet": "Rédige une fiche claire et utile avec un titre principal, des parties I./II., des sous-parties A./B., des points numérotés et une rubrique finale Évaluation (questions ciblées et critères de réussite). N'inclus pas les métadonnées ni des extraits bruts sans explication.",
+      "revision-sheet": body.format === "cause-effect"
+        ? "Construis un SCHÉMA CAUSE → CONSÉQUENCE structuré exclusivement à partir du cours : présente chaque phénomène ou décision du cours sous forme de chaînes logiques claires [Cause / Déclencheur] → [Mécanisme / Action] → [Conséquence opérationnelle et financière], regroupées par grands thèmes, suivi d'une rubrique finale Évaluation (3 questions d'analyse de causalité et critères de réussite)."
+        : body.format === "key-points"
+          ? "Construis une fiche POINTS CLÉS & PIÈGES D'EXAMEN exclusivement à partir du cours : 1) Les notions et définitions incontournables à maîtriser mot pour mot ; 2) Les chiffres, seuils, modes et distinctions majeures (ex. LOA vs LLD vs Achat) ; 3) Les pièges classiques et confusions fréquentes à éviter le jour de l'examen ; 4) Une rubrique finale Évaluation avec questions pièges et critères de réussite."
+          : "Rédige une SYNTHÈSE STRUCTURÉE complète couvrant l'intégralité du cours fourni : titre principal, grandes parties I., II., III., sous-parties A., B., points numérotés avec définitions précises, exemples du cours et une rubrique finale Évaluation (questions ciblées et critères de réussite). N'inclus pas les métadonnées administratives ni des extraits bruts sans explication.",
       flashcards: "Crée entre 6 et 10 flashcards conceptuelles. Retourne uniquement un JSON de la forme {\"cards\":[{\"front\":\"question courte sur une notion\",\"back\":\"réponse expliquée et reformulée\"}]}. Les cartes doivent tester des définitions, rôles, types, différences ou règles présentes dans le cours; ne reprends pas de paragraphe brut.",
       qcm: "Crée entre 5 et 8 QCM authentiques à quatre options. Retourne uniquement un JSON de la forme {\"questions\":[{\"question\":\"...\",\"options\":[\"...\",\"...\",\"...\",\"...\"],\"correctIndex\":0,\"explanation\":\"...\"}]}. Une seule réponse doit être juste, les distracteurs doivent être plausibles et chaque question doit tester une notion du cours."
     }[body.task];

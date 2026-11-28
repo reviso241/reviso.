@@ -4513,7 +4513,7 @@ function sanitizeCourseTitle(rawTitle) {
           level: appState.profile ? appState.profile.level : 'à préciser',
           subject: getDocumentSubject(context.document),
           chapter: context.chapter.title,
-          courseText: context.courseText.slice(0, 15000),
+          courseText: context.courseText.slice(0, 28000),
           images,
           system: buildStrictAcademicContext(),
         });
@@ -8446,41 +8446,9 @@ async function switchRevisionSubTab(subName) {
 
     async function renderRevisionView() {
       const box = document.getElementById('revision-sheet-content');
-      const { doc, text } = await getSelectedRevisionDocumentAndText();
-
-      if (!doc || !text || !text.trim()) {
-        box.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Veuillez sélectionner un cours ou importer un nouveau document dans l'onglet Documents pour commencer la révision.</p>`;
-        return;
+      if (box && !box.dataset.hasGeneratedSheet) {
+        box.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Sélectionnez votre cours, choisissez le format souhaité (<strong>Synthèse structurée</strong>, <strong>Schéma cause → conséquence</strong> ou <strong>Points clés &amp; Pièges</strong>), puis cliquez sur <strong>Actualiser la fiche</strong>.</p>`;
       }
-
-      box.innerHTML = `<p class="text-xs italic" style="color: var(--text-muted);">Génération de la fiche en cours...</p>`;
-
-      const chapter = renderRevisionSelectors().chapter;
-      let processedText = sanitizeCourseBodyText(text);
-      if (chapter && chapter.title !== "Tout le cours") {
-        processedText = sanitizeCourseBodyText(chapter.content);
-      }
-
-      try {
-        const response = await requestRevisoAI({
-          task: 'generate-sheet',
-          format: currentSheetFormat,
-          courseText: processedText,
-          system: buildStrictAcademicContext()
-        });
-
-        box.innerHTML = `<div class="prose prose-sm">${formatStructuredSheetHtml(response)}</div>`;
-      } catch (err) {
-        console.error("AI Generation failed, falling back to local:", err);
-        const concepts = extractCourseConcepts(processedText);
-        const essentials = concepts.slice(0, 2).map(item => item.label).join(' ; ') || 'Notions non détectées.';
-        box.innerHTML = `
-          <h4 class="font-bold mb-2">Fiche (Local)</h4>
-          <p><strong>Notions :</strong> ${escapeHtml(essentials)}</p>
-          <div class="mt-2 text-xs opacity-80">Service IA en attente de connexion. Vérifiez les clés API sur Vercel puis cliquez sur <strong>Actualiser la fiche</strong>.</div>
-        `;
-      }
-    }
 
     (async () => {
         const fcCounter = document.getElementById('flashcard-counter');
@@ -9725,7 +9693,7 @@ async function switchRevisionSubTab(subName) {
         ...payload,
         task: normalizedTask,
         ...(typeof payload.courseText === 'string'
-          ? { courseText: payload.courseText.slice(0, 10000) }
+          ? { courseText: payload.courseText.slice(0, 28000) }
           : {}),
         ...(typeof payload.sources === 'string'
           ? { sources: payload.sources.slice(0, 12000) }
