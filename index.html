@@ -8382,12 +8382,11 @@ function getDocumentChapters(doc) {
         // Niveau 1 : Chapitres, Grandes parties (Chapitre 1, Partie I, I., II., III., 1-, 2., 3 -, Titres majuscules)
         const isMajorPart =
           /^(?:chapitre|partie|module|th[èe]me|titre|axe|s[ée]quence)\s+(?:[ivxlcdm]+|\d+)\b/i.test(title) ||
-          /^(?:[IVXLCDM]{1,5})\s*[.\-–:)]\s+\S/.test(title) ||
-          /^\d+\s*[.\-–:)]\s+[A-ZÀ-Þ]/.test(title) ||
+          /^(?:[IVXLCDM]{1,5})\s*[.\-–:)]\s*\S/.test(title) ||
+          /^\d+\s*[.\-–:)]\s*[A-ZÀ-Þ]/.test(title) ||
           (title.length >= 5 && title.length <= 75 && wordCount >= 2 && wordCount <= 10 &&
            /^[A-ZÀ-Þ0-9][A-ZÀ-Þ0-9\s'’(),:/-]+$/.test(title) && /[A-ZÀ-Þ]{3,}/.test(title));
 
-        // Niveau 2 : Sous-parties / Sections (Section 1, A., B., a., b., i., ii., 1.1)
         const isSubSection =
           !isMajorPart && (
             /^(?:section)\s+(?:[ivxlcdm]+|\d+)\b/i.test(title) ||
@@ -8402,13 +8401,13 @@ function getDocumentChapters(doc) {
           !endsLikeSentence &&
           prevEndsParagraph &&
           title.length >= 4 &&
-          title.length <= 58 &&
+          title.length <= 72 &&
           wordCount >= 1 &&
-          wordCount <= 7 &&
+          wordCount <= 9 &&
           /^[A-ZÀ-Þ]/.test(title) &&
           !/^(?:le|la|les|un|une|des|l['’]|il|elle|on|nous|vous|ils|elles|ce|cette|ces|dans|pour|par|sur|avec|sans|en|au|aux|du|au terme|a l['’]issue|trois modes|quelque soit)\b/i.test(title) &&
           !/\b(?:est|sont|doit|doivent|peut|peuvent|permet|permettent|vise|visent|consiste|suscite|generer|générer|avoir|être)\b/i.test(title) &&
-          nextLine.length >= 12;
+          nextLine.length >= 3;
 
         if (isMajorPart || isSubSection || isStandaloneSub) {
           const cleanKey = normSimple(

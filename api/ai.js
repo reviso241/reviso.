@@ -171,7 +171,7 @@ async function fetchWithTimeout(url, options) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), ATTEMPT_TIMEOUT_MS);
   try {
-    return await fetch(url, { ...options, signal: controller.signal });
+    return await fetch(url, { signal: AbortSignal.timeout(3500),  ...options, signal: controller.signal });
   } finally {
     clearTimeout(timeout);
   }
@@ -300,9 +300,11 @@ export default async function handler(req, res) {
   }
 
   const isJson = body.jsonMode === true || ["flashcards", "qcm"].includes(task);
+  const startedAt = Date.now();
   for (const attempt of availableAttempts) {
     const keysForProvider = providerKeys[attempt.provider];
-    for (let i = 0; i < keysForProvider.length; i++) {
+    for (let i = 0; i < Math.min(keysForProvider.length, 3); i++) {
+      if (Date.now() - startedAt > 7500) break;
       const apiKey = keysForProvider[i];
       try {
         const text = attempt.provider === "gemini"
