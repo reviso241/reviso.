@@ -8248,7 +8248,7 @@ async function switchRevisionSubTab(subName) {
 
     function getDocumentChapters(doc) {
       if (!doc) return [];
-      const rawSource = doc.fullText || doc.cleanedText || doc.content || doc.text || '';
+      const rawSource = doc.content || doc.text || doc.fullText || doc.cleanedText || '';
       if (!rawSource) return [];
 
       const normSimple = (s) => String(s || '')
@@ -8259,6 +8259,7 @@ async function switchRevisionSubTab(subName) {
         .replace(/\s+/g, ' ')
         .trim();
 
+      // Normaliser les marqueurs de diapositives "--- PAGE X / Y ---" et séparer les titres collés
       const withPageBreaks = rawSource
         .replace(/---\s*PAGE\s+\d+\s*(?:\/\s*\d+)?\s*---/gi, '\n\n')
         .replace(/([^\n])\s+((?:Chapitre|Partie|Section|Module|Th[èe]me)\s+(?:[IVXLCDM]+|\d+)\b)/gi, '$1\n$2')
@@ -8269,29 +8270,14 @@ async function switchRevisionSubTab(subName) {
       const headings = [];
       const docTitleNorm = normSimple(doc.title || '');
       const seenHeadings = new Set();
-      let skipProgrammeBlock = false;
 
       lines.forEach((line, index) => {
         const title = line.trim().replace(/^#{1,6}\s*/, '').replace(/\s+/g, ' ');
-        if (!title) return;
-
-        const normCheck = normSimple(title);
-        if (/^(?:programme|sommaire|table des matieres|plan du cours)$/.test(normCheck)) {
-          skipProgrammeBlock = true;
-          return;
-        }
-        if (skipProgrammeBlock) {
-          if (title.length > 90 || /^(?:chapitre|partie|1\s*[.\-–:)]|I\s*[.\-–:)])/i.test(title)) {
-            skipProgrammeBlock = false;
-          } else {
-            return;
-          }
-        }
-
-        if (title.length < 3 || title.length > 130) return;
+        if (!title || title.length < 3 || title.length > 130) return;
 
         const prevEmpty = index === 0 || !lines[index - 1].trim();
         const nextLine = (lines[index + 1] || '').trim();
+        const nextNextLine = (lines[index + 2] || '').trim();
         const endsLikeSentence = /[.,;:!]$/.test(title);
         const wordCount = title.split(/\s+/).length;
 
@@ -8312,23 +8298,27 @@ async function switchRevisionSubTab(subName) {
             /^\d+(?:\.\d+){0,2}\s*[.\-–:)]\s+[A-ZÀ-Þa-zà-ÿ0-9]/.test(title)
           );
 
-        // Niveau 2 bis : Titres courts non numérotés isolés en haut de diapositive / paragraphe
+        // Niveau 2 bis : Titres de diapositive / sous-sections sans numéro en début de bloc
         const isStandaloneSub =
           !isMajorPart && !isSubSection &&
           !endsLikeSentence &&
           prevEmpty &&
           title.length >= 4 &&
-          title.length <= 85 &&
+          title.length <= 95 &&
           wordCount >= 1 &&
-          wordCount <= 11 &&
+          wordCount <= 12 &&
           /^[A-ZÀ-Þ]/.test(title) &&
           !/^(?:le|la|les|un|une|des|il|elle|on|nous|vous|ils|elles|ce|cette|ces|dans|pour|par|sur|avec|sans|en|au|aux|du|au terme|a l['’]issue)\b/i.test(title) &&
-          nextLine.length >= 30;
+          (nextLine.length >= 25 || (nextLine.length > 0 && nextNextLine.length >= 25));
 
         if (isMajorPart || isSubSection || isStandaloneSub) {
-          const cleanKey = normSimple(title.replace(/^(?:chapitre|partie|section|module)\s+(?:[ivxlcdm]+|\d+)\s*[.\-–:)]*\s*/i, '').replace(/^(?:[ivxlcdm]{1,5}|[a-z]|\d+(?:\.\d+){0,2})\s*[.\-–:)]\s*/i, ''));
+          const cleanKey = normSimple(
+            title
+              .replace(/^(?:chapitre|partie|section|module)\s+(?:[ivxlcdm]+|\d+)\s*[.\-–:)]*\s*/i, '')
+              .replace(/^(?:[ivxlcdm]{1,5}|[a-z]|\d+(?:\.\d+){0,2})\s*[.\-–:)]\s*/i, '')
+          );
           if (!cleanKey || cleanKey === docTitleNorm || seenHeadings.has(cleanKey)) return;
-          if (/^(?:introduction|conclusion|objectifs du cours|charge de cours|bibliographie|annexes|enseignant|coordonnees|et flottes|upsa|gestion de parcs?)$/.test(cleanKey)) return;
+          if (/^(?:programme|sommaire|table des matieres|plan du cours|introduction|conclusion|objectifs du cours|charge de cours|bibliographie|annexes|enseignant|coordonnees|et flottes|upsa|upsa eae|gestion de parcs?)$/.test(cleanKey)) return;
           if (/(?:objectif global|objectif specifique|resultats attendus|prerequis|volume horaire|youb|wilfrid|logisticien)/.test(cleanKey)) return;
           seenHeadings.add(cleanKey);
           headings.push({
@@ -8360,7 +8350,7 @@ async function switchRevisionSubTab(subName) {
             content: rawChunk
           };
         })
-        .filter(chapter => chapter.content && chapter.content.length >= 60);
+        .filter(chapter => chapter.content && chapter.content.length >= 50);
     }
 
     async function getSelectedRevisionDocumentAndText() {
