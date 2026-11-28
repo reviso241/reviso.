@@ -27,7 +27,7 @@ const MODEL_ATTEMPTS = [
   { provider: "openrouter", model: "moonshotai/kimi-k2:free" }
 ];
 
-const ATTEMPT_TIMEOUT_MS = 10000;
+const ATTEMPT_TIMEOUT_MS = 4500;
 const MAX_INPUT_LENGTH = 60000;
 const MAX_IMAGE_BASE64_LENGTH = 4000000;
 const MAX_OUTPUT_LENGTH = 16000;
@@ -153,7 +153,7 @@ async function fetchWithTimeout(url, options) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), ATTEMPT_TIMEOUT_MS);
   try {
-    return await fetch(url, { signal: AbortSignal.timeout(4500),  ...options, signal: controller.signal });
+    return await fetch(url, { ...options, signal: controller.signal });
   } finally {
     clearTimeout(timeout);
   }
@@ -184,7 +184,7 @@ async function requestGemini(attempt, apiKey, system, prompt, images, jsonMode) 
       })
     }
   );
-  if (!response.ok) throw new Error(`Gemini request failed (${response.status})`);
+  if (!response.ok) { const errTxt = await response.text().catch(() => ""); throw new Error(`HTTP ${response.status}: ${errTxt.slice(0, 120)}`); }
   const data = await response.json();
   const text = data && data.candidates && data.candidates[0] &&
     data.candidates[0].content && Array.isArray(data.candidates[0].content.parts)
@@ -215,7 +215,7 @@ async function requestChatCompletion(provider, attempt, apiKey, system, prompt, 
       ...(jsonMode ? { response_format: { type: "json_object" } } : {})
     })
   });
-  if (!response.ok) throw new Error(`OpenRouter request failed (${response.status})`);
+  if (!response.ok) { const errTxt = await response.text().catch(() => ""); throw new Error(`HTTP ${response.status}: ${errTxt.slice(0, 120)}`); }
   const data = await response.json();
   const text = data && data.choices && data.choices[0] &&
     data.choices[0].message && typeof data.choices[0].message.content === "string"
@@ -294,7 +294,7 @@ export default async function handler(req, res) {
           : await requestChatCompletion(attempt.provider, attempt, apiKey, system, prompt, isJson);
         return jsonResponse(res, 200, { text: sanitizeOutput(text) });
       } catch (err) {
-        attemptErrors.push(`${attempt.provider}:${attempt.model}#${i + 1}`);
+        attemptErrors.push(`${attempt.provider}:${attempt.model}#${i + 1} (${err && err.message ? err.message : "unknown"})`);
         console.warn(`AI attempt failed (${attempt.provider}:${attempt.model}#${i + 1}); trying next.`);
       }
     }
