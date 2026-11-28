@@ -155,8 +155,16 @@ function getMistralKey() {
   return String(process.env.MISTRAL_API_KEY || "").trim();
 }
 
-function getOpenRouterKey() {
-  return String(process.env.OPENROUTER_API_KEY || "").trim();
+function getOpenRouterKeys() {
+  return [
+    process.env.OPENROUTER_API_KEY,
+    process.env.OPENROUTER_API_KEY_2,
+    process.env.OPENROUTER_API_KEY_3,
+    process.env.OPENROUTER_API_KEY_4,
+    process.env.OPENROUTER_API_KEY_5
+  ]
+    .map(k => String(k || "").trim())
+    .filter((k, idx, arr) => k && arr.indexOf(k) === idx);
 }
 
 async function fetchWithTimeout(url, options) {
