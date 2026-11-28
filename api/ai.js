@@ -19,12 +19,12 @@ const REVISION_RULES = [
 ].join("\n");
 
 const MODEL_ATTEMPTS = [
-  { provider: "gemini", model: "gemini-2.5-flash" },
-  { provider: "gemini", model: "gemini-2.0-flash" },
-  { provider: "gemini", model: "gemini-2.5-flash-lite" },
-  { provider: "mistral", model: "mistral-small-latest" },
-  { provider: "openrouter", model: "deepseek/deepseek-r1:free" },
-  { provider: "openrouter", model: "moonshotai/kimi-k2:free" }
+  { provider: "gemini", model: "gemini-3-flash-preview" },
+  { provider: "gemini", model: "gemini-3.1-flash-lite-preview" },
+  { provider: "gemini", model: "gemini-flash-latest" },
+  { provider: "openrouter", model: "openrouter/free" },
+  { provider: "openrouter", model: "meta-llama/llama-3.3-70b-instruct:free" },
+  { provider: "openrouter", model: "google/gemma-3-27b-it:free" }
 ];
 
 const ATTEMPT_TIMEOUT_MS = 4500;
