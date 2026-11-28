@@ -283,37 +283,36 @@ export default async function handler(req, res) {
   const images = Array.isArray(body.images) ? body.images.filter(img => img && typeof img.mimeType === 'string' && typeof img.data === 'string') : [];
   if (imageBase64) images.push({ mimeType: imageMimeType, data: imageBase64 });
 
-  const geminiKey = getGeminiKey();
+  const geminiKeys = getGeminiKeys();
   const mistralKey = getMistralKey();
-  const openRouterKey = getOpenRouterKey();
+  const openRouterKeys = getOpenRouterKeys();
   const providerKeys = {
-    gemini: geminiKey,
-    mistral: mistralKey,
-    openrouter: openRouterKey
+    gemini: geminiKeys,
+    mistral: mistralKey ? [mistralKey] : [],
+    openrouter: openRouterKeys
   };
   const availableAttempts = MODEL_ATTEMPTS.filter(attempt =>
-    !!providerKeys[attempt.provider]
+    Array.isArray(providerKeys[attempt.provider]) && providerKeys[attempt.provider].length > 0
   );
+  const attemptErrors = [];
   if (!availableAttempts.length) {
-    return jsonResponse(res, 503, { error: `Service IA indisponible (${attemptErrors.join(" | ") || "aucune clé configurée"})` });
+    return jsonResponse(res, 503, { error: "Service IA indisponible (aucune clé configurée)" });
   }
 
-  const attemptErrors = [];
+  const isJson = body.jsonMode === true || ["flashcards", "qcm"].includes(task);
   for (const attempt of availableAttempts) {
-    try {
-      const text = attempt.provider === "gemini"
-        ? await requestGemini(attempt, geminiKey, system, prompt, images, body.jsonMode === true || ["flashcards", "qcm"].includes(task))
-        : await requestChatCompletion(
-          attempt.provider,
-          attempt,
-          providerKeys[attempt.provider],
-          system,
-          prompt,
-          body.jsonMode === true || ["flashcards", "qcm"].includes(task)
-        );
-      return jsonResponse(res, 200, { text: sanitizeOutput(text) });
-    } catch {
-      console.warn("AI provider attempt failed; trying the next route.");
+    const keysForProvider = providerKeys[attempt.provider];
+    for (let i = 0; i < keysForProvider.length; i++) {
+      const apiKey = keysForProvider[i];
+      try {
+        const text = attempt.provider === "gemini"
+          ? await requestGemini(attempt, apiKey, system, prompt, images, isJson)
+          : await requestChatCompletion(attempt.provider, attempt, apiKey, system, prompt, isJson);
+        return jsonResponse(res, 200, { text: sanitizeOutput(text) });
+      } catch (err) {
+        attemptErrors.push(`${attempt.provider}:${attempt.model}#${i + 1}`);
+        console.warn(`AI attempt failed (${attempt.provider}:${attempt.model}#${i + 1}); trying next.`);
+      }
     }
   }
 
