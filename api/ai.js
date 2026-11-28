@@ -19,15 +19,15 @@ const REVISION_RULES = [
 ].join("\n");
 
 const MODEL_ATTEMPTS = [
-  { provider: "gemini", model: "gemini-3-flash-preview" },
   { provider: "gemini", model: "gemini-3.1-flash-lite-preview" },
-  { provider: "gemini", model: "gemini-flash-latest" },
   { provider: "openrouter", model: "openrouter/free" },
+  { provider: "gemini", model: "gemini-flash-latest" },
+  { provider: "gemini", model: "gemini-3-flash-preview" },
   { provider: "openrouter", model: "meta-llama/llama-3.3-70b-instruct:free" },
   { provider: "openrouter", model: "google/gemma-3-27b-it:free" }
 ];
 
-const ATTEMPT_TIMEOUT_MS = 4500;
+const ATTEMPT_TIMEOUT_MS = 7500;
 const MAX_INPUT_LENGTH = 60000;
 const MAX_IMAGE_BASE64_LENGTH = 4000000;
 const MAX_OUTPUT_LENGTH = 16000;
@@ -286,7 +286,7 @@ export default async function handler(req, res) {
   for (const attempt of availableAttempts) {
     const keysForProvider = providerKeys[attempt.provider];
     for (let i = 0; i < Math.min(keysForProvider.length, 3); i++) {
-      if (Date.now() - startedAt > 8500) break;
+      if (Date.now() - startedAt > 9000) break;
       const apiKey = keysForProvider[i];
       try {
         const text = attempt.provider === "gemini"
