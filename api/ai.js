@@ -21,19 +21,15 @@ const REVISION_RULES = [
 const MODEL_ATTEMPTS = [
   {
     provider: "gemini",
+    model: "gemini-3.8-flash"
+  },
+  {
+    provider: "gemini",
+    model: "gemini-4-hydrogen"
+  },
+  {
+    provider: "gemini",
     model: "gemini-2.5-flash"
-  },
-  {
-    provider: "gemini",
-    model: "gemini-2.5-flash-lite"
-  },
-  {
-    provider: "gemini",
-    model: "gemini-3-flash-preview"
-  },
-  {
-    provider: "gemini",
-    model: "gemini-3.1-flash-lite-preview"
   },
   {
     provider: "mistral",
@@ -46,14 +42,6 @@ const MODEL_ATTEMPTS = [
   {
     provider: "openrouter",
     model: "moonshotai/kimi-k2:free"
-  },
-  {
-    provider: "openrouter",
-    model: "meta-llama/llama-3.3-70b-instruct:free"
-  },
-  {
-    provider: "openrouter",
-    model: "google/gemma-3-27b-it:free"
   }
 ];
 
