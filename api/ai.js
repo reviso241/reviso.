@@ -117,7 +117,11 @@ function buildUserContent(body, messages) {
 
     const level = String(body.level || "à préciser").slice(0, 160);
     const subject = String(body.subject || "à préciser").slice(0, 160);
-    const chapter = String(body.chapter || "Document complet").slice(0, 240);
+    const chapter = String(body.chapter || "Tout le cours").slice(0, 240);
+    const isSpecificSection = chapter && chapter !== "Tout le cours" && chapter !== "Document complet";
+    const sectionScopeRule = isSpecificSection
+      ? `IMPÉRATIF DE PÉRIMÈTRE : L'étudiant révise UNIQUEMENT la section « ${chapter} ». Mentionne explicitement « ${chapter} » en titre principal de ta réponse, et base 100 % de ta synthèse, de tes flashcards ou de tes questions exclusivement sur l'extrait fourni ci-dessous sans jamais déborder sur d'autres chapitres.`
+      : "Couvre l'ensemble du cours nettoyé fourni ci-dessous.";
     const instructions = {
       "revision-sheet": (body.format === "schema" || body.format === "cause-effect")
         ? "Construis exclusivement un SCHÉMA CAUSE → CONSÉQUENCE approfondi à partir de tout le cours : organise par grands axes thématiques et détaille chaque mécanisme sous forme de chaînes logiques complètes [Cause / Déclencheur] → [Mécanisme / Action détaillée] → [Conséquences opérationnelles, juridiques et financières]. Développe chaque maillon avec les notions exactes du cours. N'ajoute AUCUNE rubrique Évaluation, questions de réflexion ou critères de réussite."

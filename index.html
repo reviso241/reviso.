@@ -4416,15 +4416,42 @@ function sanitizeCourseTitle(rawTitle) {
       const doc = docs.find(d => d && d.id === selectedId) || docs[0] || null;
       if (!doc) return null;
 
-      const chapters = Array.isArray(doc.chapters) ? doc.chapters : [];
-      const chapIdx = chapSelect && chapSelect.value !== '' ? Number(chapSelect.value) : 0;
-      const chapter = chapters[chapIdx] || chapters[0] || { title: 'Document complet', content: '' };
-      const rawText = doc.fullText || doc.content || doc.text || chapter.content || doc.summary || '';
-      const courseText = (typeof sanitizeCourseText === 'function' ? sanitizeCourseText(rawText) : '') || rawText;
-      const key = `${doc.id}::${chapIdx || 0}`;
+      const fullRawText = doc.fullText || doc.content || doc.text || doc.cleanedText || doc.summary || '';
+      const cleanedFullText = typeof cleanExtractedDocumentText === 'function'
+        ? cleanExtractedDocumentText(fullRawText)
+        : fullRawText;
+
+      const dynamicChapters = (typeof getDocumentChapters === 'function')
+        ? getDocumentChapters({ ...doc, content: cleanedFullText })
+        : (Array.isArray(doc.chapters) ? doc.chapters : []);
+
+      const rawVal = chapSelect ? String(chapSelect.value || '').trim() : '';
+      const isAllCourse = !rawVal || rawVal === 'all' || rawVal === '-1';
+      const chapIdx = isAllCourse ? -1 : Number(rawVal);
+      const selectedChapter = (!isAllCourse && Number.isInteger(chapIdx) && dynamicChapters[chapIdx])
+        ? dynamicChapters[chapIdx]
+        : null;
+
+      const cleanSectionTitle = selectedChapter
+        ? String(selectedChapter.title || '').replace(/^↳\s*/, '').trim()
+        : 'Tout le cours';
+
+      const chapter = selectedChapter
+        ? { title: cleanSectionTitle, content: selectedChapter.content }
+        : { title: 'Tout le cours', content: cleanedFullText };
+
+      // STRICT : si une section est choisie, on envoie UNIQUEMENT son texte (jamais le document entier)
+      const targetRaw = selectedChapter && selectedChapter.content
+        ? selectedChapter.content
+        : cleanedFullText;
+
+      const courseText = (typeof sanitizeCourseText === 'function' ? sanitizeCourseText(targetRaw) : '') || targetRaw;
+      const key = `${doc.id}::${selectedChapter ? chapIdx : 'all'}`;
 
       return {
         key,
+        isSectionScoped: Boolean(selectedChapter),
+        sectionTitle: cleanSectionTitle,
         document: doc,
         chapter,
         courseText
@@ -4541,7 +4568,10 @@ function sanitizeCourseTitle(rawTitle) {
                 : (currentSheetFormat === 'pieges' || currentSheetFormat === 'key-points')
                   ? '<div class="inline-block px-2.5 py-1 mb-3 text-xs font-bold rounded-full bg-rose-100 text-rose-900">POINTS CLÉS &amp; PIÈGES D’EXAMEN</div>'
                   : '<div class="inline-block px-2.5 py-1 mb-3 text-xs font-bold rounded-full bg-orange-100 text-orange-900">SYNTHÈSE STRUCTURÉE</div>';
-              sheetBox.innerHTML = `${formatBadge}<div class="prose prose-sm">${formatStructuredSheetHtml(latest.sheet)}</div>`;
+              const scopeBanner = context.isSectionScoped
+                ? <div class="mb-3 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-900">Section ciblée : </div>
+                : <div class="mb-3 px-3 py-2 rounded-xl bg-stone-100 border border-stone-200 text-xs font-medium text-stone-700">Périmètre : Tout le cours</div>;
+              sheetBox.innerHTML = `${formatBadge}${scopeBanner}<div class="prose prose-sm">${formatStructuredSheetHtml(latest.sheet)}</div>`;
             }
           } else if (task === 'flashcards') {
             const parsed = parseRevisionJson(responseText);
@@ -8608,6 +8638,23 @@ function getDocumentChapters(doc) {
     }
 
     async function renderRevisionView() {
+      try {
+        const activeCtx = getRevisionArtifactContext();
+        const scopeLabel = activeCtx && activeCtx.isSectionScoped
+          ? `Section ciblée : ${activeCtx.sectionTitle}`
+          : 'Périmètre : Tout le cours';
+        ['revision-flashcards-panel', 'revision-qcm-panel', 'revision-sheet-panel'].forEach(panelId => {
+          const panel = document.getElementById(panelId);
+          if (!panel) return;
+          let badge = panel.querySelector('.reviso-section-scope-badge');
+          if (!badge) {
+            badge = document.createElement('div');
+            badge.className = 'reviso-section-scope-badge mb-3 px-3 py-1.5 rounded-xl bg-amber-50 border border-amber-200 text-xs font-semibold text-amber-900';
+            panel.prepend(badge);
+          }
+          badge.textContent = scopeLabel;
+        });
+      } catch (_) {}
       const box = document.getElementById('revision-sheet-content');
       if (box && !box.dataset.hasGeneratedSheet) {
         box.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Sélectionnez votre cours, choisissez le format souhaité (<strong>Synthèse structurée</strong>, <strong>Schéma cause → conséquence</strong> ou <strong>Points clés &amp; Pièges</strong>), puis cliquez sur <strong>Actualiser la fiche</strong>.</p>`;
