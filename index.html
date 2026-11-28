@@ -4534,7 +4534,12 @@ function sanitizeCourseTitle(rawTitle) {
             const sheetBox = document.getElementById('revision-sheet-content');
             if (sheetBox) {
               sheetBox.dataset.hasGeneratedSheet = 'true';
-              sheetBox.innerHTML = `<div class="prose prose-sm">${formatStructuredSheetHtml(latest.sheet)}</div>`;
+              const formatBadge = currentSheetFormat === 'cause-effect'
+                ? '<div class="inline-block px-2.5 py-1 mb-3 text-xs font-bold rounded-full bg-amber-100 text-amber-900">SCHÉMA CAUSE → CONSÉQUENCE</div>'
+                : currentSheetFormat === 'key-points'
+                  ? '<div class="inline-block px-2.5 py-1 mb-3 text-xs font-bold rounded-full bg-rose-100 text-rose-900">POINTS CLÉS &amp; PIÈGES D’EXAMEN</div>'
+                  : '<div class="inline-block px-2.5 py-1 mb-3 text-xs font-bold rounded-full bg-orange-100 text-orange-900">SYNTHÈSE STRUCTURÉE</div>';
+              sheetBox.innerHTML = `${formatBadge}<div class="prose prose-sm">${formatStructuredSheetHtml(latest.sheet)}</div>`;
             }
           } else if (task === 'flashcards') {
             const parsed = parseRevisionJson(responseText);
@@ -8453,9 +8458,7 @@ async function switchRevisionSubTab(subName) {
       if (box && !box.dataset.hasGeneratedSheet) {
         box.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Sélectionnez votre cours, choisissez le format souhaité (<strong>Synthèse structurée</strong>, <strong>Schéma cause → conséquence</strong> ou <strong>Points clés &amp; Pièges</strong>), puis cliquez sur <strong>Actualiser la fiche</strong>.</p>`;
       }
-      if (box && latest && latest.sheet && box.dataset.hasGeneratedSheet) {
-        box.innerHTML = `<div class="prose prose-sm">${formatStructuredSheetHtml(latest.sheet)}</div>`;
-      }
+
     }
 
     (async () => {
