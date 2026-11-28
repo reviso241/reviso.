@@ -7932,6 +7932,7 @@ function sanitizeCourseTitle(rawTitle) {
 
     // 1. Rafraîchissement des listes déroulantes
     async function refreshRevisionSelectors() {
+      appState.revisionSelection = { subject: '', documentId: '', chapterIndex: '0' };
       renderRevisionSelectors();
     }
 
@@ -8252,31 +8253,49 @@ async function switchRevisionSubTab(subName) {
       const lines = cleanContent.split(/\r?\n/);
       const headings = [];
       const documentTitle = sanitizeCourseTitle(doc.title, cleanContent);
+      const docSubject = normalizeR2Text(getDocumentSubject(doc));
       const seenHeadings = new Set();
 
       lines.forEach((line, index) => {
-        const title = line.trim().replace(/^#{1,6}\s*/, '');
+        const title = line.trim().replace(/^#{1,6}\s*/, '').replace(/\s+/g, ' ');
         if (!title || title.length < 4 || title.length > 110) return;
-        const structuralHeading =
-          /^(?:chapitre\s+(?:[ivxlcdm]+|\d+)\b|section\s+(?:[ivxlcdm]+|\d+)\b|partie\s+(?:[ivxlcdm]+|\d+)\b|module\s+\d+\b|th[èe]me\s+\d+\b)/i.test(title) ||
-          /^(?:[IVXLCDM]+)\.\s+[A-ZÀ-Þ0-9]/.test(title) ||
-          /^(?:[A-Z])\.\s+[A-ZÀ-Þ0-9]/.test(title) ||
-          /^\d+(?:\.\d+)*[.)]\s+[A-ZÀ-Þ0-9]/.test(title);
-        const uppercaseHeading =
-          title.length >= 6 &&
-          title.length <= 65 &&
-          title.split(/\s+/).length <= 9 &&
-          /^[A-ZÀ-Þ0-9][A-ZÀ-Þ0-9\s'’(),:;/-]+$/.test(title) &&
-          /[A-ZÀ-Þ]{3,}/.test(title);
 
-        if (structuralHeading || uppercaseHeading) {
+        const prevEmpty = index === 0 || !lines[index - 1].trim();
+        const nextLine = (lines[index + 1] || '').trim();
+        const endsLikeSentence = /[.,;:!?]$/.test(title) && !/[?]$/.test(title);
+        const wordCount = title.split(/\s+/).length;
+
+        const isMajorChapter =
+          /^(?:chapitre|partie|module|th[èe]me|titre|axe|s[ée]quence)\s+(?:[ivxlcdm]+|\d+)\b/i.test(title) ||
+          /^(?:[IVXLCDM]{1,5})\s*[.\-–:]\s+\S/.test(title) ||
+          (title.length >= 5 && title.length <= 70 && wordCount >= 2 && wordCount <= 10 &&
+           /^[A-ZÀ-Þ0-9][A-ZÀ-Þ0-9\s'’(),:/-]+$/.test(title) && /[A-ZÀ-Þ]{3,}/.test(title));
+
+        const isNumberedSection =
+          /^(?:section)\s+(?:[ivxlcdm]+|\d+)\b/i.test(title) ||
+          /^(?:[A-Z])\s*[.\-–)]\s+[A-ZÀ-Þa-zà-ÿ0-9]/.test(title) ||
+          /^\d+(?:\.\d+){0,2}\s*[.\-–)]\s+[A-ZÀ-Þa-zà-ÿ0-9]/.test(title);
+
+        const isStandaloneHeading =
+          !endsLikeSentence &&
+          prevEmpty &&
+          title.length >= 4 &&
+          title.length <= 75 &&
+          wordCount >= 2 &&
+          wordCount <= 9 &&
+          /^[A-ZÀ-Þ]/.test(title) &&
+          !/^(?:le|la|les|un|une|des|il|elle|on|nous|vous|ils|elles|ce|cette|ces|dans|pour|par|sur|avec|sans|en|au|aux|du)\b/i.test(title) &&
+          nextLine.length >= 35;
+
+        if (isMajorChapter || isNumberedSection || isStandaloneHeading) {
           const normalizedTitle = normalizeR2Text(sanitizeCourseTitle(title)).replace(/^[:\-\s]+|[:\-\s]+$/g, '');
           const normalizedDocumentTitle = normalizeR2Text(documentTitle).replace(/[\s—–-]+/g, ' ').trim();
-          if (!normalizedTitle || normalizedTitle === normalizedDocumentTitle || seenHeadings.has(normalizedTitle)) return;
-          if (/^(?:introduction|conclusion|sommaire|table des mati[èe]res|bibliographie|annexes|enseignant|coordonn[ée]es|et flottes|upsa\b)/i.test(normalizedTitle)) return;
+          if (!normalizedTitle || normalizedTitle === normalizedDocumentTitle || normalizedTitle === docSubject || seenHeadings.has(normalizedTitle)) return;
+          if (/^(?:introduction|conclusion|sommaire|table des mati[èe]res|bibliographie|annexes|enseignant|coordonn[ée]es|et flottes|upsa\b|gestion de parcs?)$/i.test(normalizedTitle)) return;
           if (/(?:objectif global|objectif sp[ée]cifique|r[ée]sultats attendus|pr[ée]requis|volume horaire|m\.\s*youb)/i.test(normalizedTitle)) return;
           seenHeadings.add(normalizedTitle);
-          headings.push({ title, lineIndex: index });
+          const displayTitle = isMajorChapter ? title : `↳ ${title}`;
+          headings.push({ title: displayTitle, lineIndex: index });
         }
       });
 
@@ -8286,7 +8305,7 @@ async function switchRevisionSubTab(subName) {
           title: heading.title,
           content: lines.slice(heading.lineIndex + 1, headings[index + 1]?.lineIndex || lines.length).join('\n').trim()
         }))
-        .filter(chapter => chapter.content && chapter.content.length >= 120);
+        .filter(chapter => chapter.content && chapter.content.length >= 80);
     }
 
     async function getSelectedRevisionDocumentAndText() {
@@ -8417,6 +8436,7 @@ async function switchRevisionSubTab(subName) {
       qcmScore = 0;
       qcmAnsweredCount = 0;
       saveState();
+      appState.revisionSelection = { subject: '', documentId: '', chapterIndex: '0' };
       renderRevisionSelectors();
       renderRevisionView();
       void generateActiveRevision('revision-sheet', false, false);
@@ -8604,7 +8624,8 @@ async function switchRevisionSubTab(subName) {
     }
 
     function createRevisionEvaluation(type, scheduledFor = null, suppliedQuestions = null) {
-      const context = renderRevisionSelectors();
+      const context = appState.revisionSelection = { subject: '', documentId: '', chapterIndex: '0' };
+      renderRevisionSelectors();
       if (!context.document || !context.chapter) {
         showToast('Sélectionnez un cours et un chapitre contenant du texte pédagogique.');
         return null;
@@ -8690,7 +8711,8 @@ async function switchRevisionSubTab(subName) {
       appState.revisionSelection.subject = getDocumentSubject(chosenDocument);
       appState.revisionSelection.documentId = chosenDocument.id;
       appState.revisionSelection.chapterIndex = '0';
-      const context = renderRevisionSelectors();
+      const context = appState.revisionSelection = { subject: '', documentId: '', chapterIndex: '0' };
+      renderRevisionSelectors();
       const reason = document.getElementById('evaluation-surprise-reason');
       const priorScores = historyByDocument.get(chosenDocument.id) || [];
       const button = document.getElementById('btn-surprise-evaluation');
@@ -8987,7 +9009,8 @@ async function switchRevisionSubTab(subName) {
       nextBtn.classList.remove('hidden');
       saveState();
       if (qcmAnsweredCount > 0 && qcmAnsweredCount % qcmList.length === 0) {
-        const revisionContext = renderRevisionSelectors();
+        const revisionContext = appState.revisionSelection = { subject: '', documentId: '', chapterIndex: '0' };
+      renderRevisionSelectors();
         const subject = revisionContext?.document ? getDocumentSubject(revisionContext?.document) : 'Révision';
         const selectedSource = appState.documents.find(document => document.id === q.sourceDocumentId);
         const includesPrivatePhoto = Boolean(selectedSource && selectedSource.photoCapture);
@@ -9674,6 +9697,7 @@ async function switchRevisionSubTab(subName) {
       }
     }
     if (changed && typeof renderRevisionSelectors === 'function') {
+      appState.revisionSelection = { subject: '', documentId: '', chapterIndex: '0' };
       renderRevisionSelectors();
     }
   };
