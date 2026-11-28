@@ -8269,6 +8269,7 @@ async function switchRevisionSubTab(subName) {
           const normalizedDocumentTitle = normalizeR2Text(documentTitle).replace(/[\s—–-]+/g, ' ').trim();
           if (!normalizedTitle || normalizedTitle === normalizedDocumentTitle || seenHeadings.has(normalizedTitle)) return;
           if (/^(?:et flottes|upsa\b|[123ivx]+[.)]\s*(?:objectif|r[ée]sultats attendus))/i.test(normalizedTitle)) return;
+          if (/^(?:et flottes|upsa\b|[123ivx]+[.)]\s*(?:objectif|r[ée]sultats attendus))/i.test(normalizedTitle)) return;
           seenHeadings.add(normalizedTitle);
           headings.push({ title, lineIndex: index });
         }
@@ -8437,13 +8438,24 @@ async function switchRevisionSubTab(subName) {
 
     function setSheetFormat(fmt) {
       currentSheetFormat = fmt;
+      document.querySelectorAll('[data-sheet-format]').forEach(btn => {
+        const active = btn.getAttribute('data-sheet-format') === fmt;
+        btn.style.fontWeight = active ? '700' : '500';
+        btn.style.color = active ? 'var(--active-color)' : '';
+      });
+      const label = fmt === 'cause-effect'
+        ? 'Schéma cause → conséquence'
+        : fmt === 'key-points'
+          ? 'Points clés & Pièges'
+          : 'Synthèse structurée';
       const sheetBox = document.getElementById('revision-sheet-content');
       if (sheetBox) {
-        delete sheetBox.dataset.hasGeneratedSheet;
-        sheetBox.innerHTML = `<p class="text-xs italic" style="color: var(--text-muted);">Génération du format <strong>${fmt === 'cause-effect' ? 'Schéma cause → conséquence' : fmt === 'key-points' ? 'Points clés & Pièges' : 'Synthèse structurée'}</strong> en cours...</p>`;
+        sheetBox.dataset.hasGeneratedSheet = 'loading';
+        sheetBox.innerHTML = `<div class="flex items-center gap-2 py-4 text-xs font-medium" style="color: var(--active-color);"><span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></span><span>Génération IA de <strong>${label}</strong> en cours...</span></div>`;
       }
-      currentSheetFormat = fmt;
-      renderRevisionView();
+      if (typeof generateActiveRevision === 'function') {
+        void generateActiveRevision('revision-sheet', true);
+      }
     }
 
     function getVisibleFlashcards() {
@@ -8465,10 +8477,6 @@ async function switchRevisionSubTab(subName) {
       if (box && !box.dataset.hasGeneratedSheet) {
         box.innerHTML = `<p class="text-xs" style="color: var(--text-muted);">Sélectionnez votre cours, choisissez le format souhaité (<strong>Synthèse structurée</strong>, <strong>Schéma cause → conséquence</strong> ou <strong>Points clés &amp; Pièges</strong>), puis cliquez sur <strong>Actualiser la fiche</strong>.</p>`;
       }
-
-    }
-
-    (async () => {
         const fcCounter = document.getElementById('flashcard-counter');
         const fcFront = document.getElementById('flashcard-front-text');
         const fcBack = document.getElementById('flashcard-back-text');
