@@ -90,7 +90,7 @@ function normalizeMessages(messages) {
 
 function buildUserContent(body, messages) {
   if (body.task === "evaluation") {
-    const course = sanitizeCourseBodyText(body.courseText).slice(0, 28000);
+    const course = sanitizeCourseBodyText(body.courseText).slice(0, 55000);
     return [
       `Niveau : ${String(body.level || "à préciser").slice(0, 160)}`,
       `Matière : ${String(body.subject || "à préciser").slice(0, 160)}`,
@@ -100,7 +100,7 @@ function buildUserContent(body, messages) {
     ].join("\n\n");
   }
   if (["revision-sheet", "flashcards", "qcm"].includes(body.task)) {
-    const course = sanitizeCourseBodyText(body.courseText).slice(0, 28000);
+    const course = sanitizeCourseBodyText(body.courseText).slice(0, 55000);
     if (!course || course.length < 20) return "Contenu de cours insuffisant pour générer une révision.";
 
     const level = String(body.level || "à préciser").slice(0, 160);
